@@ -19,6 +19,7 @@ pub fn command(executable: impl AsRef<std::ffi::OsStr>) -> Command {
 
 pub struct ManagedChild {
     pub child: Child,
+    pub spawned_at: Instant,
     #[cfg(windows)]
     _job: Job,
 }
@@ -64,6 +65,7 @@ impl ManagedChild {
         };
         Ok(Self {
             child,
+            spawned_at: Instant::now(),
             #[cfg(windows)]
             _job: job,
         })

@@ -58,11 +58,15 @@ impl Manager {
         } else {
             String::new()
         };
+        // Same enclosure rule as .env: a symlinked example must not read outside the project.
         let example_path = project.path.join(".env.example");
-        let example = example_path
-            .is_file()
-            .then(|| read_text(&example_path).ok())
-            .flatten();
+        let example = dunce::canonicalize(&example_path)
+            .ok()
+            .filter(|canon| {
+                canon.is_file()
+                    && dunce::canonicalize(&project.path).is_ok_and(|root| canon.starts_with(root))
+            })
+            .and_then(|canon| read_text(&canon).ok());
         Ok(ProjectEnv {
             exists,
             content,

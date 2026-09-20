@@ -8,7 +8,6 @@ use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
-    fs,
     io::Write,
     path::{Path, PathBuf},
     process::Command,
@@ -344,7 +343,8 @@ impl Manager {
         if !path.exists() {
             return Ok(Vec::new());
         }
-        let text = fs::read_to_string(path)?;
+        let text = String::from_utf8_lossy(&crate::storage::read_limited(&path, 16 * 1024 * 1024)?)
+            .into_owned();
         let mut records = Vec::new();
         for line in text.lines().rev() {
             if line.trim().is_empty() {
@@ -388,12 +388,14 @@ impl Manager {
             match self.run_release_step(&project, &step, deadline) {
                 Ok(output) => {
                     if !output.is_empty() {
-                        chunks.push(output);
+                        // Cap per step: a chatty composer run must not hold
+                        // tens of megabytes before the final trim.
+                        chunks.push(trim_output(&output));
                     }
                 }
                 Err(err) => {
                     success = false;
-                    let message = format!("{err:#}");
+                    let message = trim_output(&format!("{err:#}"));
                     chunks.push(message.clone());
                     error = Some(message);
                     break;
@@ -417,7 +419,14 @@ impl Manager {
             success,
             output: trim_output(&chunks.join("\n")),
         };
-        self.write_release_record(id, &record)?;
+        if let Err(error) = self.write_release_record(id, &record) {
+            // The release itself already happened; a history-file problem is
+            // worth a log line, not a failed deployment.
+            self.log(format!(
+                "{} sürüm geçmişi yazılamadı: {error:#}",
+                project.name
+            ));
+        }
         self.log(format!(
             "{} yerel sürüm {}: {} ms",
             project.name,
@@ -572,7 +581,7 @@ impl Manager {
     fn write_release_record(&self, id: &str, record: &ReleaseRecord) -> Result<()> {
         let path = history_path(&self.home, id)?;
         let mut records = if path.exists() {
-            fs::read_to_string(&path)?
+            String::from_utf8_lossy(&crate::storage::read_limited(&path, 16 * 1024 * 1024)?)
                 .lines()
                 .filter_map(|line| serde_json::from_str::<ReleaseRecord>(line).ok())
                 .collect::<Vec<_>>()

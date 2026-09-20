@@ -94,11 +94,27 @@ impl Manager {
             bail!("Parolayı değiştirmek için önce PostgreSQL'i başlatın.");
         }
         let current = secrets::read(&self.postgres_password_path())?;
-        self.psql_query(
+        // Prove the new secret can be encrypted and stored before the server
+        // learns it; a DPAPI failure after ALTER would lock the user out.
+        let staged = self.postgres_password_path().with_extension("dpapi.next");
+        secrets::save(&staged, password)?;
+        if secrets::read(&staged).ok().as_deref() != Some(password) {
+            let _ = std::fs::remove_file(&staged);
+            bail!("Yeni parola şifrelenip geri okunamadı; parola değiştirilmedi.");
+        }
+        if let Err(error) = self.psql_query(
             &current,
             &format!("ALTER USER postgres PASSWORD '{password}';"),
-        )?;
-        secrets::save(&self.postgres_password_path(), password)?;
+        ) {
+            let _ = std::fs::remove_file(&staged);
+            return Err(error);
+        }
+        std::fs::rename(&staged, self.postgres_password_path()).with_context(|| {
+            format!(
+                "PostgreSQL parolası sunucuda değişti ancak kayıt yenilenemedi. Yeni parola {} dosyasında.",
+                staged.display()
+            )
+        })?;
         self.log("PostgreSQL parolası değiştirildi. Proje .env dosyası yazılmaz.");
         Ok(())
     }

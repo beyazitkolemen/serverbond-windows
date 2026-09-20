@@ -3,8 +3,23 @@ use anyhow::{Context, Result};
 use base64::Engine;
 use std::{path::PathBuf, process::Command};
 
-fn literal(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "''"))
+/// A PowerShell single-quoted literal. Besides the ASCII apostrophe, the
+/// tokenizer also ends such a string at the typographic quotes U+2018–U+201B,
+/// so a folder like `C:\Users\O’Brien` must be spliced in as a character code.
+pub(crate) fn literal(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('\'');
+    for c in value.chars() {
+        match c {
+            '\'' => out.push_str("''"),
+            '\u{2018}'..='\u{201F}' => {
+                out.push_str(&format!("'+[char]0x{:04X}+'", c as u32));
+            }
+            _ => out.push(c),
+        }
+    }
+    out.push('\'');
+    out
 }
 
 pub(crate) fn powershell_path() -> PathBuf {

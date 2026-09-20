@@ -212,15 +212,16 @@ export async function call<T = void>(
       return await Promise.race([
         pending as Promise<T>,
         new Promise<never>((_, reject) => {
-          timer = setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "Uygulama yanıt vermiyor. Bağlantı yeniden denenecek; çalışan bir işlemi tekrar başlatmayın.",
-                ),
+          timer = setTimeout(() => {
+            // Forget the stalled invoke so the next poll issues a fresh request
+            // instead of re-attaching to a promise that may never settle.
+            if (pendingReads.get(key) === pending) pendingReads.delete(key);
+            reject(
+              new Error(
+                "Uygulama yanıt vermiyor. Bağlantı yeniden denenecek; çalışan bir işlemi tekrar başlatmayın.",
               ),
-            10_000,
-          );
+            );
+          }, 10_000);
         }),
       ]);
     } finally {

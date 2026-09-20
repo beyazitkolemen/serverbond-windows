@@ -388,6 +388,8 @@ fn mysql_password_rules_and_workspace_settings_are_not_runtime() {
     assert!(validate_mysql_password("has space!!").is_err());
     assert!(validate_mysql_password("bad'quote").is_err());
     assert!(validate_mysql_password("good-Pass_99").is_ok());
+    assert!(validate_mysql_password("Şifre-Türkçe1").is_err());
+    assert!(validate_mysql_password("ok!$%&*()[]{}").is_ok());
     let base = Settings::default();
     let mut folders = base.clone();
     folders.projects_dir = "C:\\Projeler".into();

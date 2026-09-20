@@ -7,12 +7,16 @@ use crate::{
 };
 use anyhow::{bail, Context, Result};
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
     time::{Duration, Instant},
 };
 
 pub const MAX_WORKERS: usize = 8;
+/// A `queue:work` process that ran at least this long and exited with status 0
+/// finished on purpose (`--max-jobs`, `--max-time`, `queue:restart`) and is
+/// started again; shorter lives are reported as failures to avoid a restart loop.
+pub const PLANNED_EXIT_MIN_UPTIME: Duration = Duration::from_secs(10);
 pub const MAX_PROCESSES: u8 = 8;
 
 pub fn queue_service_id(project_id: &str, worker_id: &str, index: u8) -> String {
@@ -107,6 +111,15 @@ pub fn queue_retry_args(job: &str) -> Vec<String> {
     ]
 }
 
+pub fn queue_restart_args() -> Vec<String> {
+    vec![
+        "artisan".into(),
+        "queue:restart".into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
+    ]
+}
+
 pub fn queue_flush_args() -> Vec<String> {
     vec![
         "artisan".into(),
@@ -119,6 +132,7 @@ pub fn queue_flush_args() -> Vec<String> {
 fn token(value: &str, label: &str) -> Result<()> {
     if value.is_empty()
         || value.len() > 32
+        || value.starts_with('-')
         || !value
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
@@ -262,6 +276,7 @@ pub fn failed_job_token(value: Option<&str>) -> Result<String> {
     }
     if value.is_empty()
         || value.len() > 64
+        || value.starts_with('-')
         || !value
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-')
@@ -345,7 +360,7 @@ impl Manager {
         if !worker.enabled {
             bail!("Bu kuyruk işçisi kapalı. Etkinleştirip kaydedin.");
         }
-        self.stop_queue_worker(&project.id, &worker)?;
+        self.stop_queue_worker_gracefully(&project, &worker)?;
         self.spawn_queue_worker(&project, &worker)
     }
 
@@ -502,6 +517,60 @@ impl Manager {
         }
     }
 
+    /// Start workers again after a planned exit (`--max-jobs`, `--max-time`,
+    /// `queue:restart`). Runs from `snapshot`, so it must not block: the child
+    /// is inserted as soon as it is spawned and the next snapshot judges it.
+    pub(crate) fn respawn_planned_workers(&self, ids: &[String]) {
+        let projects = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .projects
+            .clone();
+        for id in ids {
+            let Some((project_id, worker_id, _)) = parse_queue_service_id(id) else {
+                continue;
+            };
+            let Some(project) = projects.iter().find(|p| p.id == project_id) else {
+                continue;
+            };
+            let Some(worker) = project.workers.iter().find(|w| w.id == worker_id) else {
+                continue;
+            };
+            if !worker.enabled {
+                continue;
+            }
+            let result = self.project_php_runtime(project).and_then(|runtime| {
+                let mut cmd = runtime.command(project);
+                cmd.args(queue_work_args(worker));
+                let child =
+                    ManagedChild::spawn(cmd, &self.home.join("logs").join(format!("{id}.log")))?;
+                self.processes
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(id.clone(), child);
+                Ok(())
+            });
+            match result {
+                Ok(()) => self.log(format!(
+                    "{} işçisi ({}) planlı şekilde kapandı ve yeniden başlatıldı.",
+                    project.name, worker.name
+                )),
+                Err(error) => {
+                    let message = format!(
+                        "{} işçisi ({}) planlı çıkış sonrası yeniden başlatılamadı: {error:#}",
+                        project.name, worker.name
+                    );
+                    self.log(&message);
+                    self.service_errors
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .insert(id.clone(), message);
+                }
+            }
+        }
+    }
+
     pub(crate) fn stop_project_jobs(&self) -> Result<()> {
         let ids = self
             .processes
@@ -628,9 +697,11 @@ impl Manager {
 
     fn spawn_queue_worker(&self, project: &Project, worker: &QueueWorker) -> Result<()> {
         artisan_file(project)?;
+        // Validate PHP and write php.ini once per pool, not once per process.
+        let runtime = self.project_php_runtime(project)?;
         for index in 0..worker.processes {
             let id = queue_service_id(&project.id, &worker.id, index);
-            let mut cmd = self.project_php_command(project)?;
+            let mut cmd = runtime.command(project);
             cmd.args(queue_work_args(worker));
             if let Err(error) = self.spawn_process(&id, cmd) {
                 // A half-started pool would report "running" while some of its
@@ -659,6 +730,43 @@ impl Manager {
     fn stop_queue_worker(&self, project_id: &str, worker: &QueueWorker) -> Result<()> {
         for index in 0..worker.processes.max(MAX_PROCESSES) {
             self.stop_service(&queue_service_id(project_id, &worker.id, index))?;
+        }
+        Ok(())
+    }
+
+    /// Ask the project's workers to finish their current job (`queue:restart`
+    /// sets a cache flag every `queue:work` loop checks), wait for the pool to
+    /// exit on its own, and only then fall back to killing what is still alive.
+    /// Jobs in `handle()` are therefore completed instead of lost.
+    fn stop_queue_worker_gracefully(&self, project: &Project, worker: &QueueWorker) -> Result<()> {
+        let ids = (0..worker.processes.max(MAX_PROCESSES))
+            .map(|index| queue_service_id(&project.id, &worker.id, index))
+            .collect::<Vec<_>>();
+        let mut children = {
+            let mut processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
+            ids.iter()
+                .filter_map(|id| processes.remove(id).map(|child| (id.clone(), child)))
+                .collect::<Vec<_>>()
+        };
+        if children.is_empty() {
+            return Ok(());
+        }
+        if let Err(error) = self.artisan_output(project, &queue_restart_args()) {
+            self.log(format!(
+                "{} için queue:restart gönderilemedi; işçiler doğrudan durduruluyor: {error:#}",
+                project.name
+            ));
+        }
+        let grace = Duration::from_secs(u64::from(worker.timeout.clamp(3, 60)));
+        let deadline = Instant::now() + grace;
+        for (_, child) in &mut children {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            // A non-zero exit here is still a stop; drop() kills anything left.
+            let _ = child.wait_timeout(remaining.max(Duration::from_millis(50)));
+        }
+        for (id, child) in children {
+            drop(child);
+            self.log(format!("{id} durduruldu."));
         }
         Ok(())
     }
@@ -747,7 +855,7 @@ impl Manager {
         let mut restarted = Vec::new();
         for worker in &project.workers {
             if worker.enabled {
-                self.stop_queue_worker(&project.id, worker)?;
+                self.stop_queue_worker_gracefully(project, worker)?;
                 self.spawn_queue_worker(project, worker)?;
                 restarted.push(format!("kuyruk: {}", worker.name));
             }
@@ -765,6 +873,12 @@ impl Manager {
     }
 
     pub(crate) fn project_php_command(&self, project: &Project) -> Result<Command> {
+        Ok(self.project_php_runtime(project)?.command(project))
+    }
+
+    /// The validated PHP install and freshly written php.ini for a project;
+    /// callers that launch several processes build all commands from one value.
+    pub(crate) fn project_php_runtime(&self, project: &Project) -> Result<ProjectPhpRuntime> {
         let package = php_package(&project.php_version)?;
         let directory = self.home.join("bin/php").join(&project.php_version);
         install::validate_installation(&directory, &package).with_context(|| {
@@ -774,19 +888,30 @@ impl Manager {
             )
         })?;
         let ini = self.write_php_config_for(&project.php_version)?;
-        let mut cmd = command(directory.join("php.exe"));
+        Ok(ProjectPhpRuntime { directory, ini })
+    }
+}
+
+pub(crate) struct ProjectPhpRuntime {
+    directory: PathBuf,
+    ini: PathBuf,
+}
+
+impl ProjectPhpRuntime {
+    pub(crate) fn command(&self, project: &Project) -> Command {
+        let mut cmd = command(self.directory.join("php.exe"));
         cmd.arg("-c")
-            .arg(&ini)
+            .arg(&self.ini)
             .arg("-d")
             .arg(format!(
                 "extension_dir=\"{}\"",
-                portable_path(&directory.join("ext"))
+                portable_path(&self.directory.join("ext"))
             ))
             .current_dir(&project.path)
-            .env("PHPRC", &ini)
-            .env("F4BOX_PHP_EXT", directory.join("ext"))
+            .env("PHPRC", &self.ini)
+            .env("F4BOX_PHP_EXT", self.directory.join("ext"))
             .env("PHP_INI_SCAN_DIR", "");
-        Ok(cmd)
+        cmd
     }
 }
 

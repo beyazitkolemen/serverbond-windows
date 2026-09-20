@@ -56,7 +56,14 @@ pub fn save(path: &Path, value: &str) -> Result<()> {
 
 pub fn read(path: &Path) -> Result<String> {
     String::from_utf8(transform(
-        &crate::storage::read_limited(path, 64 * 1024).context("MySQL parolası bulunamadı.")?,
+        &crate::storage::read_limited(path, 64 * 1024).with_context(|| {
+            format!(
+                "Kayıtlı sır bulunamadı: {}",
+                path.file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            )
+        })?,
         false,
     )?)
     .context("Parola çözülemedi.")

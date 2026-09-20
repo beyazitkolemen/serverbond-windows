@@ -69,7 +69,16 @@ impl Manager {
             .settings
             .redis
             .clone();
-        crate::services::port_free(settings.port)?;
+        if self
+            .processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(ID)
+            .is_some_and(|p| p.alive())
+        {
+            return Ok(());
+        }
+        // spawn_service checks the port itself once we know no owned instance holds it.
         let executable = self
             .tool_executable(ID)
             .context("Redis kurulu değil. Hizmetler → Redis ekranından kurun.")?;
@@ -98,8 +107,10 @@ impl Manager {
             String::new(),
             "--maxmemory".into(),
             "256mb".into(),
+            // Laravel queues and sessions live here: refuse writes when full
+            // instead of silently evicting jobs the way allkeys-lru would.
             "--maxmemory-policy".into(),
-            "allkeys-lru".into(),
+            "noeviction".into(),
         ]);
         self.spawn_service(ID, cmd, settings.port)?;
         self.log(format!(

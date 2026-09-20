@@ -304,16 +304,23 @@ impl Manager {
         health
     }
 
-    pub fn snapshot(&self) -> Result<Snapshot> {
-        let config = self
-            .config
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone();
+    /// Drop children that have exited. Queue workers that finished on purpose
+    /// (status 0 after a reasonable uptime) are returned so the caller can start
+    /// them again; everything else is reported as an unexpected stop.
+    fn reap_exited_children(&self) -> Vec<String> {
+        let mut planned = Vec::new();
         let mut processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
         processes.retain(|id, p| {
             let detail = match p.child.try_wait() {
                 Ok(None) => return true,
+                Ok(Some(exit))
+                    if exit.success()
+                        && jobs::is_queue_service_id(id)
+                        && p.spawned_at.elapsed() >= jobs::PLANNED_EXIT_MIN_UPTIME =>
+                {
+                    planned.push(id.clone());
+                    return false;
+                }
                 Ok(Some(exit)) => exit.to_string(),
                 Err(error) => error.to_string(),
             };
@@ -325,6 +332,25 @@ impl Manager {
                 .insert(id.clone(), message);
             false
         });
+        planned
+    }
+
+    pub fn snapshot(&self) -> Result<Snapshot> {
+        let planned = self.reap_exited_children();
+        if !planned.is_empty()
+            && !self
+                .shutting_down
+                .load(std::sync::atomic::Ordering::Acquire)
+            && self.recovery_issue().is_none()
+        {
+            self.respawn_planned_workers(&planned);
+        }
+        let config = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
         let packages = selected_catalog(&config.php_version)?
             .into_iter()
             .map(|package| {
@@ -605,10 +631,14 @@ impl Manager {
         backup.persist(self.home.join("config/settings.previous.json"))?;
         config.settings = settings;
         self.save_config(&config)?;
-        self.project_ports
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clear();
+        // Folder/launch preferences may be saved while project PHP workers run;
+        // their ports must survive or the next Caddy restart cannot route them.
+        if !running {
+            self.project_ports
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clear();
+        }
         self.log(if runtime {
             "Sunucu ayarları kaydedildi."
         } else {

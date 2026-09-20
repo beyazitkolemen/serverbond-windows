@@ -153,10 +153,12 @@ pub fn apply_github_git_auth(cmd: &mut Command, token: Option<&str>) {
         // pull in ssh/ext transports that could prompt or run commands.
         .env("GIT_ALLOW_PROTOCOL", "https:file");
     if let Some(token) = token {
+        // URL-scoped: a release of a project whose origin is GitLab, Bitbucket
+        // or a company server must never receive the GitHub token.
         cmd.env("GIT_CONFIG_COUNT", "2")
             .env("GIT_CONFIG_KEY_0", "credential.helper")
             .env("GIT_CONFIG_VALUE_0", "")
-            .env("GIT_CONFIG_KEY_1", "http.extraHeader")
+            .env("GIT_CONFIG_KEY_1", "http.https://github.com/.extraHeader")
             .env(
                 "GIT_CONFIG_VALUE_1",
                 format!("AUTHORIZATION: bearer {token}"),

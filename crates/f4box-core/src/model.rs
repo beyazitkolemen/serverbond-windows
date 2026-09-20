@@ -273,11 +273,14 @@ pub fn validate_mysql_password(password: &str) -> Result<()> {
     if !(8..=128).contains(&password.chars().count()) {
         bail!("Parola 8–128 karakter olmalı.");
     }
+    // The bundled mysql.exe/psql.exe clients read argv and option files through
+    // the ANSI code page; non-ASCII characters would round-trip differently
+    // between "set" and "log in" and lock the user out.
     if password
         .chars()
-        .any(|c| c.is_control() || "#'\";\\ \t".contains(c))
+        .any(|c| !c.is_ascii_graphic() || "#'\";\\".contains(c))
     {
-        bail!("Parola boşluk, tırnak, noktalı virgül veya denetim karakteri içeremez.");
+        bail!("Parola yalnızca ASCII harf, rakam ve simge içerebilir; boşluk, tırnak, #, ; ve \\ kullanılamaz.");
     }
     Ok(())
 }

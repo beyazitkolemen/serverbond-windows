@@ -1,7 +1,7 @@
 #[cfg(windows)]
 use crate::process::{command, ManagedChild};
 use crate::{storage, Manager};
-#[cfg(windows)]
+#[cfg(any(test, windows))]
 use anyhow::Context;
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
@@ -67,8 +67,9 @@ pub(crate) fn next_action(
     PermissionAction::Skip
 }
 
-#[cfg(windows)]
-#[derive(Deserialize)]
+#[cfg(any(test, windows))]
+#[cfg_attr(not(windows), allow(dead_code))]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ScriptResult {
     #[serde(default)]
@@ -77,11 +78,39 @@ struct ScriptResult {
     failed: Vec<String>,
 }
 
-/// PowerShell single-quoted literals only need the quote itself doubled, which
-/// keeps user-chosen folder names out of the command grammar.
+/// PowerShell single-quoted literals keep user-chosen folder names out of the
+/// command grammar; see `terminal::literal` for the quote characters handled.
 #[cfg(any(test, windows))]
 fn quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "''"))
+    crate::terminal::literal(value)
+}
+
+/// Windows PowerShell 5.1 writes `-Encoding UTF8` files with a byte-order mark,
+/// which serde_json rejects as "expected value"; accept both forms.
+#[cfg(any(test, windows))]
+fn parse_script_result(bytes: &[u8]) -> Result<ScriptResult> {
+    let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    let body = if body.len() >= 2 && (body[..2] == [0xFF, 0xFE] || body[..2] == [0xFE, 0xFF]) {
+        let little = body[0] == 0xFF;
+        let units = body[2..]
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|&pair| {
+                if little {
+                    u16::from_le_bytes(pair)
+                } else {
+                    u16::from_be_bytes(pair)
+                }
+            })
+            .collect::<Vec<_>>();
+        String::from_utf16(&units)
+            .context("Yetki sonucu UTF-16 olarak okunamadı.")?
+            .into_bytes()
+    } else {
+        body.to_vec()
+    };
+    serde_json::from_slice(&body).context("Yetki sonucu JSON olarak okunamadı.")
 }
 
 /// netsh and icacls store the path as given; both expect Windows separators.
@@ -331,20 +360,30 @@ impl Manager {
     #[cfg(windows)]
     fn wait_for_result(&self, result: &Path) -> Result<ScriptResult> {
         let deadline = Instant::now() + Duration::from_secs(120);
+        let mut last_error = None;
         loop {
             if result.is_file() {
-                break;
+                // Set-Content creates the file before the JSON lands in it, so a
+                // short or half-written read is retried rather than treated as final.
+                match storage::read_limited(result, 256 * 1024) {
+                    Ok(bytes) if !bytes.is_empty() => match parse_script_result(&bytes) {
+                        Ok(parsed) => return Ok(parsed),
+                        Err(error) => last_error = Some(error),
+                    },
+                    Ok(_) => {}
+                    Err(error) => last_error = Some(error),
+                }
             }
             if Instant::now() > deadline {
-                bail!("Yetki sonucu yazılmadı. Günlükler ekranını kontrol edin.");
+                return Err(match last_error {
+                    Some(error) => error.context("Yetki sonucu anlaşılamadı."),
+                    None => {
+                        anyhow::anyhow!("Yetki sonucu yazılmadı. Günlükler ekranını kontrol edin.")
+                    }
+                });
             }
             std::thread::sleep(Duration::from_millis(200));
         }
-        serde_json::from_slice(
-            &storage::read_limited(result, 256 * 1024)
-                .context("Yetki sonucu okunamadı. Hiçbir ayarın uygulandığı varsayılmadı.")?,
-        )
-        .context("Yetki sonucu anlaşılamadı.")
     }
 
     #[cfg(windows)]
@@ -499,6 +538,33 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn script_result_accepts_powershell_encodings() {
+        let json = r#"{"applied":["firewall"],"failed":[]}"#;
+        let plain = parse_script_result(json.as_bytes()).unwrap();
+        assert_eq!(plain.applied, ["firewall"]);
+        let mut bom = b"\xEF\xBB\xBF".to_vec();
+        bom.extend_from_slice(json.as_bytes());
+        assert_eq!(parse_script_result(&bom).unwrap().applied, ["firewall"]);
+        let mut utf16 = vec![0xFF, 0xFE];
+        for unit in json.encode_utf16() {
+            utf16.extend_from_slice(&unit.to_le_bytes());
+        }
+        assert_eq!(parse_script_result(&utf16).unwrap().applied, ["firewall"]);
+        assert!(parse_script_result(b"").is_err());
+        assert!(parse_script_result(b"\xEF\xBB\xBF{").is_err());
+    }
+
+    #[test]
+    fn quoting_neutralises_typographic_apostrophes() {
+        assert_eq!(quote("plain"), "'plain'");
+        assert_eq!(quote("O'Brien"), "'O''Brien'");
+        assert_eq!(
+            quote("C:\\Users\\O\u{2019}Brien"),
+            "'C:\\Users\\O'+[char]0x2019+'Brien'"
+        );
+    }
 
     #[test]
     fn first_launch_asks_once_later_changes_reuse_the_helper() {
