@@ -157,7 +157,12 @@ export async function call<T = void>(
       clearTimeout(timer);
     }
   }
-  if (command === "snapshot") return structuredClone(preview) as T;
+  if (command === "snapshot") {
+    // scripts/ai/screenshots.mjs renders the interface with sample data.
+    const sample = (globalThis as { __F4BOX_PREVIEW__?: Snapshot })
+      .__F4BOX_PREVIEW__;
+    return structuredClone(sample ?? preview) as T;
+  }
   if (command === "read_log")
     return "Günlükler masaüstü uygulamasında görüntülenir." as T;
   throw new Error(

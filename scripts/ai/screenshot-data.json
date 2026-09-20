@@ -1,0 +1,303 @@
+{
+  "note": "scripts/ai/screenshots.mjs kullanır. Gerçek bir kurulum değildir: arayüzü tutarlı örnek veriyle göstermek için yazılmıştır.",
+  "packages": [
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "8.4.25",
+      "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+      "license": "PHP-3.01",
+      "source": "https://www.php.net/downloads.php",
+      "installed": true,
+      "running": true,
+      "pid": 12840,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "mysql",
+      "name": "MySQL",
+      "version": "8.4.10",
+      "description": "Veritabanı sunucusu · 8.4 LTS.",
+      "license": "GPL-2.0 with vendor exceptions",
+      "source": "https://dev.mysql.com/downloads/mysql/8.4.html",
+      "installed": true,
+      "running": true,
+      "pid": 9932,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "caddy",
+      "name": "Caddy",
+      "version": "2.11.4",
+      "description": "Modern, kolay yapılandırılabilir web sunucusu.",
+      "license": "Apache-2.0",
+      "source": "https://github.com/caddyserver/caddy",
+      "installed": true,
+      "running": true,
+      "pid": 15204,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "composer",
+      "name": "Composer",
+      "version": "2.10.3",
+      "description": "PHP bağımlılık yönetim aracı.",
+      "license": "MIT",
+      "source": "https://getcomposer.org/",
+      "installed": true,
+      "running": false,
+      "pid": null,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "phpmyadmin",
+      "name": "phpMyAdmin",
+      "version": "5.2.3",
+      "description": "MySQL veritabanlarını tarayıcıdan yönetin.",
+      "license": "GPL-2.0-or-later",
+      "source": "https://www.phpmyadmin.net/downloads/",
+      "installed": true,
+      "running": false,
+      "pid": null,
+      "repairable": true,
+      "issue": null
+    }
+  ],
+  "phpVersions": [
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "7.4.33",
+      "description": "Eski projeler için PHP 7.4.",
+      "license": "PHP-3.01",
+      "source": "https://www.php.net/downloads.php",
+      "installed": true,
+      "running": true,
+      "pid": 16044,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "8.3.33",
+      "description": "PHP 8.3 serisi.",
+      "license": "PHP-3.01",
+      "source": "https://www.php.net/downloads.php",
+      "installed": false,
+      "running": false,
+      "pid": null,
+      "repairable": false,
+      "issue": null
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "8.4.25",
+      "description": "Varsayılan PHP sürümü.",
+      "license": "PHP-3.01",
+      "source": "https://www.php.net/downloads.php",
+      "installed": true,
+      "running": true,
+      "pid": 12840,
+      "repairable": true,
+      "issue": null
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "8.5.10",
+      "description": "PHP 8.5 serisi.",
+      "license": "PHP-3.01",
+      "source": "https://www.php.net/downloads.php",
+      "installed": false,
+      "running": false,
+      "pid": null,
+      "repairable": false,
+      "issue": null
+    }
+  ],
+  "settings": {
+    "webPort": 8088,
+    "mysqlPort": 13306,
+    "phpPort": 19000,
+    "php": {
+      "timezone": "Europe/Istanbul",
+      "memoryMb": 512,
+      "uploadMb": 64,
+      "postMb": 64,
+      "executionSeconds": 120,
+      "inputSeconds": -1,
+      "inputVars": 1000,
+      "displayErrors": true,
+      "logErrors": true,
+      "opcache": true,
+      "opcacheMb": 192,
+      "extensions": [
+        "curl",
+        "fileinfo",
+        "mbstring",
+        "openssl",
+        "pdo_mysql",
+        "mysqli",
+        "sodium",
+        "pdo_sqlite",
+        "sqlite3",
+        "intl",
+        "zip",
+        "gd"
+      ],
+      "extraIni": "serialize_precision=-1"
+    },
+    "phpVersions": {},
+    "mysql": {
+      "bufferPoolMb": 512,
+      "maxConnections": 151,
+      "maxPacketMb": 64,
+      "waitSeconds": 28800,
+      "collation": "utf8mb4_unicode_ci",
+      "sqlMode": "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION",
+      "slowQueryLog": true,
+      "longQuerySeconds": 5
+    },
+    "web": {
+      "hostPattern": "{name}.localhost",
+      "compression": true,
+      "accessLog": true,
+      "readSeconds": 120,
+      "connectSeconds": 3
+    },
+    "phpmyadmin": {
+      "enabled": true,
+      "language": "tr",
+      "rows": 25,
+      "loginSeconds": 1440
+    },
+    "tunnel": { "autoStart": true },
+    "projectsDir": "",
+    "backupsDir": "",
+    "startOnLaunch": true
+  },
+  "projects": [
+    {
+      "id": "6f1b6d1c-2f7c-4f0a-9d3e-2b7c4f0a9d3e",
+      "name": "magaza",
+      "path": "C:\\Users\\dev\\F4Box\\www\\magaza",
+      "host": "magaza.localhost",
+      "phpVersion": "8.4.25",
+      "running": true,
+      "phpPort": 19012,
+      "issue": null,
+      "workers": [
+        {
+          "id": "b7c1d2e3-4f5a-6b7c-8d9e-0f1a2b3c4d5e",
+          "name": "default",
+          "connection": "database",
+          "queue": "default",
+          "processes": 2,
+          "timeout": 60,
+          "sleep": 3,
+          "maxTries": 1,
+          "memory": 128,
+          "backoff": 0,
+          "enabled": true,
+          "autoStart": true
+        },
+        {
+          "id": "c8d2e3f4-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+          "name": "epostalar",
+          "connection": "database",
+          "queue": "mail,notifications",
+          "processes": 1,
+          "timeout": 120,
+          "sleep": 5,
+          "maxTries": 3,
+          "memory": 256,
+          "backoff": 10,
+          "enabled": true,
+          "autoStart": false
+        }
+      ],
+      "schedule": { "enabled": true, "autoStart": true },
+      "workerStates": [
+        {
+          "id": "b7c1d2e3-4f5a-6b7c-8d9e-0f1a2b3c4d5e",
+          "running": 2,
+          "pids": [17304, 17412],
+          "issue": null
+        },
+        {
+          "id": "c8d2e3f4-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+          "running": 0,
+          "pids": [],
+          "issue": null
+        }
+      ],
+      "scheduleRunning": true,
+      "schedulePid": 17688,
+      "scheduleIssue": null
+    },
+    {
+      "id": "8a2c7e4b-1d3f-4a5b-9c8d-7e6f5a4b3c2d",
+      "name": "eski-panel",
+      "path": "D:\\projeler\\eski-panel",
+      "host": "eski-panel.localhost",
+      "phpVersion": "7.4.33",
+      "running": true,
+      "phpPort": 19013,
+      "issue": null,
+      "workers": [],
+      "schedule": { "enabled": false, "autoStart": false },
+      "workerStates": [],
+      "scheduleRunning": false,
+      "schedulePid": null,
+      "scheduleIssue": null
+    }
+  ],
+  "tunnel": {
+    "version": "2026.9.1",
+    "installed": true,
+    "running": true,
+    "pid": 18120,
+    "tokenSaved": true,
+    "autoStart": true,
+    "issue": null
+  },
+  "permissions": {
+    "granted": true,
+    "appliedAt": "2026-09-20 21:15",
+    "applied": [
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
+      "Klasör yetkisi: C:\\Users\\dev\\F4Box"
+    ],
+    "failed": [],
+    "programs": [
+      "C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
+      "C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
+      "C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe"
+    ],
+    "defenderExclusion": false,
+    "pending": []
+  },
+  "logs": [
+    "[21:14:58] mysql çalışıyor · 127.0.0.1:13306",
+    "[21:15:01] php çalışıyor · 127.0.0.1:19000",
+    "[21:15:02] magaza · PHP 8.4.25 çalışıyor · 127.0.0.1:19012",
+    "[21:15:03] eski-panel · PHP 7.4.33 çalışıyor · 127.0.0.1:19013",
+    "[21:15:04] caddy çalışıyor · 127.0.0.1:8088",
+    "[21:15:05] magaza · default kuyruk işçisi 2 süreçle çalışıyor",
+    "[21:15:06] magaza · zamanlayıcı çalışıyor (schedule:work)",
+    "[21:15:09] Cloudflare tüneli çalışıyor. Genel adres Cloudflare panelindeki tünel yapılandırmasına bağlıdır."
+  ],
+  "home": "C:\\Users\\dev\\AppData\\Local\\F4Box",
+  "busy": false,
+  "anyRunning": true,
+  "recoveryIssue": null,
+  "restartRequired": false
+}

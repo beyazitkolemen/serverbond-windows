@@ -18,15 +18,17 @@ Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşen
 
 Kurulu masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsünden GitHub’daki son sürümü denetler. Yeni paket siz onaylamadan kurulmaz. Bu kanalın çalışması için deponun herkese açık olması ve imzalı bir GitHub Release (`latest.json`) yayımlanmış olması gerekir. Ayrıntı: [docs/updates.md](docs/updates.md).
 
-![F4Box genel bakış: gerçek PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
+![F4Box genel bakış: PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
 
 ## Ekran görüntüleri
 
-Görüntüler Windows üzerinde çalışan masaüstü uygulamasından alınmıştır. Yapay veriler veya tasarım maketleri değildir.
+Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi değildir. Proje adları, portlar ve süreç kimlikleri örnek veridir.
 
-| Bileşen yönetimi | Windows ve sistem tepsisi |
+| Bileşen yönetimi | Kuyruk ve zamanlama |
 | --- | --- |
-| ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Windows tercihleri](docs/screenshots/03-windows-ayarlari.png) |
+| ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
+| Cloudflare tüneli | Windows izinleri |
+| ![Cloudflare tüneli ayarları](docs/screenshots/04-tunel.png) | ![Windows izinleri](docs/screenshots/05-windows-izinleri.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
