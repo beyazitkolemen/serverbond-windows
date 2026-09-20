@@ -158,6 +158,10 @@ export interface PostgresSettings {
   port: number;
   autoStart: boolean;
 }
+export interface GithubState {
+  tokenSaved: boolean;
+  login: string | null;
+}
 export interface PostgresState {
   version: string;
   installed: boolean;
@@ -211,6 +215,7 @@ export interface Snapshot {
   tunnel: TunnelState;
   mail: MailState;
   postgres: PostgresState;
+  github: GithubState;
   node: NodeState;
   permissions: PermissionState;
   logs: string[];

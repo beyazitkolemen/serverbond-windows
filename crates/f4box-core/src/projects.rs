@@ -163,7 +163,7 @@ impl Manager {
         self.add_project_inner(name, path)
     }
 
-    fn add_project_inner(&self, name: String, path: PathBuf) -> Result<Project> {
+    pub(crate) fn add_project_inner(&self, name: String, path: PathBuf) -> Result<Project> {
         validate_slug(&name)?;
         let path = dunce::canonicalize(path).context("Proje klasörü bulunamadı.")?;
         if !path.join("public/index.php").is_file() {

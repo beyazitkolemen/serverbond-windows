@@ -444,6 +444,7 @@ export default function App() {
               )}
               home={state.settings.projectsDir || `${state.home}/projects`}
               hostPattern={state.settings.web.hostPattern}
+              github={state.github}
               compact={page === "overview"}
               onOpen={
                 page === "overview" ? () => setPage("projects") : undefined
@@ -472,6 +473,7 @@ export default function App() {
               tunnel={state.tunnel}
               mail={state.mail}
               postgres={state.postgres}
+              github={state.github}
               node={state.node}
               permissions={state.permissions}
               appUpdate={appUpdate}

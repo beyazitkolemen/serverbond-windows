@@ -455,6 +455,38 @@ async fn postgres(
     .await
 }
 #[tauri::command]
+async fn github(
+    state: tauri::State<'_, State>,
+    action: String,
+    token: Option<String>,
+    repository: Option<String>,
+    name: Option<String>,
+    branch: Option<String>,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "save" => state
+            .save_github_token(
+                token
+                    .as_deref()
+                    .ok_or_else(|| anyhow::anyhow!("GitHub jetonu gerekli."))?,
+            )
+            .map(|_| String::new()),
+        "forget" => state.clear_github_token().map(|_| String::new()),
+        "import" => state
+            .import_github_project(
+                repository
+                    .as_deref()
+                    .ok_or_else(|| anyhow::anyhow!("GitHub deposu gerekli."))?,
+                name.unwrap_or_default(),
+                branch.unwrap_or_default(),
+            )
+            .map(|_| String::new()),
+        _ => Err(anyhow::anyhow!("Bilinmeyen GitHub işlemi")),
+    })
+    .await
+}
+#[tauri::command]
 async fn node(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || match action.as_str() {
@@ -699,6 +731,7 @@ fn main() {
             tunnel,
             mail,
             postgres,
+            github,
             node,
             save_tunnel_token,
             save_tunnel_auto_start,

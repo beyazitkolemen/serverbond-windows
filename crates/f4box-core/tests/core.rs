@@ -815,6 +815,47 @@ fn postgres_is_optional_and_rejects_port_collisions() {
 }
 
 #[test]
+fn github_import_rejects_bad_repos_and_existing_folders() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().github;
+    assert!(!state.token_saved && state.login.is_none());
+    assert!(manager.save_github_token("too-short").is_err());
+    assert!(manager
+        .import_github_project(
+            "https://gitlab.com/owner/repo",
+            String::new(),
+            String::new()
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("github.com"));
+    assert!(manager
+        .import_github_project("owner/repo;rm", "demo".into(), String::new())
+        .is_err());
+    let taken = home.path().join("www/taken");
+    fs::create_dir_all(taken.join("public")).unwrap();
+    fs::write(taken.join("public/index.php"), "<?php").unwrap();
+    manager.add_project("taken".into(), taken).unwrap();
+    assert!(manager
+        .import_github_project("owner/taken", "taken".into(), String::new())
+        .unwrap_err()
+        .to_string()
+        .contains("kayıtlı"));
+    let dest = home.path().join("projects/magaza");
+    fs::create_dir_all(&dest).unwrap();
+    assert!(manager
+        .import_github_project("owner/magaza", "magaza".into(), String::new())
+        .unwrap_err()
+        .to_string()
+        .contains("üzerine yazılmadı"));
+    assert_eq!(
+        manager.read_log("github").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+}
+
+#[test]
 fn node_stays_out_of_the_project_terminal_until_it_is_installed() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

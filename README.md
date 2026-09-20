@@ -2,7 +2,7 @@
 
 Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rust + Tauri masaüstü uygulaması. Laravel Forge’un uzak VPS katmanı yoktur; PHP, MySQL, Caddy, kuyruk, zamanlayıcı ve yapılandırılmış sürüm aynı makinede yönetilir. Herd veya Laragon geliştirme kopyası değildir.
 
-PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
+PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, GitHub’dan proje ekleme, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
 ## İndir — v1.1
 
@@ -33,14 +33,18 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png) |
 | Yerel sürüm | İsteğe bağlı PostgreSQL |
 | ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png) |
+| GitHub hesabı | GitHub’dan proje |
+| ![GitHub hesabı](docs/screenshots/12-github.png) | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
 ## Kullanım
 
-Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paketleri hazırlayın; **Ortamı başlat** ile MySQL, PHP FastCGI ve Caddy'yi çalıştırın. **Proje ekle** ekranında mevcut Laravel kök klasörünü seçin veya **Yeni Laravel projesi** sekmesinden Laravel 12 oluşturun.
+Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paketleri hazırlayın; **Ortamı başlat** ile MySQL, PHP FastCGI ve Caddy'yi çalıştırın. **Proje ekle** ekranında mevcut Laravel kök klasörünü seçin, **GitHub** sekmesinden depo klonlayın veya **Yeni Laravel projesi** sekmesinden Laravel 12 oluşturun.
 
 Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa F4Box o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
+
+**Ayarlar → GitHub** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
 
 **Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 

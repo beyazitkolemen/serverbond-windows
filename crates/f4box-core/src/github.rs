@@ -1,0 +1,359 @@
+use crate::{
+    model::{slug_from_folder, validate_slug, Project},
+    process::{command, ManagedChild},
+    release::{git_program, validate_git_branch},
+    secrets, storage, Manager,
+};
+use anyhow::{bail, Context, Result};
+use serde::{Deserialize, Serialize};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+    time::Duration,
+};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GithubRepository {
+    pub owner: String,
+    pub name: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubState {
+    pub token_saved: bool,
+    pub login: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct GithubAccount {
+    login: String,
+}
+
+#[derive(Deserialize)]
+struct GithubUser {
+    login: String,
+}
+
+pub fn parse_github_repository(raw: &str) -> Result<GithubRepository> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        bail!("GitHub deposu gerekli. owner/repo veya https://github.com/owner/repo yazın.");
+    }
+    if trimmed.len() > 256 {
+        bail!("GitHub deposu en fazla 256 karakter olabilir.");
+    }
+    let value = trimmed
+        .trim_end_matches('/')
+        .trim_end_matches(".git")
+        .replace('\\', "/");
+    let path = if let Some(rest) = value.strip_prefix("git@github.com:") {
+        rest.to_string()
+    } else if let Some(rest) = value
+        .strip_prefix("https://github.com/")
+        .or_else(|| value.strip_prefix("http://github.com/"))
+        .or_else(|| value.strip_prefix("github.com/"))
+    {
+        rest.to_string()
+    } else if value.contains("://") || value.contains('@') || value.contains("github.com") {
+        bail!("Yalnızca github.com depoları desteklenir.");
+    } else {
+        value
+    };
+    let mut parts = path.split('/');
+    let owner = parts.next().unwrap_or_default();
+    let name = parts.next().unwrap_or_default();
+    if parts.next().is_some() {
+        bail!("Depo adresi owner/repo olmalı; ek yol kabul edilmez.");
+    }
+    if !valid_github_name(owner) || !valid_github_name(name) {
+        bail!("Geçersiz depo. owner/repo yalnızca harf, rakam, nokta, _ ve - içerebilir.");
+    }
+    Ok(GithubRepository {
+        owner: owner.into(),
+        name: name.into(),
+    })
+}
+
+pub fn validate_github_token(raw: &str) -> Result<String> {
+    let token: String = raw.chars().filter(|c| !c.is_whitespace()).collect();
+    if !(20..=255).contains(&token.len()) {
+        bail!("GitHub jetonu 20–255 karakter olmalı. GitHub → Settings → Developer settings → Personal access tokens.");
+    }
+    let known = token.starts_with("ghp_")
+        || token.starts_with("github_pat_")
+        || token.starts_with("gho_")
+        || token.starts_with("ghu_")
+        || (token.len() == 40 && token.bytes().all(|b| b.is_ascii_hexdigit()));
+    if !known
+        || !token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    {
+        bail!("GitHub kişisel erişim jetonunu olduğu gibi yapıştırın. Özel depolar için repo yetkisi gerekir.");
+    }
+    Ok(token)
+}
+
+fn valid_github_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 100
+        && !value.starts_with('.')
+        && !value.ends_with('.')
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+}
+
+pub fn apply_github_git_auth(cmd: &mut Command, token: Option<&str>) {
+    cmd.env("GIT_TERMINAL_PROMPT", "0")
+        .env("GCM_INTERACTIVE", "never")
+        .env("GIT_CONFIG_NOSYSTEM", "1");
+    if let Some(token) = token {
+        cmd.env("GIT_CONFIG_COUNT", "2")
+            .env("GIT_CONFIG_KEY_0", "credential.helper")
+            .env("GIT_CONFIG_VALUE_0", "")
+            .env("GIT_CONFIG_KEY_1", "http.extraHeader")
+            .env(
+                "GIT_CONFIG_VALUE_1",
+                format!("AUTHORIZATION: bearer {token}"),
+            );
+    }
+}
+
+impl Manager {
+    pub(crate) fn github_state(&self) -> GithubState {
+        GithubState {
+            token_saved: self.github_token_path().is_file(),
+            login: self.github_login(),
+        }
+    }
+
+    pub fn save_github_token(&self, token: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        let token = validate_github_token(token)?;
+        let login = self.github_login_for_token(&token)?;
+        secrets::save(&self.github_token_path(), &token)?;
+        storage::atomic_write(
+            &self.github_account_path(),
+            serde_json::to_vec(&GithubAccount {
+                login: login.clone(),
+            })?,
+        )?;
+        self.log(format!(
+            "GitHub hesabı kaydedildi: {login}. Jeton Windows hesabınıza bağlı olarak şifrelenir."
+        ));
+        Ok(())
+    }
+
+    pub fn clear_github_token(&self) -> Result<()> {
+        let _guard = self.cleanup_gate()?;
+        for path in [self.github_token_path(), self.github_account_path()] {
+            if path.exists() {
+                std::fs::remove_file(&path).context("GitHub jetonu silinemedi.")?;
+            }
+        }
+        self.log("GitHub jetonu silindi. Genel depolar jeton olmadan klonlanabilir.");
+        Ok(())
+    }
+
+    pub fn import_github_project(
+        &self,
+        repository: &str,
+        name: String,
+        branch: String,
+    ) -> Result<Project> {
+        let _guard = self.gate()?;
+        let repo = parse_github_repository(repository)?;
+        validate_git_branch(&branch)?;
+        let name = if name.trim().is_empty() {
+            slug_from_folder(&repo.name)?
+        } else {
+            validate_slug(&name)?;
+            name
+        };
+        if self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .projects
+            .iter()
+            .any(|project| project.name == name)
+        {
+            bail!("Bu proje adı zaten kayıtlı.");
+        }
+        let parent = self.github_clone_parent()?;
+        let destination = parent.join(&name);
+        if destination.exists() {
+            bail!("Hedef klasör zaten var; mevcut dosyaların üzerine yazılmadı.");
+        }
+        std::fs::create_dir_all(&parent).context("Proje çalışma alanı oluşturulamadı.")?;
+        crate::storage::require_space(&parent, 64 * 1024 * 1024)?;
+        self.clone_github_repository(&repo, &destination, &branch)?;
+        if !destination.join("public/index.php").is_file() {
+            bail!(
+                "Depo klonlandı ama public/index.php yok. Laravel kökünü seçin; oluşan klasör korundu."
+            );
+        }
+        let project = self.add_project_inner(name, destination)?;
+        if !branch.is_empty() {
+            self.set_project_release_branch(&project.id, &branch)?;
+        }
+        Ok(project)
+    }
+
+    pub(crate) fn apply_github_git_auth(&self, cmd: &mut Command) {
+        apply_github_git_auth(cmd, self.github_token().ok().as_deref());
+    }
+
+    fn github_token(&self) -> Result<String> {
+        secrets::read(&self.github_token_path())
+    }
+
+    fn github_login(&self) -> Option<String> {
+        let bytes = storage::read_limited(&self.github_account_path(), 4 * 1024).ok()?;
+        serde_json::from_slice::<GithubAccount>(&bytes)
+            .ok()
+            .map(|account| account.login)
+    }
+
+    fn github_token_path(&self) -> PathBuf {
+        self.home.join("config/github-token.dpapi")
+    }
+
+    fn github_account_path(&self) -> PathBuf {
+        self.home.join("config/github-account.json")
+    }
+
+    fn github_clone_parent(&self) -> Result<PathBuf> {
+        let projects_dir = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .projects_dir
+            .clone();
+        if projects_dir.is_empty() {
+            Ok(self.default_projects_dir())
+        } else {
+            Ok(PathBuf::from(projects_dir))
+        }
+    }
+
+    fn github_login_for_token(&self, token: &str) -> Result<String> {
+        let response = crate::install::download_client()?
+            .get("https://api.github.com/user")
+            .header("Authorization", format!("Bearer {token}"))
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .context("GitHub API'ye bağlanılamadı.")?;
+        let status = response.status();
+        let body = response.text().unwrap_or_default();
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            bail!("GitHub jetonu reddedildi. repo yetkili kişisel erişim jetonunu kontrol edin.");
+        }
+        if !status.is_success() {
+            bail!("GitHub hesabı doğrulanamadı (HTTP {}).", status.as_u16());
+        }
+        let user: GithubUser =
+            serde_json::from_str(&body).context("GitHub hesap yanıtı okunamadı.")?;
+        if user.login.is_empty() {
+            bail!("GitHub hesabı doğrulanamadı.");
+        }
+        Ok(user.login)
+    }
+
+    fn clone_github_repository(
+        &self,
+        repo: &GithubRepository,
+        destination: &Path,
+        branch: &str,
+    ) -> Result<()> {
+        let git = git_program()?;
+        let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
+        let mut cmd = command(git);
+        cmd.arg("clone").arg("--no-tags");
+        if !branch.is_empty() {
+            cmd.args(["--branch", branch, "--single-branch"]);
+        }
+        cmd.arg(&url).arg(destination);
+        self.apply_github_git_auth(&mut cmd);
+        self.log(format!(
+            "GitHub deposu klonlanıyor: {}/{}{}",
+            repo.owner,
+            repo.name,
+            if branch.is_empty() {
+                String::new()
+            } else {
+                format!(" ({branch})")
+            }
+        ));
+        let mut child = ManagedChild::spawn(cmd, &self.home.join("logs/github.log"))?;
+        child.wait_timeout(Duration::from_secs(600)).with_context(|| {
+            if self.github_token_path().is_file() {
+                "GitHub deposu klonlanamadı. github günlüğünü kontrol edin."
+            } else {
+                "GitHub deposu klonlanamadı. Özel depolar için Ayarlar → GitHub ekranından jeton kaydedin."
+            }
+        })?;
+        Ok(())
+    }
+
+    fn set_project_release_branch(&self, id: &str, branch: &str) -> Result<()> {
+        let mut config = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let project = config
+            .projects
+            .iter_mut()
+            .find(|project| project.id == id)
+            .context("Proje bulunamadı.")?;
+        project.release.branch = branch.into();
+        self.save_config(&config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_github_repository, validate_github_token};
+
+    #[test]
+    fn parses_owner_repo_and_common_urls() {
+        for raw in [
+            "beyazitkolemen/magaza",
+            "https://github.com/beyazitkolemen/magaza",
+            "https://github.com/beyazitkolemen/magaza.git",
+            "git@github.com:beyazitkolemen/magaza.git",
+            "github.com/beyazitkolemen/magaza/",
+        ] {
+            let repo = parse_github_repository(raw).unwrap();
+            assert_eq!(repo.owner, "beyazitkolemen");
+            assert_eq!(repo.name, "magaza");
+        }
+    }
+
+    #[test]
+    fn rejects_non_github_hosts_and_paths() {
+        for raw in [
+            "",
+            "https://gitlab.com/owner/repo",
+            "owner/repo/extra",
+            "../etc",
+            "owner/repo;rm",
+        ] {
+            assert!(parse_github_repository(raw).is_err(), "{raw}");
+        }
+    }
+
+    #[test]
+    fn accepts_known_personal_access_tokens() {
+        assert!(validate_github_token(&format!("ghp_{}", "a".repeat(36))).is_ok());
+        assert!(validate_github_token(&format!("github_pat_{}", "b".repeat(40))).is_ok());
+        assert!(validate_github_token(&"c".repeat(40)).is_ok());
+        assert!(validate_github_token("too-short").is_err());
+        assert!(validate_github_token("ghp_bad token spaces").is_err());
+    }
+}

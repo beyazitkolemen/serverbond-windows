@@ -269,10 +269,11 @@ fn run_command(cmd: Command, timeout: Duration) -> Result<String> {
     Ok(text)
 }
 
-fn git_command(project: &Project, args: &[String]) -> Result<Command> {
+fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<Command> {
     let git = git_program()?;
     let mut cmd = command(git);
     cmd.args(args).current_dir(&project.path);
+    manager.apply_github_git_auth(&mut cmd);
     Ok(cmd)
 }
 
@@ -446,16 +447,19 @@ impl Manager {
                     checkout
                         .args(["checkout", &project.release.branch])
                         .current_dir(&project.path);
+                    self.apply_github_git_auth(&mut checkout);
                     let checked = run_command(checkout, timeout)?;
-                    let pull =
-                        run_command(git_command(project, &step.args)?, remaining(deadline)?)?;
+                    let pull = run_command(
+                        git_command(self, project, &step.args)?,
+                        remaining(deadline)?,
+                    )?;
                     return Ok([checked, pull]
                         .into_iter()
                         .filter(|part| !part.is_empty())
                         .collect::<Vec<_>>()
                         .join("\n"));
                 }
-                run_command(git_command(project, &step.args)?, timeout)
+                run_command(git_command(self, project, &step.args)?, timeout)
             }
             "composer" => {
                 let composer = self.executable("composer")?;
@@ -480,7 +484,7 @@ impl Manager {
     }
 
     fn git_output(&self, project: &Project, args: &[String]) -> Result<String> {
-        run_command(git_command(project, args)?, Duration::from_secs(8))
+        run_command(git_command(self, project, args)?, Duration::from_secs(8))
     }
 
     fn write_release_record(&self, id: &str, record: &ReleaseRecord) -> Result<()> {

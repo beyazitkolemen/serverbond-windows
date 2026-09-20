@@ -126,6 +126,10 @@ const preview: Snapshot = {
     passwordSaved: false,
     issue: null,
   },
+  github: {
+    tokenSaved: false,
+    login: null,
+  },
   node: {
     version: toolVersion("node"),
     installed: false,

@@ -42,6 +42,21 @@ const shots = [
     height: 1560,
   },
   {
+    file: "12-github.png",
+    nav: "Ayarlar",
+    tab: "GitHub",
+    height: 1180,
+  },
+  {
+    file: "13-proje-github.png",
+    nav: "Projeler",
+    actions: [
+      [".heading-actions .button.primary", "Proje ekle"],
+      [".tabs button", "GitHub"],
+    ],
+    height: 1100,
+  },
+  {
     file: "08-web-https.png",
     nav: "Ayarlar",
     tab: "Web sunucusu",
@@ -87,6 +102,7 @@ addEventListener("DOMContentLoaded", () => {
       [".nav-item", shot.nav],
       shot.tab ? [".settings-tabs button", shot.tab] : null,
       shot.projectTab ? [".project-detail-tabs button", shot.projectTab] : null,
+      ...(Array.isArray(shot.actions) ? shot.actions : []),
       ...(Array.isArray(shot.expand)
         ? shot.expand.map((selector) => [selector, null])
         : shot.expand

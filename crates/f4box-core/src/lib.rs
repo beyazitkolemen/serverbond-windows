@@ -1,3 +1,4 @@
+mod github;
 pub mod https;
 pub mod install;
 mod jobs;
@@ -321,6 +322,7 @@ impl Manager {
         let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
         let mail = self.mail_state_with(&processes, &config.settings.mail);
         let postgres = self.postgres_state_with(&processes, &config.settings.postgres);
+        let github = self.github_state();
         let node = self.node_state();
         Ok(Snapshot {
             packages,
@@ -412,6 +414,7 @@ impl Manager {
             tunnel,
             mail,
             postgres,
+            github,
             node,
             permissions: self.permission_state(),
             logs: self

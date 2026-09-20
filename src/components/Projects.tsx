@@ -1,13 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { Folder, Plus, X, FolderOpen, ExternalLink } from "lucide-react";
 import { call, chooseFolder, chooseSqlFile } from "../api";
-import type { DiscoveredProject, Project, Run, PackageStatus } from "../types";
+import type {
+  DiscoveredProject,
+  GithubState,
+  Project,
+  Run,
+  PackageStatus,
+} from "../types";
 import {
   databaseName,
   phpSupportsLaravel12,
   projectAddress,
   projectUrl,
 } from "../version";
+
+function githubSlug(raw: string): string {
+  const cleaned = raw
+    .trim()
+    .replace(/\.git$/i, "")
+    .replace(/\/+$/, "")
+    .replace(/\\/g, "/");
+  const path = cleaned
+    .replace(/^git@github\.com:/i, "")
+    .replace(/^https?:\/\/github\.com\//i, "")
+    .replace(/^github\.com\//i, "");
+  const repo =
+    path.split("/").filter(Boolean)[1] ?? path.split("/").pop() ?? "";
+  return repo
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
 import ProjectDetail, { CompactProjectRow } from "./ProjectDetail";
 
 export default function Projects({
@@ -26,6 +51,7 @@ export default function Projects({
   phpVersions,
   anyRunning,
   hostPattern,
+  github,
   compact = false,
   onOpen,
 }: {
@@ -44,6 +70,7 @@ export default function Projects({
   phpVersions: PackageStatus[];
   anyRunning: boolean;
   hostPattern: string;
+  github: GithubState;
   compact?: boolean;
   onOpen?: () => void;
 }) {
@@ -195,8 +222,9 @@ export default function Projects({
           <div>
             <h3>Çalışma alanında proje yok</h3>
             <p>
-              Mevcut bir Laravel klasörü ekleyin veya yeni proje oluşturun. PHP
-              sürümü, kuyruk ve zamanlayıcı proje sayfasından yönetilir.
+              Mevcut bir Laravel klasörü ekleyin, GitHub’dan klonlayın veya yeni
+              proje oluşturun. PHP sürümü, kuyruk ve zamanlayıcı proje
+              sayfasından yönetilir.
             </p>
             <div className="empty-actions">
               <button
@@ -237,6 +265,7 @@ export default function Projects({
           serverError={serverError}
           phpVersion={phpVersion}
           hostPattern={hostPattern}
+          github={github}
           close={() => setModal(false)}
         />
       ) : null}
@@ -304,6 +333,7 @@ function ProjectDialog({
   serverError,
   phpVersion,
   hostPattern,
+  github,
 }: {
   home: string;
   busy: boolean;
@@ -312,13 +342,20 @@ function ProjectDialog({
   serverError: string;
   phpVersion: string;
   hostPattern: string;
+  github: GithubState;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [create, setCreate] = useState(false);
+  const [mode, setMode] = useState<"existing" | "create" | "github">(
+    "existing",
+  );
   const [name, setName] = useState("");
   const [path, setPath] = useState("");
+  const [repository, setRepository] = useState("");
+  const [branch, setBranch] = useState("");
   const [error, setError] = useState("");
   const canCreate = phpSupportsLaravel12(phpVersion);
+  const create = mode === "create";
+  const fromGithub = mode === "github";
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
@@ -330,17 +367,31 @@ function ProjectDialog({
       );
       return;
     }
-    if (!path.trim()) {
+    if (fromGithub && !repository.trim()) {
+      setError("GitHub deposunu owner/repo veya URL olarak yazın.");
+      return;
+    }
+    if (!fromGithub && !path.trim()) {
       setError("Bir klasör seçin.");
       return;
     }
     setError("");
     if (
       await run(
-        create
-          ? "Laravel oluşturuluyor… Composer günlüğünden takip edebilirsiniz."
-          : "Proje ekleniyor…",
-        () => call("add_project", { name, path: path.trim(), create }),
+        fromGithub
+          ? "GitHub deposu klonlanıyor…"
+          : create
+            ? "Laravel oluşturuluyor… Composer günlüğünden takip edebilirsiniz."
+            : "Proje ekleniyor…",
+        () =>
+          fromGithub
+            ? call("github", {
+                action: "import",
+                repository: repository.trim(),
+                name,
+                branch: branch.trim(),
+              })
+            : call("add_project", { name, path: path.trim(), create }),
       )
     )
       close();
@@ -368,24 +419,34 @@ function ProjectDialog({
       </div>
       <div className="tabs" role="group" aria-label="Proje türü">
         <button
-          className={!create ? "active" : ""}
+          className={mode === "existing" ? "active" : ""}
           disabled={busy}
           onClick={() => {
-            setCreate(false);
+            setMode("existing");
             setPath("");
           }}
         >
           Mevcut proje
         </button>
         <button
-          className={create ? "active" : ""}
+          className={mode === "create" ? "active" : ""}
           disabled={busy}
           onClick={() => {
-            setCreate(true);
+            setMode("create");
             setPath(`${home.replace(/^\\\\\?\\/, "")}`);
           }}
         >
           Yeni Laravel projesi
+        </button>
+        <button
+          className={mode === "github" ? "active" : ""}
+          disabled={busy}
+          onClick={() => {
+            setMode("github");
+            setPath("");
+          }}
+        >
+          GitHub
         </button>
       </div>
       <form onSubmit={(e) => void submit(e)}>
@@ -405,39 +466,84 @@ function ProjectDialog({
         <p className="field-hint">
           {projectAddress(hostPattern, name)} adresinden erişilir.
         </p>
-        <label htmlFor="project-path">
-          {create ? "Oluşturulacağı üst klasör" : "Laravel proje klasörü"}
-        </label>
-        <div className="input-with-button">
-          <input
-            id="project-path"
-            placeholder={create ? "C:\\Projeler" : "C:\\Projeler\\ornek-proje"}
-            value={path}
-            disabled={busy}
-            onChange={(e) => setPath(e.target.value)}
-            required
-          />
-          <button
-            type="button"
-            className="button secondary"
-            disabled={busy}
-            aria-label="Klasör seç"
-            onClick={async () => {
-              try {
-                const folder = await chooseFolder();
-                if (folder) setPath(folder);
-              } catch (e) {
-                setError(String(e));
-              }
-            }}
-          >
-            <FolderOpen size={19} />
-          </button>
-        </div>
+        {fromGithub ? (
+          <>
+            <label>
+              GitHub deposu
+              <input
+                name="repository"
+                placeholder="owner/repo veya https://github.com/owner/repo"
+                value={repository}
+                disabled={busy}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRepository(value);
+                  const slug = githubSlug(value);
+                  if (slug && (!name || name === githubSlug(repository))) {
+                    setName(slug);
+                  }
+                }}
+                required
+              />
+            </label>
+            <label>
+              Dal (isteğe bağlı)
+              <input
+                name="branch"
+                placeholder="varsayılan dal"
+                value={branch}
+                disabled={busy}
+                onChange={(e) => setBranch(e.target.value)}
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <label htmlFor="project-path">
+              {create ? "Oluşturulacağı üst klasör" : "Laravel proje klasörü"}
+            </label>
+            <div className="input-with-button">
+              <input
+                id="project-path"
+                placeholder={
+                  create ? "C:\\Projeler" : "C:\\Projeler\\ornek-proje"
+                }
+                value={path}
+                disabled={busy}
+                onChange={(e) => setPath(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy}
+                aria-label="Klasör seç"
+                onClick={async () => {
+                  try {
+                    const folder = await chooseFolder();
+                    if (folder) setPath(folder);
+                  } catch (e) {
+                    setError(String(e));
+                  }
+                }}
+              >
+                <FolderOpen size={19} />
+              </button>
+            </div>
+          </>
+        )}
         <p className="field-hint">
-          {create
-            ? `Üst klasörde ornek-proje/ oluşur. Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
-            : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}{" "}
+          {fromGithub
+            ? `Depo ${home.replace(/^\\\\\?\\/, "")}\\${name || "ornek-proje"} klasörüne klonlanır. ${
+                github.tokenSaved
+                  ? github.login
+                    ? `Kayıtlı hesap: ${github.login}.`
+                    : "GitHub jetonu kayıtlı."
+                  : "Özel depolar için Ayarlar → GitHub ekranından jeton kaydedin."
+              }`
+            : create
+              ? `Üst klasörde ornek-proje/ oluşur. Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
+              : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}{" "}
           MySQL çalışıyorsa {databaseName(name || "ornek-proje")} veritabanı
           oluşturulur; proje .env dosyası yazılmaz.
         </p>
@@ -468,9 +574,11 @@ function ProjectDialog({
           >
             {busy
               ? "İşlem sürüyor…"
-              : create
-                ? "Laravel oluştur"
-                : "Projeyi ekle"}
+              : fromGithub
+                ? "GitHub'dan ekle"
+                : create
+                  ? "Laravel oluştur"
+                  : "Projeyi ekle"}
           </button>
         </div>
       </form>

@@ -11,6 +11,7 @@ import type {
   MailState,
   NodeState,
   PostgresState,
+  GithubState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
@@ -18,6 +19,7 @@ import UpdateSettings from "./UpdateSettings";
 import TunnelSettings from "./TunnelSettings";
 import MailActions from "./MailActions";
 import PostgresSettings from "./PostgresSettings";
+import GithubSettings from "./GithubSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
@@ -30,6 +32,7 @@ const sections = [
   "phpMyAdmin",
   "E-posta",
   "PostgreSQL",
+  "GitHub",
   "Tünel",
   "Yedek ve aktarım",
   "Sistem",
@@ -42,7 +45,7 @@ const sectionGroups = [
   },
   {
     label: "Hizmetler",
-    items: ["phpMyAdmin", "E-posta", "PostgreSQL", "Tünel"],
+    items: ["phpMyAdmin", "E-posta", "PostgreSQL", "GitHub", "Tünel"],
   },
   {
     label: "Yönetim",
@@ -142,6 +145,7 @@ export default function Settings({
   tunnel,
   mail,
   postgres,
+  github,
   node,
   permissions,
   appUpdate,
@@ -159,6 +163,7 @@ export default function Settings({
   tunnel: TunnelState;
   mail: MailState;
   postgres: PostgresState;
+  github: GithubState;
   node: NodeState;
   permissions: PermissionState;
   appUpdate: UpdateInfo | null;
@@ -941,7 +946,7 @@ export default function Settings({
             </div>
           </section>
         )}
-        {!["Sistem", "Güncellemeler", "Tünel"].includes(section) && (
+        {!["Sistem", "Güncellemeler", "Tünel", "GitHub"].includes(section) && (
           <div className="settings-save">
             <span>
               {dirty
@@ -976,6 +981,9 @@ export default function Settings({
       )}
       {section === "PostgreSQL" && (
         <PostgresSettings postgres={postgres} busy={busy} run={run} />
+      )}
+      {section === "GitHub" && (
+        <GithubSettings github={github} busy={busy} run={run} />
       )}
       {section === "Tünel" && (
         <TunnelSettings tunnel={tunnel} busy={busy} run={run} />

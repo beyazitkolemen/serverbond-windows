@@ -40,4 +40,4 @@ bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 
 - Mevcut Laravel `.env` otomatik değiştirilmez
 - Herd/Laragon/Docker kurulumlarına dokunulmaz
-- DPAPI parolası Windows kullanıcısına bağlıdır; taşıma SQL yedeği iledir
+- DPAPI parolası ve GitHub jetonu Windows kullanıcısına bağlıdır; taşıma SQL yedeği iledir

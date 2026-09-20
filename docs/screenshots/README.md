@@ -46,6 +46,14 @@ MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: port, otoma
 
 ![İsteğe bağlı PostgreSQL](11-postgresql.png)
 
+## GitHub hesabı ve proje ekleme
+
+Özel depolar için jeton Ayarlar → GitHub’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
+
+![GitHub hesabı](12-github.png)
+
+![GitHub’dan proje ekle](13-proje-github.png)
+
 ## Cloudflare tüneli
 
 Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte otomatik başlatma tercihi.

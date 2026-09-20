@@ -319,6 +319,7 @@ pub struct Snapshot {
     pub tunnel: crate::tunnel::TunnelState,
     pub mail: crate::mail::MailState,
     pub postgres: crate::postgres::PostgresState,
+    pub github: crate::github::GithubState,
     pub node: crate::node::NodeState,
     pub permissions: crate::permissions::PermissionState,
     pub logs: Vec<String>,

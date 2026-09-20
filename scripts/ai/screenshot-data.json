@@ -312,6 +312,10 @@
     "passwordSaved": true,
     "issue": null
   },
+  "github": {
+    "tokenSaved": true,
+    "login": "anarschi"
+  },
   "node": {
     "version": "24.21.0",
     "installed": true,
