@@ -34,6 +34,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
     let restart = item("restart", "Tümünü yeniden başlat")?;
     let pma = item("pma", "phpMyAdmin'i aç")?;
     let mail = item("mail", "Gelen kutusunu aç")?;
+    let services_page = item("services", "Hizmetler")?;
     let settings = item("settings", "Ayarlar / Özellikler")?;
     let update = item("update", "Güncellemeleri denetle")?;
     let logs = item("logs", "Günlükleri göster")?;
@@ -83,6 +84,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
             &separator()?,
             &pma,
             &mail,
+            &services_page,
             &settings,
             &update,
             &logs,
@@ -228,6 +230,7 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
 fn dispatch(app: &AppHandle, id: &str) {
     match id {
         "open" => desktop::show(app, None),
+        "services" => desktop::show(app, Some("services")),
         "settings" => desktop::show(app, Some("settings")),
         "update" => {
             desktop::show(app, Some("settings"));

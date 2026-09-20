@@ -198,7 +198,7 @@ export default function Packages({
                         disabled={busy || !databaseReady || !pmaEnabled}
                         title={
                           !pmaEnabled
-                            ? "phpMyAdmin Ayarlar ekranında kapalı"
+                            ? "phpMyAdmin Hizmetler ekranında kapalı"
                             : databaseReady
                               ? "phpMyAdmin'i tarayıcıda aç"
                               : "Önce PHP, MySQL ve web sunucusunu başlatın"

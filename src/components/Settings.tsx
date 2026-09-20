@@ -7,19 +7,11 @@ import type {
   PackageStatus,
   PermissionState,
   Run,
-  TunnelState,
-  MailState,
   NodeState,
-  PostgresState,
-  GithubState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
-import TunnelSettings from "./TunnelSettings";
-import MailActions from "./MailActions";
-import PostgresSettings from "./PostgresSettings";
-import GithubSettings from "./GithubSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
@@ -29,11 +21,6 @@ const sections = [
   "PHP",
   "MySQL",
   "Web sunucusu",
-  "phpMyAdmin",
-  "E-posta",
-  "PostgreSQL",
-  "GitHub",
-  "Tünel",
   "Yedek ve aktarım",
   "Sistem",
   "Güncellemeler",
@@ -42,10 +29,6 @@ const sectionGroups = [
   {
     label: "Ortam",
     items: ["Genel", "PHP", "MySQL", "Web sunucusu"],
-  },
-  {
-    label: "Hizmetler",
-    items: ["phpMyAdmin", "E-posta", "PostgreSQL", "GitHub", "Tünel"],
   },
   {
     label: "Yönetim",
@@ -142,10 +125,6 @@ export default function Settings({
   busy,
   running,
   run,
-  tunnel,
-  mail,
-  postgres,
-  github,
   node,
   permissions,
   appUpdate,
@@ -160,10 +139,6 @@ export default function Settings({
   busy: boolean;
   running: boolean;
   run: Run;
-  tunnel: TunnelState;
-  mail: MailState;
-  postgres: PostgresState;
-  github: GithubState;
   node: NodeState;
   permissions: PermissionState;
   appUpdate: UpdateInfo | null;
@@ -664,166 +639,6 @@ export default function Settings({
               </p>
             </section>
           )}
-          {section === "phpMyAdmin" && (
-            <section className="settings-section">
-              <h2>phpMyAdmin</h2>
-              <Toggle
-                label="phpMyAdmin web erişimi etkin"
-                value={values.phpmyadmin.enabled}
-                onChange={(v) =>
-                  change("phpmyadmin", { ...values.phpmyadmin, enabled: v })
-                }
-              />
-              <div className="settings-grid">
-                <label>
-                  Varsayılan dil
-                  <select
-                    value={values.phpmyadmin.language}
-                    onChange={(e) =>
-                      change("phpmyadmin", {
-                        ...values.phpmyadmin,
-                        language: e.target.value,
-                      })
-                    }
-                  >
-                    {Object.entries({
-                      tr: "Türkçe",
-                      en: "English",
-                      de: "Deutsch",
-                      fr: "Français",
-                      es: "Español",
-                      it: "Italiano",
-                      pt: "Português",
-                      ru: "Русский",
-                      ar: "العربية",
-                      ja: "日本語",
-                      zh_CN: "简体中文",
-                    }).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <NumberField
-                  label="Sayfa başına satır"
-                  value={values.phpmyadmin.rows}
-                  min={10}
-                  max={1000}
-                  onChange={(v) =>
-                    change("phpmyadmin", { ...values.phpmyadmin, rows: v })
-                  }
-                />
-                <NumberField
-                  label="Oturum süresi (sn)"
-                  value={values.phpmyadmin.loginSeconds}
-                  min={60}
-                  max={86400}
-                  onChange={(v) =>
-                    change("phpmyadmin", {
-                      ...values.phpmyadmin,
-                      loginSeconds: v,
-                    })
-                  }
-                />
-              </div>
-              <p className="section-note">
-                Adres:{" "}
-                {values.web.https
-                  ? `https://phpmyadmin.f4box.localhost:${values.web.httpsPort}`
-                  : `http://phpmyadmin.f4box.localhost:${values.webPort}`}
-                . Dosyalar bileşen kuruluysa sunulur. Yükleme limitleri
-                varsayılan PHP sürümünün profilinden alınır.
-              </p>
-            </section>
-          )}
-          {section === "E-posta" && (
-            <section className="settings-section">
-              <h2>Yerel e-posta yakalama</h2>
-              <p className="section-note">
-                Mailpit, projelerinizin gönderdiği e-postaları yerel bir SMTP
-                sunucusunda tutar ve tarayıcıda gösterir. Hiçbir ileti gerçek
-                alıcıya iletilmez.
-              </p>
-              <div className="settings-grid">
-                <NumberField
-                  label="SMTP portu"
-                  value={values.mail.smtpPort}
-                  min={1}
-                  max={65535}
-                  onChange={(v) =>
-                    change("mail", { ...values.mail, smtpPort: v })
-                  }
-                />
-                <NumberField
-                  label="Arayüz portu"
-                  value={values.mail.webPort}
-                  min={1}
-                  max={65535}
-                  onChange={(v) =>
-                    change("mail", { ...values.mail, webPort: v })
-                  }
-                />
-                <NumberField
-                  label="Saklanacak e-posta (0: sınırsız)"
-                  value={values.mail.maxMessages}
-                  min={0}
-                  max={100000}
-                  onChange={(v) =>
-                    change("mail", { ...values.mail, maxMessages: v })
-                  }
-                />
-              </div>
-              <Toggle
-                label="Ortam başlatıldığında Mailpit'i de başlat"
-                value={values.mail.autoStart}
-                onChange={(v) =>
-                  change("mail", { ...values.mail, autoStart: v })
-                }
-              />
-              <Toggle
-                label="PHP mail() çağrılarını Mailpit'e yönlendir"
-                value={values.mail.relayPhpMail}
-                onChange={(v) =>
-                  change("mail", { ...values.mail, relayPhpMail: v })
-                }
-              />
-              <p className="section-note">
-                Yönlendirme php.ini içindeki SMTP ayarlarını üretir; bu yüzden
-                aynı anahtarlar PHP sekmesindeki ek ayarlar alanına yazılamaz.
-                Laravel kendi <code>.env</code> dosyasını okur, bu anahtarları
-                kullanmaz. Değişiklik PHP yeniden başladığında geçerli olur.
-              </p>
-            </section>
-          )}
-          {section === "PostgreSQL" && (
-            <section className="settings-section">
-              <h2>İsteğe bağlı PostgreSQL</h2>
-              <p className="section-note">
-                MySQL varsayılan kalır. İsterseniz aynı Windows makinesinde
-                PostgreSQL 17 de kurulur; ortamı bloke etmez. <code>.env</code>{" "}
-                yazılmaz.
-              </p>
-              <div className="settings-grid">
-                <NumberField
-                  label="Port"
-                  value={values.postgres.port}
-                  min={1}
-                  max={65535}
-                  onChange={(v) =>
-                    change("postgres", { ...values.postgres, port: v })
-                  }
-                />
-              </div>
-              <Toggle
-                label="Ortam başlatıldığında PostgreSQL'i de başlat"
-                value={values.postgres.autoStart}
-                onChange={(v) =>
-                  change("postgres", { ...values.postgres, autoStart: v })
-                }
-              />
-            </section>
-          )}
           {section === "Yedek ve aktarım" && (
             <section className="settings-section">
               <h2>Ayarları aktar</h2>
@@ -946,7 +761,7 @@ export default function Settings({
             </div>
           </section>
         )}
-        {!["Sistem", "Güncellemeler", "Tünel", "GitHub"].includes(section) && (
+        {!["Sistem", "Güncellemeler"].includes(section) && (
           <div className="settings-save">
             <span>
               {dirty
@@ -976,18 +791,6 @@ export default function Settings({
           </div>
         )}
       </form>
-      {section === "E-posta" && (
-        <MailActions mail={mail} busy={busy} run={run} />
-      )}
-      {section === "PostgreSQL" && (
-        <PostgresSettings postgres={postgres} busy={busy} run={run} />
-      )}
-      {section === "GitHub" && (
-        <GithubSettings github={github} busy={busy} run={run} />
-      )}
-      {section === "Tünel" && (
-        <TunnelSettings tunnel={tunnel} busy={busy} run={run} />
-      )}
       {section === "Sistem" && (
         <>
           <NodeSettings node={node} busy={busy} run={run} />

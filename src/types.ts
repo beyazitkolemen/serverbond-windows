@@ -238,7 +238,8 @@ export interface Requirement {
   detail: string;
   helpUrl: string | null;
 }
-export type Page = "overview" | "packages" | "projects" | "logs" | "settings";
+export type Page =
+  "overview" | "packages" | "projects" | "logs" | "services" | "settings";
 export type Run = (
   label: string,
   action: () => Promise<unknown>,

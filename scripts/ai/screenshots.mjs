@@ -26,8 +26,8 @@ const shots = [
     expand: [".project-worker-more summary"],
     height: 1400,
   },
-  { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1360 },
-  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1600 },
+  { file: "04-eposta.png", nav: "Hizmetler", tab: "E-posta", height: 1360 },
+  { file: "05-tunel.png", nav: "Hizmetler", tab: "Tünel", height: 1600 },
   {
     file: "06-sistem.png",
     nav: "Ayarlar",
@@ -37,13 +37,13 @@ const shots = [
   { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1560 },
   {
     file: "11-postgresql.png",
-    nav: "Ayarlar",
+    nav: "Hizmetler",
     tab: "PostgreSQL",
     height: 1560,
   },
   {
     file: "12-github.png",
-    nav: "Ayarlar",
+    nav: "Hizmetler",
     tab: "GitHub",
     height: 1180,
   },

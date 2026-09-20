@@ -156,13 +156,13 @@ impl Manager {
 
     pub(crate) fn start_tunnel_inner(&self) -> Result<()> {
         let token = secrets::read(&self.tunnel_token_path())
-            .context("Tünel jetonu okunamadı. Ayarlar → Tünel ekranından jetonu kaydedin.")?;
+            .context("Tünel jetonu okunamadı. Hizmetler → Tünel ekranından jetonu kaydedin.")?;
         let token = normalize_token(&token)?;
         self.ensure_cloudflared()
-            .context("Cloudflared kurulamadı. Ayarlar → Tünel ekranından yeniden deneyin.")?;
+            .context("Cloudflared kurulamadı. Hizmetler → Tünel ekranından yeniden deneyin.")?;
         let executable = self
             .tool_executable(ID)
-            .context("Cloudflared kurulu değil. Ayarlar → Tünel ekranından kurun.")?;
+            .context("Cloudflared kurulu değil. Hizmetler → Tünel ekranından kurun.")?;
         let mut cmd = command(executable);
         // The token stays in the environment block; command lines are visible to
         // every process on the machine.

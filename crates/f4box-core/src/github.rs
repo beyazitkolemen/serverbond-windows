@@ -294,7 +294,7 @@ impl Manager {
             if self.github_token_path().is_file() {
                 "GitHub deposu klonlanamadı. github günlüğünü kontrol edin."
             } else {
-                "GitHub deposu klonlanamadı. Özel depolar için Ayarlar → GitHub ekranından jeton kaydedin."
+                "GitHub deposu klonlanamadı. Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
             }
         })?;
         Ok(())

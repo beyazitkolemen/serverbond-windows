@@ -21,7 +21,7 @@ Komutlar `src-tauri/src/main.rs` içinde. Arayüz `src/api.ts` → `call()`. Oku
 
 - Ana pencere başlangıçta gizli; tepsi yoksa veya kurtarma varsa gösterilir
 - X: `close_to_tray` açıksa gizle, değilse servisleri durdurup çık
-- Menü `Çıkış` her zaman tam kapanış
+- Menü `Hizmetler` isteğe bağlı hizmetler sayfasını açar; `Çıkış` her zaman tam kapanış
 - `--autostart` + `start_minimized` + tepsi + sağlıklı config → gizli açılış
 - Tek örnek: `tauri-plugin-single-instance`
 

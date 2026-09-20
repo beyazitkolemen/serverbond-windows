@@ -18,6 +18,7 @@ import Packages from "./components/Packages";
 import Projects from "./components/Projects";
 import Logs, { LogPreview } from "./components/Logs";
 import Settings from "./components/Settings";
+import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
@@ -29,6 +30,7 @@ const headings: Record<Page, [string, string]> = {
   packages: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
   projects: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
   logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
+  services: ["Hizmetler", "phpMyAdmin, e-posta, PostgreSQL, GitHub ve tünel."],
   settings: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
 };
 
@@ -201,6 +203,7 @@ export default function App() {
                     packages: "Bileşenler",
                     projects: "Projeler",
                     logs: "Günlükler",
+                    services: "Hizmetler",
                     settings: "Ayarlar",
                   }[page]
                 }
@@ -455,6 +458,19 @@ export default function App() {
             <LogPreview logs={state.logs} onOpen={() => setPage("logs")} />
           ) : null}
           {page === "logs" ? <Logs /> : null}
+          {page === "services" ? (
+            <Services
+              key={JSON.stringify(state.settings)}
+              settings={state.settings}
+              busy={disabled}
+              running={running}
+              run={run}
+              tunnel={state.tunnel}
+              mail={state.mail}
+              postgres={state.postgres}
+              github={state.github}
+            />
+          ) : null}
           {page === "settings" ? (
             <Settings
               key={JSON.stringify(state.settings)}
@@ -470,10 +486,6 @@ export default function App() {
               busy={disabled}
               running={running}
               run={run}
-              tunnel={state.tunnel}
-              mail={state.mail}
-              postgres={state.postgres}
-              github={state.github}
               node={state.node}
               permissions={state.permissions}
               appUpdate={appUpdate}

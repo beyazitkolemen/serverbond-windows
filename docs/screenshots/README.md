@@ -16,6 +16,10 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ![Bileşenler](02-bilesenler.png)
 
+## Hizmetler
+
+phpMyAdmin, Mailpit, PostgreSQL, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır.
+
 ## Projeler, kuyruk ve zamanlama
 
 Proje listesi ve sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
@@ -54,7 +58,7 @@ MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: port, otoma
 
 ## GitHub hesabı ve proje ekleme
 
-Özel depolar için jeton Ayarlar → GitHub’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
+Özel depolar için jeton Hizmetler → GitHub’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
 
 ![GitHub hesabı](12-github.png)
 
@@ -74,7 +78,7 @@ Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte
 
 ## PHP ayarları
 
-Ortam / Hizmetler / Yönetim gruplu sekmeler; PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi.
+Ortam / Yönetim gruplu sekmeler; PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi. İsteğe bağlı hizmetler sol kenar çubuğundaki Hizmetler sayfasındadır.
 
 ![PHP ayarları](07-php-ayarlari.png)
 

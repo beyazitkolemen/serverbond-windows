@@ -58,7 +58,7 @@ impl Manager {
     pub fn install_postgres(&self) -> Result<()> {
         let _guard = self.gate()?;
         self.install_tool(ID)?;
-        self.log("PostgreSQL kuruldu. Ayarlar → PostgreSQL ekranından başlatın.");
+        self.log("PostgreSQL kuruldu. Hizmetler → PostgreSQL ekranından başlatın.");
         Ok(())
     }
 
@@ -232,7 +232,7 @@ impl Manager {
     fn postgres_bin(&self) -> Result<PathBuf> {
         let executable = self
             .tool_executable(ID)
-            .context("PostgreSQL kurulu değil. Ayarlar → PostgreSQL ekranından kurun.")?;
+            .context("PostgreSQL kurulu değil. Hizmetler → PostgreSQL ekranından kurun.")?;
         Ok(executable
             .parent()
             .expect("postgres.exe lives in bin")

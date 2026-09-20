@@ -539,7 +539,7 @@ function ProjectDialog({
                   ? github.login
                     ? `Kayıtlı hesap: ${github.login}.`
                     : "GitHub jetonu kayıtlı."
-                  : "Özel depolar için Ayarlar → GitHub ekranından jeton kaydedin."
+                  : "Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
               }`
             : create
               ? `Üst klasörde ornek-proje/ oluşur. Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`

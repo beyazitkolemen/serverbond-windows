@@ -38,7 +38,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 - MySQL çalışırken ekleme/oluşturma/tarama `CREATE DATABASE IF NOT EXISTS` yapar (tire → `_`). `.env` yazılmaz
 - `discover_projects` `projects_dir` veya varsayılan `projects/` (+ varsa `www/`) altında bir ve iki seviye Laravel köklerini listeler (`musteri/magaza`). `vendor`, `node_modules`, `storage` ve benzeri klasörler atlanır. Çakışan klasör adı `musteri-magaza` olur. `import_projects` tek `apply_project_config` ile ekler
 - SQL geri yükleme: `.sql`, 512 MB, Unicode için geçici ASCII kopya, `mysql --one-database`
-- GitHub: jeton `config/github-token.dpapi` (DPAPI), hesap `config/github-account.json`. Ayarlar → GitHub bir kez kaydeder. `import_github_project` `git clone https://github.com/owner/repo.git` ile `projects_dir` altına yazar; özel depo için jeton `GIT_CONFIG_*` ortamında (`http.extraHeader`), komut satırına yazılmaz. `.env` yazılmaz. Sürüm `git pull` aynı jetonu kullanır.
+- GitHub: jeton `config/github-token.dpapi` (DPAPI), hesap `config/github-account.json`. Hizmetler → GitHub bir kez kaydeder. `import_github_project` `git clone https://github.com/owner/repo.git` ile `projects_dir` altına yazar; özel depo için jeton `GIT_CONFIG_*` ortamında (`http.extraHeader`), komut satırına yazılmaz. `.env` yazılmaz. Sürüm `git pull` aynı jetonu kullanır.
 - `.env` editörü: `read_project_env` / `save_project_env` yalnızca proje kökü `.env` (256 KB, UTF-8, NUL yok). Otomatik yazılmaz; kullanıcı Kaydet der. İçerik günlüğe yazılmaz. `.env.example` taslak olarak okunabilir.
 - Terminal, projenin PHP’sini `PATH`/`php`/`composer` sarmalayıcısıyla verir; `node` kuruluysa dizini de `PATH`’e girer (`node.rs`, servis değil)
 

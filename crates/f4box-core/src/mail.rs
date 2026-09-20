@@ -71,7 +71,7 @@ impl Manager {
             .clone();
         let executable = self
             .tool_executable(ID)
-            .context("Mailpit kurulu değil. Ayarlar → E-posta ekranından kurun.")?;
+            .context("Mailpit kurulu değil. Hizmetler → E-posta ekranından kurun.")?;
         let database = self.home.join("data/mailpit/mailpit.db");
         std::fs::create_dir_all(database.parent().unwrap())
             .context("Mailpit veri klasörü oluşturulamadı.")?;
@@ -113,7 +113,7 @@ impl Manager {
             .unwrap_or_else(|e| e.into_inner())
             .contains_key(ID)
         {
-            anyhow::bail!("Mailpit çalışmıyor. Ayarlar → E-posta ekranından başlatın.");
+            anyhow::bail!("Mailpit çalışmıyor. Hizmetler → E-posta ekranından başlatın.");
         }
         command("rundll32.exe")
             .args([

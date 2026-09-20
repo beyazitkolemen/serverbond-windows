@@ -46,7 +46,7 @@ Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paket
 
 Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa F4Box o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
 
-**Ayarlar → GitHub** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
+**Hizmetler → GitHub** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
 
 **Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 
@@ -104,7 +104,7 @@ Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı 
 
 ### Yerel e-posta yakalama
 
-**Ayarlar → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.
+**Hizmetler → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.
 
 SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en fazla e-posta sayısı ayarlanabilir; portlar diğer bileşenlerin portlarından farklı olmak zorundadır. Laravel tarafında `.env` dosyasına `MAIL_MAILER=smtp`, `MAIL_HOST=127.0.0.1` ve `MAIL_PORT=1025` yazın; kullanıcı adı ve parola gerekmez. F4Box `.env` dosyanızı değiştirmez.
 
@@ -114,7 +114,7 @@ SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en
 
 ### İsteğe bağlı PostgreSQL
 
-**Ayarlar → PostgreSQL** bölümü resmi EDB Windows x64 arşivinden PostgreSQL 17 kurar. MySQL varsayılan kalır; PostgreSQL ortamın çalışması için gerekli değildir. Port varsayılanı 15432’dir (sistem 5432 ile çakışmaz). İlk başlatmada veri dizini `data/postgresql-17` oluşturulur; `postgres` kullanıcısının parolası Windows DPAPI ile saklanır. Sunucu `postgres.exe` ile 127.0.0.1’e bağlanır; kapatırken `pg_ctl stop` kullanılır.
+**Hizmetler → PostgreSQL** bölümü resmi EDB Windows x64 arşivinden PostgreSQL 17 kurar. MySQL varsayılan kalır; PostgreSQL ortamın çalışması için gerekli değildir. Port varsayılanı 15432’dir (sistem 5432 ile çakışmaz). İlk başlatmada veri dizini `data/postgresql-17` oluşturulur; `postgres` kullanıcısının parolası Windows DPAPI ile saklanır. Sunucu `postgres.exe` ile 127.0.0.1’e bağlanır; kapatırken `pg_ctl stop` kullanılır.
 
 Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`, `DB_PORT=15432`, `DB_USERNAME=postgres` ve F4Box’ın gösterdiği parolayı yazın. F4Box `.env` dosyanızı değiştirmez. PHP `pgsql` ve `pdo_pgsql` uzantıları Ayarlar → PHP’den açılır.
 
@@ -122,10 +122,10 @@ Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`,
 
 ### Cloudflare tüneli
 
-**Ayarlar → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
+**Hizmetler → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
 
 1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun. **Install and run a connector** adımındaki jetonu veya tüm `cloudflared.exe service install …` satırını kopyalayın.
-2. **Ayarlar → Tünel** alanına yapıştırın. F4Box jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
+2. **Hizmetler → Tünel** alanına yapıştırın. F4Box jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
 3. **Kaydet ve tüneli başlat** Cloudflared’ı yoksa kurar, jetonu kaydeder ve bağlayıcıyı çalıştırır. Hangi genel adresin hangi porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler.
 
 Kurulum, onarım, başlat/durdur ve **Ortam başlatıldığında tüneli de başlat** aynı karttan yönetilir. Tepsi menüsü → Servisler → Cloudflare tüneli aynı başlat/durdur işini yapar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Komut satırından: `f4box tunnel install|token <jeton>|apply <jeton>|start|stop|status`.

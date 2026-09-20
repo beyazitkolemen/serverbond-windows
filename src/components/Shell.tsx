@@ -4,6 +4,7 @@ import {
   Home,
   ScrollText,
   Settings,
+  Server,
   Monitor,
   LoaderCircle,
   X,
@@ -14,13 +15,45 @@ import type { ReactNode } from "react";
 import { desktop } from "../api";
 import { APP_VERSION } from "../version";
 
-const navigation = [
+const workspaceNav = [
   { id: "overview", title: "Genel bakış", icon: Home },
-  { id: "packages", title: "Bileşenler", icon: Box },
   { id: "projects", title: "Projeler", icon: Folder },
   { id: "logs", title: "Günlükler", icon: ScrollText },
+] as const;
+
+const environmentNav = [
+  { id: "packages", title: "Bileşenler", icon: Box },
+  { id: "services", title: "Hizmetler", icon: Server },
   { id: "settings", title: "Ayarlar", icon: Settings },
 ] as const;
+
+function NavButtons({
+  items,
+  page,
+  onPage,
+}: {
+  items: typeof workspaceNav | typeof environmentNav;
+  page: Page;
+  onPage: (p: Page) => void;
+}) {
+  return (
+    <>
+      {items.map(({ id, title, icon: Icon }) => (
+        <button
+          key={id}
+          aria-label={title}
+          className={`nav-item ${page === id ? "selected" : ""}`}
+          aria-current={page === id ? "page" : undefined}
+          onClick={() => onPage(id)}
+        >
+          <Icon size={20} />
+          <span>{title}</span>
+          {page === id && <ChevronRight className="nav-chevron" size={16} />}
+        </button>
+      ))}
+    </>
+  );
+}
 
 export function Shell({
   page,
@@ -52,24 +85,18 @@ export function Shell({
             <p>Windows Laravel üretimi</p>
           </div>
         </div>
-        <p className="nav-caption">ÇALIŞMA ALANI</p>
-        <nav aria-label="Ana menü">
-          {navigation.map(({ id, title, icon: Icon }) => (
-            <button
-              key={id}
-              aria-label={title}
-              className={`nav-item ${page === id ? "selected" : ""}`}
-              aria-current={page === id ? "page" : undefined}
-              onClick={() => onPage(id)}
-            >
-              <Icon size={20} />
-              <span>{title}</span>
-              {page === id && (
-                <ChevronRight className="nav-chevron" size={16} />
-              )}
-            </button>
-          ))}
-        </nav>
+        <div className="sidebar-nav-group">
+          <p className="nav-caption">ÇALIŞMA ALANI</p>
+          <nav aria-label="Çalışma alanı">
+            <NavButtons items={workspaceNav} page={page} onPage={onPage} />
+          </nav>
+        </div>
+        <div className="sidebar-nav-group">
+          <p className="nav-caption">ORTAM</p>
+          <nav aria-label="Ortam">
+            <NavButtons items={environmentNav} page={page} onPage={onPage} />
+          </nav>
+        </div>
         <div className="sidebar-note">
           <span className="local-label">
             <span className="status-dot green" /> Bu bilgisayarda çalışır
