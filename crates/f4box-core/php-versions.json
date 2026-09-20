@@ -1,0 +1,93 @@
+[
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "7.4.33",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/archives/php-7.4.33-nts-Win32-vc15-x64.zip",
+    "sha256": "14ae3250d4447c8ccfc4c45a70d90adfbcd61e728d85f0be56a7ddf8f9c8aace",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.0.30",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/archives/php-8.0.30-nts-Win32-vs16-x64.zip",
+    "sha256": "dfb70498ffa2c617f2f655a155564697e3c9cca41709938fd1a5997d1d5b0785",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.1.34",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/archives/php-8.1.34-nts-Win32-vs16-x64.zip",
+    "sha256": "9cfe246cb144076c16f5913a3ef88a474c3dd7e60f0f0c8bb95faf68674016cc",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.2.33",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/php-8.2.33-nts-Win32-vs16-x64.zip",
+    "sha256": "d0bd189522fa50255ee94ed4b340ed4330f5ae33a90a74205275b0f0b221d388",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.3.33",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/php-8.3.33-nts-Win32-vs16-x64.zip",
+    "sha256": "534399107056313246f424adbbb7937337e40fbbf6aa7bc26287ba9cfd2e4a2a",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.4.25",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/php-8.4.25-nts-Win32-vs17-x64.zip",
+    "sha256": "43a8f67ed2e5223fafb21293c85976361808855405278cef2cf3037c3ae2529c",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "version": "8.5.10",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://downloads.php.net/~windows/releases/php-8.5.10-nts-Win32-vs17-x64.zip",
+    "sha256": "22ec430195984d233eb9e62c637a945bbcda06efca2f392d9d96d62c6acd34f8",
+    "archive": true,
+    "prefix": "",
+    "executable": "php.exe",
+    "license": "PHP-3.01",
+    "source": "https://downloads.php.net/~windows/releases/releases.json"
+  }
+]

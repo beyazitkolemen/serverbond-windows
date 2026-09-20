@@ -1,0 +1,42 @@
+[
+  {
+    "id": "php", "name": "PHP", "version": "8.4.25",
+    "description": "Laravel uygulamaları için PHP çalışma ortamı.",
+    "url": "https://windows.php.net/downloads/releases/php-8.4.25-nts-Win32-vs17-x64.zip",
+    "sha256": "43a8f67ed2e5223fafb21293c85976361808855405278cef2cf3037c3ae2529c",
+    "archive": true, "prefix": "", "executable": "php.exe",
+    "license": "PHP-3.01", "source": "https://www.php.net/downloads.php"
+  },
+  {
+    "id": "mysql", "name": "MySQL", "version": "8.4.10",
+    "description": "Veritabanı sunucusu · 8.4 LTS.",
+    "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.10-winx64.zip",
+    "sha256": "3b950db31c33fb59252568c012bd9ee5fac50811e778ca7c8f1a0dc91686cd6f",
+    "archive": true, "prefix": "mysql-8.4.10-winx64", "executable": "bin/mysqld.exe",
+    "license": "GPL-2.0 with vendor exceptions", "source": "https://dev.mysql.com/downloads/mysql/8.4.html"
+  },
+  {
+    "id": "caddy", "name": "Caddy", "version": "2.11.4",
+    "description": "Modern, kolay yapılandırılabilir web sunucusu.",
+    "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_windows_amd64.zip",
+    "sha256": "1708333f79e274c7697285afe6d592ab39314e0b131e9ec6bea08ad27df62ebf",
+    "archive": true, "prefix": "", "executable": "caddy.exe",
+    "license": "Apache-2.0", "source": "https://github.com/caddyserver/caddy"
+  },
+  {
+    "id": "composer", "name": "Composer", "version": "2.10.3",
+    "description": "PHP bağımlılık yönetim aracı.",
+    "url": "https://getcomposer.org/download/2.10.3/composer.phar",
+    "sha256": "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6",
+    "archive": false, "prefix": "", "executable": "composer.phar",
+    "license": "MIT", "source": "https://getcomposer.org/"
+  },
+  {
+    "id": "phpmyadmin", "name": "phpMyAdmin", "version": "5.2.3",
+    "description": "MySQL veritabanlarını tarayıcıdan yönetin.",
+    "url": "https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip",
+    "sha256": "2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f",
+    "archive": true, "prefix": "phpMyAdmin-5.2.3-all-languages", "executable": "index.php",
+    "license": "GPL-2.0-or-later", "source": "https://www.phpmyadmin.net/downloads/"
+  }
+]

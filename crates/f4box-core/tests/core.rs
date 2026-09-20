@@ -1,0 +1,496 @@
+use f4box_core::{
+    install::{extract_zip, verify_hash},
+    model::{caddy_config, catalog, validate_slug, Project, Settings},
+    Manager,
+};
+use std::{fs, io::Write};
+
+fn available_settings(mut settings: Settings) -> Settings {
+    let listeners: Vec<_> = (0..3)
+        .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
+        .collect();
+    settings.web_port = listeners[0].local_addr().unwrap().port();
+    settings.mysql_port = listeners[1].local_addr().unwrap().port();
+    settings.php_port = listeners[2].local_addr().unwrap().port();
+    settings
+}
+
+#[test]
+fn rejects_command_and_path_injection_in_project_names() {
+    for invalid in [
+        "",
+        "../app",
+        "foo/bar",
+        "a\"\n}",
+        "foo;bar",
+        "APP",
+        "-foo",
+        "foo-",
+        "foo.localhost",
+        "con",
+        "lpt1",
+    ] {
+        assert!(validate_slug(invalid).is_err(), "{invalid}");
+    }
+    for valid in ["app", "my-app", "app-42", "a"] {
+        assert!(validate_slug(valid).is_ok());
+    }
+}
+
+#[test]
+fn prevents_port_collisions_and_zero_but_allows_standard_http() {
+    assert!(Settings::default().validate().is_ok());
+    assert!(Settings {
+        web_port: 80,
+        ..Settings::default()
+    }
+    .validate()
+    .is_ok());
+    assert!(Settings {
+        web_port: 0,
+        ..Settings::default()
+    }
+    .validate()
+    .is_err());
+    assert!(Settings {
+        mysql_port: 8088,
+        ..Settings::default()
+    }
+    .validate()
+    .is_err());
+}
+
+#[test]
+fn caddy_routes_to_public_and_binds_loopback() {
+    let project = Project {
+        id: "1".into(),
+        name: "demo".into(),
+        host: "demo.localhost".into(),
+        path: "C:/Project With Space/demo".into(),
+        php_version: "8.4.25".into(),
+    };
+    let config = caddy_config(
+        &Settings::default(),
+        &[project],
+        std::path::Path::new("C:/F4Box/welcome"),
+        &std::collections::HashMap::from([("1".into(), 19001)]),
+    )
+    .unwrap();
+    assert!(config.contains("http://demo.localhost:8088"));
+    assert!(config.contains("\"C:/Project With Space/demo/public\""));
+    assert_eq!(config.matches("bind 127.0.0.1").count(), 2);
+    assert!(config.contains("admin off"));
+    assert!(config.contains("php_fastcgi 127.0.0.1:19001"));
+}
+
+#[test]
+fn hashes_reject_modified_packages() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("package");
+    fs::write(&path, "hello").unwrap();
+    let sha = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+    assert!(verify_hash(&path, sha).is_ok());
+    fs::write(&path, "modified").unwrap();
+    assert!(verify_hash(&path, sha).is_err());
+}
+
+#[test]
+fn archive_cannot_escape_install_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let zip_path = dir.path().join("bad.zip");
+    let mut zip = zip::ZipWriter::new(fs::File::create(&zip_path).unwrap());
+    zip.start_file("../escape.txt", zip::write::SimpleFileOptions::default())
+        .unwrap();
+    zip.write_all(b"bad").unwrap();
+    zip.finish().unwrap();
+    let out = dir.path().join("output");
+    fs::create_dir(&out).unwrap();
+    assert!(extract_zip(&zip_path, &out, "").is_err());
+    assert!(!dir.path().join("escape.txt").exists());
+}
+
+#[test]
+fn archive_strips_vendor_prefix() {
+    let dir = tempfile::tempdir().unwrap();
+    let zip_path = dir.path().join("valid.zip");
+    let mut zip = zip::ZipWriter::new(fs::File::create(&zip_path).unwrap());
+    zip.start_file(
+        "vendor/bin/app.exe",
+        zip::write::SimpleFileOptions::default(),
+    )
+    .unwrap();
+    zip.write_all(b"ok").unwrap();
+    zip.finish().unwrap();
+    let out = dir.path().join("output");
+    fs::create_dir(&out).unwrap();
+    extract_zip(&zip_path, &out, "vendor").unwrap();
+    assert_eq!(fs::read(out.join("bin/app.exe")).unwrap(), b"ok");
+}
+
+#[test]
+fn second_manager_cannot_share_data_directory() {
+    let home = tempfile::tempdir().unwrap();
+    let first = Manager::new(home.path().into()).unwrap();
+    assert!(Manager::new(home.path().into()).is_err());
+    drop(first);
+    assert!(Manager::new(home.path().into()).is_ok());
+}
+
+#[test]
+fn external_program_paths_avoid_windows_extended_prefix() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert!(!manager.home.to_string_lossy().starts_with("\\\\?\\"));
+}
+
+#[test]
+fn settings_persist_and_invalid_settings_leave_previous_intact() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let settings = available_settings(manager.snapshot().unwrap().settings);
+    let saved_port = settings.web_port;
+    manager.save_settings(settings).unwrap();
+    assert!(manager
+        .save_settings(Settings {
+            web_port: 0,
+            ..Settings::default()
+        })
+        .is_err());
+    drop(manager);
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert_eq!(manager.snapshot().unwrap().settings.web_port, saved_port);
+}
+
+#[test]
+fn adding_and_removing_project_preserves_existing_env_and_files() {
+    let home = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    fs::create_dir(project.path().join("public")).unwrap();
+    fs::write(project.path().join("public/index.php"), "<?php echo 'OK';").unwrap();
+    fs::write(project.path().join(".env"), "APP_KEY=do-not-touch").unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let saved = manager
+        .add_project("demo".into(), project.path().into())
+        .unwrap();
+    assert!(manager
+        .add_project("other".into(), project.path().into())
+        .is_err());
+    manager.remove_project(&saved.id).unwrap();
+    assert_eq!(
+        fs::read_to_string(project.path().join(".env")).unwrap(),
+        "APP_KEY=do-not-touch"
+    );
+    assert!(project.path().join("public/index.php").exists());
+    assert!(manager.snapshot().unwrap().projects.is_empty());
+}
+
+#[test]
+fn rejects_invalid_project_folder_and_log_traversal() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert!(manager
+        .add_project("demo".into(), home.path().into())
+        .is_err());
+    assert!(manager.read_log("../config").is_err());
+    assert!(manager.install("../php").is_err());
+}
+
+#[test]
+fn corrupt_configuration_is_not_silently_replaced() {
+    let home = tempfile::tempdir().unwrap();
+    fs::write(home.path().join("config.json"), "broken").unwrap();
+    assert!(Manager::new(home.path().into()).is_err());
+    assert_eq!(
+        fs::read_to_string(home.path().join("config.json")).unwrap(),
+        "broken"
+    );
+}
+
+#[test]
+fn catalog_only_contains_pinned_https_packages() {
+    let packages = catalog();
+    assert_eq!(packages.len(), 5);
+    for package in packages {
+        assert!(package.url.starts_with("https://"));
+        assert_eq!(package.sha256.len(), 64);
+        assert!(package.sha256.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
+}
+
+#[test]
+fn legacy_configuration_keeps_projects_and_defaults_to_original_php() {
+    let home = tempfile::tempdir().unwrap();
+    let legacy =
+        r#"{"settings":{"webPort":18088,"mysqlPort":23316,"phpPort":19330},"projects":[]}"#;
+    fs::write(home.path().join("config.json"), legacy).unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert_eq!(
+        manager.snapshot().unwrap().packages[0].package.version,
+        "8.4.25"
+    );
+    assert_eq!(
+        fs::read_to_string(home.path().join("config.json")).unwrap(),
+        legacy
+    );
+}
+
+#[test]
+fn php_selection_rejects_unknown_version_without_changing_config() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let original = fs::read(home.path().join("config.json")).unwrap();
+    for version in ["../8.4.25", "8.4", "8.6.0", ""] {
+        assert!(manager.select_php(version).is_err());
+    }
+    assert_eq!(fs::read(home.path().join("config.json")).unwrap(), original);
+    assert_eq!(fs::read_dir(home.path().join("bin")).unwrap().count(), 0);
+}
+
+#[test]
+fn saved_php_selection_controls_paths_and_package_status() {
+    let home = tempfile::tempdir().unwrap();
+    let config = f4box_core::model::Config {
+        php_version: "7.4.33".into(),
+        ..Default::default()
+    };
+    fs::write(
+        home.path().join("config.json"),
+        serde_json::to_vec(&config).unwrap(),
+    )
+    .unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert!(manager
+        .package_dir("php")
+        .unwrap()
+        .ends_with("bin/php/7.4.33"));
+    assert!(manager
+        .php_ini_path()
+        .unwrap()
+        .ends_with("config/php/7.4.33/php.ini"));
+    assert_eq!(
+        manager.snapshot().unwrap().packages[0].package.version,
+        "7.4.33"
+    );
+    let err = manager
+        .create_project("demo".into(), home.path().into())
+        .unwrap_err();
+    assert!(err.to_string().contains("PHP 8.2"));
+    assert!(!home.path().join("demo").exists());
+}
+
+#[test]
+fn php_catalog_has_one_pinned_build_per_supported_series() {
+    let versions = f4box_core::model::php_versions();
+    let branches: Vec<_> = versions
+        .iter()
+        .map(|p| p.version.rsplit_once('.').unwrap().0)
+        .collect();
+    assert_eq!(branches, ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]);
+    for package in versions {
+        assert!(package
+            .url
+            .starts_with("https://downloads.php.net/~windows/releases/"));
+        assert!(package.url.contains("-nts-Win32-"));
+        assert!(package.url.ends_with("-x64.zip"));
+        assert_eq!(package.sha256.len(), 64);
+        assert!(package.sha256.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
+}
+
+#[test]
+fn broken_download_does_not_replace_selected_php() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    // An incomplete installation must fail before network access or configuration changes.
+    fs::create_dir_all(home.path().join("bin/php/7.4.33")).unwrap();
+    let original = fs::read(home.path().join("config.json")).unwrap();
+    assert!(manager.select_php("7.4.33").is_err());
+    assert_eq!(fs::read(home.path().join("config.json")).unwrap(), original);
+}
+
+#[test]
+fn occupied_port_is_rejected_without_overwriting_settings() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let before = fs::read(home.path().join("config.json")).unwrap();
+    let mut settings = manager.snapshot().unwrap().settings;
+    settings.web_port = listener.local_addr().unwrap().port();
+    assert!(manager.save_settings(settings).is_err());
+    assert_eq!(fs::read(home.path().join("config.json")).unwrap(), before);
+}
+
+#[test]
+fn installed_receipt_without_fastcgi_is_reported_as_broken() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let package = catalog().remove(0);
+    let dir = manager.package_dir("php").unwrap();
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("installed.json"),
+        serde_json::to_vec(&package).unwrap(),
+    )
+    .unwrap();
+    fs::write(dir.join("php.exe"), "fixture").unwrap();
+    let snapshot = manager.snapshot().unwrap();
+    assert!(!snapshot.packages[0].installed);
+    assert!(snapshot.packages[0].repairable);
+    assert!(snapshot.packages[0]
+        .issue
+        .as_ref()
+        .unwrap()
+        .contains("php-cgi.exe"));
+    assert!(manager.executable("php").is_err());
+}
+
+#[test]
+fn archive_fallback_is_only_for_official_php_release_urls() {
+    let mut php = catalog().remove(0);
+    assert!(f4box_core::install::archive_fallback(&php)
+        .unwrap()
+        .contains("/archives/php-8.4.25"));
+    php.url = "https://example.com/php.zip".into();
+    assert!(f4box_core::install::archive_fallback(&php).is_none());
+    php.url = "https://downloads.php.net/~windows/releases/archives/php.zip".into();
+    assert!(f4box_core::install::archive_fallback(&php).is_none());
+    let mysql = catalog().remove(1);
+    assert!(f4box_core::install::archive_fallback(&mysql).is_none());
+}
+
+fn cached_fixture(home: &std::path::Path, entry: &str) -> f4box_core::model::Package {
+    use sha2::{Digest, Sha256};
+    fs::create_dir_all(home.join("cache")).unwrap();
+    let path = home.join("cache/fixture-1.zip");
+    let mut zip = zip::ZipWriter::new(fs::File::create(&path).unwrap());
+    zip.start_file(entry, zip::write::SimpleFileOptions::default())
+        .unwrap();
+    zip.write_all(b"new executable").unwrap();
+    zip.finish().unwrap();
+    let mut package = catalog().remove(0);
+    package.id = "fixture".into();
+    package.version = "1".into();
+    package.executable = "app.exe".into();
+    package.sha256 = format!("{:x}", Sha256::digest(fs::read(path).unwrap()));
+    package
+}
+
+#[test]
+fn repair_replaces_only_programs_and_keeps_old_files() {
+    let home = tempfile::tempdir().unwrap();
+    let package = cached_fixture(home.path(), "app.exe");
+    let dir = home.path().join("bin/fixture/1");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("custom.txt"), "keep").unwrap();
+    fs::create_dir_all(home.path().join("data")).unwrap();
+    fs::write(home.path().join("data/database"), "keep data").unwrap();
+    f4box_core::install::repair(home.path(), &package, |_| {}).unwrap();
+    f4box_core::install::validate_installation(&dir, &package).unwrap();
+    assert_eq!(fs::read(dir.join("app.exe")).unwrap(), b"new executable");
+    assert_eq!(
+        fs::read(home.path().join("data/database")).unwrap(),
+        b"keep data"
+    );
+    let backup = fs::read_dir(dir.parent().unwrap())
+        .unwrap()
+        .filter_map(Result::ok)
+        .find(|e| e.file_name().to_string_lossy().contains("before-repair"))
+        .unwrap();
+    assert_eq!(fs::read(backup.path().join("custom.txt")).unwrap(), b"keep");
+}
+
+#[test]
+fn failed_repair_keeps_existing_installation_intact() {
+    let home = tempfile::tempdir().unwrap();
+    let package = cached_fixture(home.path(), "../escape.exe");
+    let dir = home.path().join("bin/fixture/1");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("app.exe"), "original").unwrap();
+    assert!(f4box_core::install::repair(home.path(), &package, |_| {}).is_err());
+    assert_eq!(fs::read(dir.join("app.exe")).unwrap(), b"original");
+    assert_eq!(fs::read_dir(dir.parent().unwrap()).unwrap().count(), 1);
+}
+
+#[test]
+fn password_and_backup_before_mysql_initialization_explain_next_step() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    assert!(manager
+        .credentials()
+        .unwrap_err()
+        .to_string()
+        .contains("Önce MySQL"));
+    assert!(manager
+        .backup_database("demo")
+        .unwrap_err()
+        .to_string()
+        .contains("MySQL'i başlatın"));
+}
+
+#[test]
+fn migration_pins_existing_projects_to_the_saved_default_without_touching_env() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("old-project");
+    fs::create_dir_all(&path).unwrap();
+    fs::write(path.join(".env"), "APP_KEY=keep-this").unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let config = serde_json::json!({"phpVersion":"7.4.33", "settings":{"webPort":18088,"mysqlPort":23316,"phpPort":19330},"projects":[{"id":id,"name":"old-project","host":"old-project.localhost","path":path}]});
+    fs::write(dir.path().join("config.json"), config.to_string()).unwrap();
+    let manager = Manager::new(dir.path().into()).unwrap();
+    assert_eq!(
+        manager.snapshot().unwrap().projects[0].project.php_version,
+        "7.4.33"
+    );
+    assert_eq!(
+        fs::read_to_string(path.join(".env")).unwrap(),
+        "APP_KEY=keep-this"
+    );
+    let persisted: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.path().join("config.json")).unwrap()).unwrap();
+    assert_eq!(persisted["projects"][0]["phpVersion"], "7.4.33");
+    assert_eq!(persisted["projects"][0]["id"], id);
+    for key in ["webPort", "mysqlPort", "phpPort"] {
+        assert_eq!(persisted["settings"][key], config["settings"][key]);
+    }
+    assert_eq!(persisted["settings"]["php"]["memoryMb"], 512);
+}
+
+#[test]
+fn requirements_detect_an_external_port_owner_without_changing_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    let manager = Manager::new(dir.path().into()).unwrap();
+    let mut settings = available_settings(manager.snapshot().unwrap().settings);
+    // Other tests also probe the default ports. Use an OS-assigned port here.
+    let reservation = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    settings.web_port = reservation.local_addr().unwrap().port();
+    drop(reservation);
+    manager.save_settings(settings.clone()).unwrap();
+    let listener = std::net::TcpListener::bind(("127.0.0.1", settings.web_port)).unwrap();
+    let checks = manager.requirements();
+    assert_eq!(
+        checks.iter().find(|c| c.id == "caddy").unwrap().status,
+        "error"
+    );
+    assert_eq!(
+        checks
+            .iter()
+            .find(|c| c.id == "storage-write")
+            .unwrap()
+            .status,
+        "ok"
+    );
+    assert_eq!(
+        manager.snapshot().unwrap().settings.web_port,
+        settings.web_port
+    );
+    drop(listener);
+    assert_eq!(
+        manager
+            .requirements()
+            .iter()
+            .find(|c| c.id == "caddy")
+            .unwrap()
+            .status,
+        "ok"
+    );
+}

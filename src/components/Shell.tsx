@@ -1,0 +1,131 @@
+import {
+  Box,
+  Folder,
+  Home,
+  ScrollText,
+  Settings,
+  Monitor,
+  LoaderCircle,
+  X,
+  ChevronRight,
+} from "lucide-react";
+import type { Page } from "../types";
+import type { ReactNode } from "react";
+import { desktop } from "../api";
+
+const navigation = [
+  { id: "overview", title: "Genel bakış", icon: Home },
+  { id: "packages", title: "Bileşenler", icon: Box },
+  { id: "projects", title: "Projeler", icon: Folder },
+  { id: "logs", title: "Günlükler", icon: ScrollText },
+  { id: "settings", title: "Ayarlar", icon: Settings },
+] as const;
+
+export function Shell({
+  page,
+  onPage,
+  children,
+}: {
+  page: Page;
+  onPage: (p: Page) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        İçeriğe geç
+      </a>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark" aria-hidden="true">
+            <Box size={25} strokeWidth={1.7} />
+          </div>
+          <div className="brand-copy">
+            <span>F4Box</span>
+            <p>Yerel geliştirme alanınız</p>
+          </div>
+        </div>
+        <p className="nav-caption">ÇALIŞMA ALANI</p>
+        <nav aria-label="Ana menü">
+          {navigation.map(({ id, title, icon: Icon }) => (
+            <button
+              key={id}
+              aria-label={title}
+              className={`nav-item ${page === id ? "selected" : ""}`}
+              aria-current={page === id ? "page" : undefined}
+              onClick={() => onPage(id)}
+            >
+              <Icon size={21} />
+              <span>{title}</span>
+              {page === id && (
+                <ChevronRight className="nav-chevron" size={15} />
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-note">
+          <span className="sidebar-note-title">
+            Sizin makineniz.
+            <br />
+            Sizin ortamınız.
+          </span>
+          <p>
+            PHP'den veritabanına,
+            <br />
+            tüm araçlar elinizin altında.
+          </p>
+          <span className="local-label">
+            <span className="status-dot green" /> Yerel olarak çalışır
+          </span>
+        </div>
+        <div className="sidebar-footer">
+          <Monitor size={17} />
+          <span>Windows x64</span>
+          <span className="build-version">v0.1.0</span>
+        </div>
+      </aside>
+      <div className="workspace">
+        <main id="main-content" tabIndex={-1}>
+          {children}
+        </main>
+        <footer>
+          {desktop
+            ? "F4Box v0.1.0"
+            : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+export function Notice({
+  error,
+  busy,
+  message,
+  dismiss,
+}: {
+  error: string;
+  busy: string;
+  message: string;
+  dismiss: () => void;
+}) {
+  if (!error && !busy && !message) return null;
+  return (
+    <div
+      className={`notice ${error ? "error" : ""}`}
+      role={error ? "alert" : "status"}
+    >
+      {busy && !error ? <LoaderCircle className="spin" size={20} /> : null}
+      <span>{error || busy || message}</span>
+      {!busy ? (
+        <button
+          className="icon-button"
+          aria-label="Bildirimi kapat"
+          onClick={dismiss}
+        >
+          <X size={18} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
