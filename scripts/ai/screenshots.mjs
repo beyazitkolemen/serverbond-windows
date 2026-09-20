@@ -24,7 +24,7 @@ const shots = [
     nav: "Projeler",
     projectTab: "Kuyruklar",
     expand: [".project-worker-more summary"],
-    height: 1880,
+    height: 1400,
   },
   { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1360 },
   { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1600 },
@@ -45,7 +45,7 @@ const shots = [
     file: "09-proje-gunlukleri.png",
     nav: "Projeler",
     projectTab: "Günlükler",
-    height: 1520,
+    height: 1200,
   },
 ];
 
