@@ -10,26 +10,26 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { Page } from "../types";
+import { Page, type Page as AppPage } from "../domain";
 import type { ReactNode } from "react";
 import { desktop } from "../api";
 import { APP_VERSION } from "../version";
 
-type NavEntry = { id: Page; title: string; icon: LucideIcon };
+type NavEntry = { id: AppPage; title: string; icon: LucideIcon };
 
 const workspaceNav: NavEntry[] = [
-  { id: "overview", title: "Genel bakış", icon: Home },
-  { id: "projects", title: "Projeler", icon: Folder },
-  { id: "logs", title: "Günlükler", icon: ScrollText },
+  { id: Page.Overview, title: "Genel bakış", icon: Home },
+  { id: Page.Projects, title: "Projeler", icon: Folder },
+  { id: Page.Logs, title: "Günlükler", icon: ScrollText },
 ];
 
 const environmentNav: NavEntry[] = [
-  { id: "packages", title: "Bileşenler", icon: Box },
-  { id: "services", title: "Hizmetler", icon: Server },
+  { id: Page.Packages, title: "Bileşenler", icon: Box },
+  { id: Page.Services, title: "Hizmetler", icon: Server },
 ];
 
 const manageNav: NavEntry[] = [
-  { id: "settings", title: "Ayarlar", icon: Settings },
+  { id: Page.Settings, title: "Ayarlar", icon: Settings },
 ];
 
 function NavButtons({
@@ -38,8 +38,8 @@ function NavButtons({
   onPage,
 }: {
   items: readonly NavEntry[];
-  page: Page;
-  onPage: (p: Page) => void;
+  page: AppPage;
+  onPage: (p: AppPage) => void;
 }) {
   return (
     <>
@@ -69,8 +69,8 @@ function NavGroup({
 }: {
   label: string;
   items: readonly NavEntry[];
-  page: Page;
-  onPage: (p: Page) => void;
+  page: AppPage;
+  onPage: (p: AppPage) => void;
 }) {
   return (
     <div className="sidebar-nav-group">
@@ -90,8 +90,8 @@ export function Shell({
   updateAvailable = false,
   onOpenUpdates,
 }: {
-  page: Page;
-  onPage: (p: Page) => void;
+  page: AppPage;
+  onPage: (p: AppPage) => void;
   children: ReactNode;
   toolbar?: ReactNode;
   updateAvailable?: boolean;

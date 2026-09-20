@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { call } from "../api";
+import { nodeService } from "../services";
 import type { NodeState, Run } from "../types";
 import ServiceRepair from "./ServiceRepair";
 
@@ -49,9 +49,7 @@ export default function NodeSettings({
             className="button secondary"
             disabled={busy}
             onClick={() =>
-              void run("Node.js indiriliyor…", () =>
-                call("node", { action: "install" }),
-              )
+              void run("Node.js indiriliyor…", () => nodeService.install())
             }
           >
             <Download size={16} />
@@ -71,7 +69,7 @@ export default function NodeSettings({
           "Proje node_modules ve .env dosyaları",
           "Açık terminaller (yeniden açın)",
         ]}
-        action={() => call("node", { action: "repair" })}
+        action={() => nodeService.repair()}
       />
       <p className="section-note">
         Kurduktan sonra proje kartındaki <strong>Terminal</strong> düğmesiyle

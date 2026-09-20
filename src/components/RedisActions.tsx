@@ -1,4 +1,4 @@
-import { call } from "../api";
+import { redisService } from "../services";
 import type { RedisState, Run } from "../types";
 import ServiceRepair from "./ServiceRepair";
 
@@ -26,7 +26,7 @@ export default function RedisActions({
           "Port ve otomatik başlatma",
           "Proje .env dosyaları",
         ]}
-        action={() => call("redis", { action: "repair" })}
+        action={() => redisService.repair()}
       />
       <p className="section-note">
         Port ve otomatik başlatma Ayarlar düğmesindedir. Laravel{" "}

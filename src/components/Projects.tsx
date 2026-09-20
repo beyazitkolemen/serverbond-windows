@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Folder, Plus, X, FolderOpen, ExternalLink } from "lucide-react";
 import { call, chooseFolder, chooseSqlFile } from "../api";
+import { githubService } from "../services";
 import type {
   DiscoveredProject,
   GithubState,
@@ -385,8 +386,7 @@ function ProjectDialog({
             : "Proje ekleniyor…",
         () =>
           fromGithub
-            ? call("github", {
-                action: "import",
+            ? githubService.import({
                 repository: repository.trim(),
                 name,
                 branch: branch.trim(),

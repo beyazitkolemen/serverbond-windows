@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Globe, Play, Trash2, Eye, EyeOff } from "lucide-react";
-import { call } from "../api";
+import { tunnelService } from "../services";
 import type { Run, TunnelState } from "../types";
 import ServiceRepair from "./ServiceRepair";
 
@@ -24,7 +24,7 @@ export default function TunnelSettings({
         ? "Jeton kaydediliyor, Cloudflared kuruluyor ve tünel açılıyor…"
         : "Tünel jetonu kaydediliyor…",
       async () => {
-        await call("save_tunnel_token", { token, start });
+        await tunnelService.saveToken(token, start);
         setToken("");
         return start
           ? "Jeton kaydedildi ve tünel başlatıldı."
@@ -73,7 +73,7 @@ export default function TunnelSettings({
             "Otomatik başlatma tercihi",
             "Proje .env dosyaları",
           ]}
-          action={() => call("tunnel", { action: "repair" })}
+          action={() => tunnelService.repair()}
         />
       ) : null}
 
@@ -148,9 +148,7 @@ export default function TunnelSettings({
                 className="button secondary"
                 disabled={busy}
                 onClick={() =>
-                  void run("Jeton siliniyor…", () =>
-                    call("tunnel", { action: "forget" }),
-                  )
+                  void run("Jeton siliniyor…", () => tunnelService.forget())
                 }
               >
                 <Trash2 size={16} />
@@ -169,7 +167,7 @@ export default function TunnelSettings({
             disabled={busy}
             onChange={(e) =>
               void run("Tünel tercihi kaydediliyor…", () =>
-                call("save_tunnel_auto_start", { autoStart: e.target.checked }),
+                tunnelService.saveAutoStart(e.target.checked),
               )
             }
           />

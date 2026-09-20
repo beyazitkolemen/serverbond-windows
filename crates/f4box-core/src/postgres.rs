@@ -15,7 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const ID: &str = "postgres";
+pub const ID: &str = crate::domain::ComponentId::Postgres.as_str();
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

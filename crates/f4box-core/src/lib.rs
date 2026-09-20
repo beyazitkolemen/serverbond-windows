@@ -1,3 +1,4 @@
+mod domain;
 mod envfile;
 mod github;
 pub mod https;
@@ -15,6 +16,7 @@ mod project_runtime;
 mod projects;
 mod redis;
 mod release;
+mod repository;
 pub mod requirements;
 mod resilience;
 mod secrets;
@@ -23,8 +25,10 @@ mod storage;
 mod terminal;
 pub mod tunnel;
 
+pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
 pub use envfile::ProjectEnv;
 pub use release::{ProjectGitStatus, ReleaseRecord};
+pub use repository::DataDir;
 
 use anyhow::{bail, Context, Result};
 use fs2::FileExt;
@@ -520,7 +524,8 @@ impl Manager {
     }
 
     fn save_config(&self, config: &Config) -> Result<()> {
-        let path = self.home.join("config.json");
+        let layout = DataDir::new(&self.home);
+        let path = layout.config();
         let bytes = serde_json::to_vec_pretty(config)?;
         if bytes.len() > 2 * 1024 * 1024 || config.projects.len() > 1000 {
             bail!("Yapılandırma boyutu veya proje sayısı sınırı aşıldı.");
@@ -531,7 +536,7 @@ impl Manager {
         } else {
             bytes.clone()
         };
-        storage::atomic_write(&self.home.join("config.last-good.json"), previous)?;
+        storage::atomic_write(&layout.last_good(), previous)?;
         storage::atomic_write(&path, bytes)?;
         *self.config.lock().unwrap_or_else(|e| e.into_inner()) = config.clone();
         Ok(())

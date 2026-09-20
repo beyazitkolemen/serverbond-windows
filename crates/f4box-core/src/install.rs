@@ -1,4 +1,6 @@
+use crate::domain::ComponentId;
 use crate::model::Package;
+use crate::repository::DataDir;
 use anyhow::{bail, Context, Result};
 use sha2::{Digest, Sha256};
 use std::{
@@ -114,33 +116,33 @@ pub fn repair(home: &Path, package: &Package, log: impl Fn(String)) -> Result<()
 }
 
 pub fn required_files(package: &Package) -> Vec<&str> {
-    match package.id.as_str() {
-        "phpmyadmin" => vec![
+    match package.id.parse::<ComponentId>() {
+        Ok(ComponentId::PhpMyAdmin) => vec![
             "index.php",
             "vendor/autoload.php",
             "libraries/classes/DatabaseInterface.php",
             "templates/login/form.twig",
             "js/dist/common.js",
         ],
-        "php" => vec!["php.exe", "php-cgi.exe", "php8.dll"]
+        Ok(ComponentId::Php) => vec!["php.exe", "php-cgi.exe", "php8.dll"]
             .into_iter()
             .filter(|name| *name != "php8.dll" || !package.version.starts_with("7."))
             .chain(package.version.starts_with("7.").then_some("php7.dll"))
             .collect(),
-        "mysql" => vec![
+        Ok(ComponentId::Mysql) => vec![
             "bin/mysqld.exe",
             "bin/mysql.exe",
             "bin/mysqladmin.exe",
             "bin/mysqldump.exe",
         ],
-        "postgres" => vec![
+        Ok(ComponentId::Postgres) => vec![
             "bin/postgres.exe",
             "bin/initdb.exe",
             "bin/pg_ctl.exe",
             "bin/psql.exe",
             "bin/pg_isready.exe",
         ],
-        "redis" => vec!["redis-server.exe", "redis-cli.exe", "msys-2.0.dll"],
+        Ok(ComponentId::Redis) => vec!["redis-server.exe", "redis-cli.exe", "msys-2.0.dll"],
         _ => vec![&package.executable],
     }
 }
@@ -153,7 +155,7 @@ pub struct InstallHealth {
 }
 
 pub fn health(home: &Path, package: &Package) -> InstallHealth {
-    let directory = home.join("bin").join(&package.id).join(&package.version);
+    let directory = DataDir::new(home).package(&package.id, &package.version);
     match validate_installation(&directory, package) {
         Ok(()) => InstallHealth {
             installed: true,
@@ -214,7 +216,7 @@ pub fn archive_fallback(package: &Package) -> Option<String> {
 }
 
 fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(String)) -> Result<()> {
-    let destination = home.join("bin").join(&package.id).join(&package.version);
+    let destination = DataDir::new(home).package(&package.id, &package.version);
     if !repair && validate_installation(&destination, package).is_ok() {
         log(format!(
             "{} {} zaten kurulu.",

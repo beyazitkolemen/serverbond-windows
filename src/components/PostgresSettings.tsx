@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, Copy } from "lucide-react";
-import { call } from "../api";
+import { postgresService } from "../services";
 import type { PostgresState, Run } from "../types";
 import ServiceRepair from "./ServiceRepair";
 
@@ -32,9 +32,7 @@ export default function PostgresSettings({
               return;
             }
             void run("Parola açılıyor…", async () =>
-              setPassword(
-                await call<string>("postgres", { action: "credentials" }),
-              ),
+              setPassword(await postgresService.credentials()),
             );
           }}
         >
@@ -47,9 +45,7 @@ export default function PostgresSettings({
           disabled={busy || !postgres.passwordSaved}
           onClick={() =>
             void run("Parola kopyalanıyor…", async () => {
-              const value =
-                password ||
-                (await call<string>("postgres", { action: "credentials" }));
+              const value = password || (await postgresService.credentials());
               await navigator.clipboard.writeText(value);
               return "Parola panoya kopyalandı.";
             })
@@ -137,10 +133,7 @@ export default function PostgresSettings({
                     );
                   if (nextPassword !== confirmPassword)
                     throw new Error("Parola doğrulaması eşleşmiyor.");
-                  await call("postgres", {
-                    action: "password",
-                    password: nextPassword,
-                  });
+                  await postgresService.changePassword(nextPassword);
                   setPassword(nextPassword);
                   setNextPassword("");
                   setConfirmPassword("");
@@ -168,7 +161,7 @@ export default function PostgresSettings({
           "Port ve otomatik başlatma",
           "Proje .env dosyaları",
         ]}
-        action={() => call("postgres", { action: "repair" })}
+        action={() => postgresService.repair()}
       />
       <p className="section-note">
         Port ve otomatik başlatma Ayarlar düğmesindedir. MySQL varsayılan kalır;

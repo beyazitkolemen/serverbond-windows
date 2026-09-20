@@ -12,7 +12,8 @@ use f4box_core::{
         DiscoveredProject, Project, ProjectRelease, ProjectSchedule, QueueWorker, Settings,
         Snapshot,
     },
-    Manager, ProjectEnv, ProjectGitStatus, ReleaseRecord,
+    EnvironmentAction, GithubAction, Manager, ProjectEnv, ProjectGitStatus, ReleaseRecord,
+    ToolAction,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -98,10 +99,11 @@ async fn open_runtime_download(state: tauri::State<'_, State>) -> Result<(), Str
 #[tauri::command]
 async fn service(state: tauri::State<'_, State>, id: String, action: String) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || match action.as_str() {
-        "start" => state.start(&id),
-        "stop" => state.stop(&id),
-        _ => Err(anyhow::anyhow!("Bilinmeyen işlem")),
+    blocking(state.clone(), move || {
+        match action.parse::<EnvironmentAction>()? {
+            EnvironmentAction::Start => state.start(&id),
+            EnvironmentAction::Stop => state.stop(&id),
+        }
     })
     .await
 }
@@ -425,25 +427,30 @@ async fn project_git_status(
 async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || match action.as_str() {
-        "install" => state.install_tunnel(),
-        "repair" => state.repair_tunnel(),
-        "start" => state.start_tunnel(),
-        "stop" => state.stop_tunnel(),
         "forget" => state.clear_tunnel_token(),
-        _ => Err(anyhow::anyhow!("Bilinmeyen tünel işlemi")),
+        other => match other.parse::<ToolAction>()? {
+            ToolAction::Install => state.install_tunnel(),
+            ToolAction::Repair => state.repair_tunnel(),
+            ToolAction::Start => state.start_tunnel(),
+            ToolAction::Stop => state.stop_tunnel(),
+            ToolAction::Open => Err(anyhow::anyhow!(
+                "Tünelin tarayıcıda açılacak bir arayüzü yok"
+            )),
+        },
     })
     .await
 }
 #[tauri::command]
 async fn mail(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || match action.as_str() {
-        "install" => state.install_mail(),
-        "repair" => state.repair_mail(),
-        "start" => state.start_mail(),
-        "stop" => state.stop_mail(),
-        "open" => state.open_mail(),
-        _ => Err(anyhow::anyhow!("Bilinmeyen e-posta işlemi")),
+    blocking(state.clone(), move || {
+        match action.parse::<ToolAction>()? {
+            ToolAction::Install => state.install_mail(),
+            ToolAction::Repair => state.repair_mail(),
+            ToolAction::Start => state.start_mail(),
+            ToolAction::Stop => state.stop_mail(),
+            ToolAction::Open => state.open_mail(),
+        }
     })
     .await
 }
@@ -455,10 +462,6 @@ async fn postgres(
 ) -> Result<String, String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || match action.as_str() {
-        "install" => state.install_postgres().map(|_| String::new()),
-        "repair" => state.repair_postgres().map(|_| String::new()),
-        "start" => state.start_postgres().map(|_| String::new()),
-        "stop" => state.stop_postgres().map(|_| String::new()),
         "credentials" => state.postgres_credentials(),
         "password" => state
             .change_postgres_password(
@@ -467,19 +470,31 @@ async fn postgres(
                     .ok_or_else(|| anyhow::anyhow!("Yeni PostgreSQL parolası gerekli."))?,
             )
             .map(|_| String::new()),
-        _ => Err(anyhow::anyhow!("Bilinmeyen PostgreSQL işlemi")),
+        other => match other.parse::<ToolAction>()? {
+            ToolAction::Install => state.install_postgres().map(|_| String::new()),
+            ToolAction::Repair => state.repair_postgres().map(|_| String::new()),
+            ToolAction::Start => state.start_postgres().map(|_| String::new()),
+            ToolAction::Stop => state.stop_postgres().map(|_| String::new()),
+            ToolAction::Open => Err(anyhow::anyhow!(
+                "PostgreSQL'in tarayıcıda açılacak bir arayüzü yok"
+            )),
+        },
     })
     .await
 }
 #[tauri::command]
 async fn redis(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || match action.as_str() {
-        "install" => state.install_redis(),
-        "repair" => state.repair_redis(),
-        "start" => state.start_redis(),
-        "stop" => state.stop_redis(),
-        _ => Err(anyhow::anyhow!("Bilinmeyen Redis işlemi")),
+    blocking(state.clone(), move || {
+        match action.parse::<ToolAction>()? {
+            ToolAction::Install => state.install_redis(),
+            ToolAction::Repair => state.repair_redis(),
+            ToolAction::Start => state.start_redis(),
+            ToolAction::Stop => state.stop_redis(),
+            ToolAction::Open => Err(anyhow::anyhow!(
+                "Redis'in tarayıcıda açılacak bir arayüzü yok"
+            )),
+        }
     })
     .await
 }
@@ -493,35 +508,40 @@ async fn github(
     branch: Option<String>,
 ) -> Result<String, String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || match action.as_str() {
-        "save" => state
-            .save_github_token(
-                token
-                    .as_deref()
-                    .ok_or_else(|| anyhow::anyhow!("GitHub jetonu gerekli."))?,
-            )
-            .map(|_| String::new()),
-        "forget" => state.clear_github_token().map(|_| String::new()),
-        "import" => state
-            .import_github_project(
-                repository
-                    .as_deref()
-                    .ok_or_else(|| anyhow::anyhow!("GitHub deposu gerekli."))?,
-                name.unwrap_or_default(),
-                branch.unwrap_or_default(),
-            )
-            .map(|_| String::new()),
-        _ => Err(anyhow::anyhow!("Bilinmeyen GitHub işlemi")),
+    blocking(state.clone(), move || {
+        match action.parse::<GithubAction>()? {
+            GithubAction::Save => state
+                .save_github_token(
+                    token
+                        .as_deref()
+                        .ok_or_else(|| anyhow::anyhow!("GitHub jetonu gerekli."))?,
+                )
+                .map(|_| String::new()),
+            GithubAction::Forget => state.clear_github_token().map(|_| String::new()),
+            GithubAction::Import => state
+                .import_github_project(
+                    repository
+                        .as_deref()
+                        .ok_or_else(|| anyhow::anyhow!("GitHub deposu gerekli."))?,
+                    name.unwrap_or_default(),
+                    branch.unwrap_or_default(),
+                )
+                .map(|_| String::new()),
+        }
     })
     .await
 }
 #[tauri::command]
 async fn node(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || match action.as_str() {
-        "install" => state.install_node(),
-        "repair" => state.repair_node(),
-        _ => Err(anyhow::anyhow!("Bilinmeyen Node.js işlemi")),
+    blocking(state.clone(), move || {
+        match action.parse::<ToolAction>()? {
+            ToolAction::Install => state.install_node(),
+            ToolAction::Repair => state.repair_node(),
+            ToolAction::Start | ToolAction::Stop | ToolAction::Open => Err(anyhow::anyhow!(
+                "Node.js bir süreç değildir; yalnızca kur/onar."
+            )),
+        }
     })
     .await
 }

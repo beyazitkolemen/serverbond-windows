@@ -12,7 +12,15 @@ import {
 } from "lucide-react";
 import { call, desktop } from "./api";
 import { listen } from "@tauri-apps/api/event";
-import type { Page, Snapshot, Run } from "./types";
+import {
+  ComponentId,
+  CORE_COMPONENTS,
+  Page,
+  type Page as AppPage,
+} from "./domain";
+import { snapshotRepository } from "./repositories";
+import { environmentService, packagesService } from "./services";
+import type { Snapshot, Run } from "./types";
 import { Shell, Notice } from "./components/Shell";
 import Packages from "./components/Packages";
 import Projects from "./components/Projects";
@@ -22,23 +30,23 @@ import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
-const headings: Record<Page, [string, string]> = {
-  overview: [
+const headings: Record<AppPage, [string, string]> = {
+  [Page.Overview]: [
     "Genel bakış",
     "Bu makinedeki üretim servisleri, projeler ve kayıtlar.",
   ],
-  packages: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
-  projects: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
-  logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
-  services: [
+  [Page.Packages]: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
+  [Page.Projects]: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
+  [Page.Logs]: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
+  [Page.Services]: [
     "Hizmetler",
     "phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel.",
   ],
-  settings: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
+  [Page.Settings]: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
 };
 
 export default function App() {
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<AppPage>(Page.Overview);
   const [state, setState] = useState<Snapshot | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -52,7 +60,7 @@ export default function App() {
   const refresh = useCallback(async () => {
     const request = ++requestNumber.current;
     try {
-      const next = await call<Snapshot>("snapshot");
+      const next = await snapshotRepository.get();
       if (request === requestNumber.current) {
         setState(next);
         setConnectionError("");
@@ -90,7 +98,7 @@ export default function App() {
     const cleanup: (() => void)[] = [];
     const navigate = (target: string | null) => {
       if (active && target && Object.hasOwn(headings, target))
-        setPage(target as Page);
+        setPage(target as AppPage);
     };
     const connect = async () => {
       const nav = await listen<string>("desktop:navigate", () => {
@@ -114,7 +122,7 @@ export default function App() {
       navigate(await call<string | null>("desktop_navigation"));
       const updates = await listen("desktop:check-update", () => {
         if (active) {
-          setPage("settings");
+          setPage(Page.Settings);
           setOpenUpdates((n) => n + 1);
         }
       });
@@ -181,7 +189,7 @@ export default function App() {
   const installed = state?.packages.every((p) => p.installed) ?? false;
   const servicesInstalled =
     state?.packages
-      .filter((p) => ["php", "mysql", "caddy"].includes(p.id))
+      .filter((p) => (CORE_COMPONENTS as readonly string[]).includes(p.id))
       .every((p) => p.installed) ?? false;
   return (
     <Shell
@@ -189,7 +197,7 @@ export default function App() {
       onPage={setPage}
       updateAvailable={Boolean(appUpdate)}
       onOpenUpdates={() => {
-        setPage("settings");
+        setPage(Page.Settings);
         setOpenUpdates((n) => n + 1);
       }}
       toolbar={
@@ -276,11 +284,7 @@ export default function App() {
           onClick={() =>
             void run(
               running ? "Ortam durduruluyor…" : "Ortam başlatılıyor…",
-              () =>
-                call("service", {
-                  id: "all",
-                  action: running ? "stop" : "start",
-                }),
+              () => environmentService.toggle(running),
             )
           }
         >
@@ -369,7 +373,7 @@ export default function App() {
               <button
                 className="button banner-button"
                 onClick={() => {
-                  setPage("settings");
+                  setPage(Page.Settings);
                   setOpenUpdates((n) => n + 1);
                 }}
               >
@@ -377,10 +381,10 @@ export default function App() {
               </button>
             </div>
           ) : null}
-          {page === "overview" && (
+          {page === Page.Overview && (
             <EnvironmentSummary state={state} onPage={setPage} />
           )}
-          {page === "overview" && !installed ? (
+          {page === Page.Overview && !installed ? (
             <div className="setup-banner">
               <div className="setup-icon">
                 <Check size={16} />
@@ -405,7 +409,7 @@ export default function App() {
                 onClick={() =>
                   void run(
                     "Bileşenler kuruluyor… İlerlemeyi günlüklerden takip edebilirsiniz.",
-                    () => call("install", { id: "all" }),
+                    () => packagesService.install("all"),
                   )
                 }
               >
@@ -413,21 +417,23 @@ export default function App() {
               </button>
             </div>
           ) : null}
-          {page === "overview" || page === "packages" ? (
+          {page === Page.Overview || page === Page.Packages ? (
             <Packages
               packages={state.packages}
               phpVersions={state.phpVersions}
               busy={disabled}
               run={run}
-              detailed={page === "packages"}
+              detailed={page === Page.Packages}
               pmaEnabled={state.settings.phpmyadmin.enabled}
               running={running}
               onOpen={
-                page === "overview" ? () => setPage("packages") : undefined
+                page === Page.Overview
+                  ? () => setPage(Page.Packages)
+                  : undefined
               }
             />
           ) : null}
-          {page === "overview" || page === "projects" ? (
+          {page === Page.Overview || page === Page.Projects ? (
             <Projects
               projects={state.projects}
               phpVersions={state.phpVersions}
@@ -435,10 +441,11 @@ export default function App() {
               anyRunning={running}
               clearError={() => setError("")}
               webRunning={state.packages.some(
-                (p) => p.id === "caddy" && p.running,
+                (p) => p.id === ComponentId.Caddy && p.running,
               )}
               phpVersion={
-                state.packages.find((p) => p.id === "php")?.version ?? ""
+                state.packages.find((p) => p.id === ComponentId.Php)?.version ??
+                ""
               }
               busy={disabled}
               run={run}
@@ -446,22 +453,24 @@ export default function App() {
               https={state.settings.web.https}
               httpsPort={state.settings.web.httpsPort}
               mysqlRunning={state.packages.some(
-                (p) => p.id === "mysql" && p.running,
+                (p) => p.id === ComponentId.Mysql && p.running,
               )}
               home={state.settings.projectsDir || `${state.home}/projects`}
               hostPattern={state.settings.web.hostPattern}
               github={state.github}
-              compact={page === "overview"}
+              compact={page === Page.Overview}
               onOpen={
-                page === "overview" ? () => setPage("projects") : undefined
+                page === Page.Overview
+                  ? () => setPage(Page.Projects)
+                  : undefined
               }
             />
           ) : null}
-          {page === "overview" ? (
-            <LogPreview logs={state.logs} onOpen={() => setPage("logs")} />
+          {page === Page.Overview ? (
+            <LogPreview logs={state.logs} onOpen={() => setPage(Page.Logs)} />
           ) : null}
-          {page === "logs" ? <Logs /> : null}
-          {page === "services" ? (
+          {page === Page.Logs ? <Logs /> : null}
+          {page === Page.Services ? (
             <Services
               key={JSON.stringify(state.settings)}
               settings={state.settings}
@@ -473,19 +482,22 @@ export default function App() {
               postgres={state.postgres}
               redis={state.redis}
               github={state.github}
-              phpmyadmin={state.packages.find((p) => p.id === "phpmyadmin")}
+              phpmyadmin={state.packages.find(
+                (p) => p.id === ComponentId.PhpMyAdmin,
+              )}
             />
           ) : null}
-          {page === "settings" ? (
+          {page === Page.Settings ? (
             <Settings
               key={JSON.stringify(state.settings)}
               settings={state.settings}
               versions={state.phpVersions}
               phpVersion={
-                state.packages.find((p) => p.id === "php")?.version ?? ""
+                state.packages.find((p) => p.id === ComponentId.Php)?.version ??
+                ""
               }
               mysqlRunning={state.packages.some(
-                (p) => p.id === "mysql" && p.running,
+                (p) => p.id === ComponentId.Mysql && p.running,
               )}
               home={state.home}
               busy={disabled}

@@ -1,4 +1,4 @@
-import { call } from "../api";
+import { mailService } from "../services";
 import type { MailState, Run } from "../types";
 import ServiceRepair from "./ServiceRepair";
 
@@ -26,7 +26,7 @@ export default function MailActions({
           "SMTP, arayüz portu ve otomatik başlatma",
           "Proje .env dosyaları",
         ]}
-        action={() => call("mail", { action: "repair" })}
+        action={() => mailService.repair()}
       />
       <p className="section-note">
         SMTP, arayüz portu ve otomatik başlatma Ayarlar düğmesindedir. Laravel

@@ -1,15 +1,16 @@
 import { Activity } from "lucide-react";
-import type { Page, Snapshot } from "../types";
+import { CORE_COMPONENTS, Page, type Page as AppPage } from "../domain";
+import type { Snapshot } from "../types";
 
 export default function EnvironmentSummary({
   state,
   onPage,
 }: {
   state: Snapshot;
-  onPage: (page: Page) => void;
+  onPage: (page: AppPage) => void;
 }) {
   const services = state.packages.filter((p) =>
-    ["php", "mysql", "caddy"].includes(p.id),
+    (CORE_COMPONENTS as readonly string[]).includes(p.id),
   );
   const active = services.filter((p) => p.running).length;
   const ready = services.length === 3 && active === 3;
@@ -55,7 +56,7 @@ export default function EnvironmentSummary({
             <button
               type="button"
               className="metric-link"
-              onClick={() => onPage("packages")}
+              onClick={() => onPage(Page.Packages)}
             >
               {active}
               <span> / 3</span>
@@ -68,7 +69,7 @@ export default function EnvironmentSummary({
             <button
               type="button"
               className="metric-link"
-              onClick={() => onPage("packages")}
+              onClick={() => onPage(Page.Packages)}
             >
               {state.packages.find((p) => p.id === "php")?.version ?? "—"}
             </button>
@@ -80,7 +81,7 @@ export default function EnvironmentSummary({
             <button
               type="button"
               className="metric-link"
-              onClick={() => onPage("projects")}
+              onClick={() => onPage(Page.Projects)}
             >
               {state.projects.length}
             </button>

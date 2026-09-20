@@ -1,6 +1,22 @@
 import { useState } from "react";
 import { ChevronLeft, Settings } from "lucide-react";
-import { call } from "../api";
+import {
+  ComponentId,
+  ToolAction,
+  ToolCommand,
+  WorkspaceService,
+} from "../domain";
+import type {
+  ToolCommand as ToolCommandName,
+  WorkspaceService as ServiceId,
+} from "../domain";
+import {
+  mailService,
+  packagesService,
+  runTool,
+  settingsService,
+  tunnelService,
+} from "../services";
 import type {
   Settings as Values,
   Run,
@@ -24,38 +40,36 @@ import TunnelSettings from "./TunnelSettings";
 
 const catalog = [
   {
-    id: "pma",
+    id: WorkspaceService.PhpMyAdmin,
     title: "phpMyAdmin",
     copy: "MySQL veritabanlarını tarayıcıdan yönetin.",
   },
   {
-    id: "mail",
+    id: WorkspaceService.Mail,
     title: "E-posta",
     copy: "Mailpit yerel SMTP yakalayıcı ve gelen kutusu.",
   },
   {
-    id: "postgres",
+    id: WorkspaceService.Postgres,
     title: "PostgreSQL",
     copy: "İsteğe bağlı PostgreSQL 17 · Laravel pgsql.",
   },
   {
-    id: "redis",
+    id: WorkspaceService.Redis,
     title: "Redis",
     copy: "Kuyruk, önbellek ve oturum için Redis 8.",
   },
   {
-    id: "github",
+    id: WorkspaceService.Github,
     title: "GitHub",
     copy: "Özel depolar için bir kez jeton kaydı.",
   },
   {
-    id: "tunnel",
+    id: WorkspaceService.Tunnel,
     title: "Tünel",
     copy: "Cloudflare Tunnel ile dışarı açın.",
   },
 ] as const;
-
-type ServiceId = (typeof catalog)[number]["id"];
 
 function NumberField({
   label,
@@ -149,12 +163,12 @@ export default function Services({
   };
   const tileState = (id: ServiceId) => {
     switch (id) {
-      case "pma":
+      case WorkspaceService.PhpMyAdmin:
         return {
           on: settings.phpmyadmin.enabled,
           label: settings.phpmyadmin.enabled ? "Açık" : "Kapalı",
         };
-      case "mail":
+      case WorkspaceService.Mail:
         return {
           on: mail.running,
           label: mail.running
@@ -165,7 +179,7 @@ export default function Services({
                 ? "Onarım gerekir"
                 : "Kurulmadı",
         };
-      case "postgres":
+      case WorkspaceService.Postgres:
         return {
           on: postgres.running,
           label: postgres.running
@@ -176,7 +190,7 @@ export default function Services({
                 ? "Onarım gerekir"
                 : "Kurulmadı",
         };
-      case "redis":
+      case WorkspaceService.Redis:
         return {
           on: redis.running,
           label: redis.running
@@ -187,7 +201,7 @@ export default function Services({
                 ? "Onarım gerekir"
                 : "Kurulmadı",
         };
-      case "github":
+      case WorkspaceService.Github:
         return {
           on: github.tokenSaved,
           label: github.tokenSaved
@@ -196,7 +210,7 @@ export default function Services({
               : "Jeton kayıtlı"
             : "Jeton yok",
         };
-      case "tunnel":
+      case WorkspaceService.Tunnel:
         return {
           on: tunnel.running,
           label: tunnel.running
@@ -222,21 +236,21 @@ export default function Services({
       installed: boolean,
       repairable: boolean,
       isRunning: boolean,
-      command: string,
+      command: ToolCommandName,
       start: string,
       stop: string,
     ): ConsoleAction[] => {
       if (!installed && !repairable) {
         return [
           {
-            id: "install",
+            id: ToolAction.Install,
             label: "Kur",
             tone: "primary",
             icon: "install",
             disabled: busy,
             onClick: () =>
               void run(`${start} indiriliyor…`, () =>
-                call(command, { action: "install" }),
+                runTool(command, ToolAction.Install),
               ),
           },
         ];
@@ -244,14 +258,14 @@ export default function Services({
       if (!installed) return [];
       return [
         {
-          id: isRunning ? "stop" : "start",
+          id: isRunning ? ToolAction.Stop : ToolAction.Start,
           label: isRunning ? "Durdur" : "Başlat",
           tone: isRunning ? "secondary" : "primary",
           icon: isRunning ? "stop" : "play",
           disabled: busy,
           onClick: () =>
             void run(isRunning ? `${stop}…` : `${start} başlatılıyor…`, () =>
-              call(command, { action: isRunning ? "stop" : "start" }),
+              runTool(command, isRunning ? ToolAction.Stop : ToolAction.Start),
             ),
         },
       ];
@@ -283,7 +297,7 @@ export default function Services({
             ? "Kurulum eksik"
             : `${name} kurulu değil`;
     switch (id) {
-      case "pma": {
+      case WorkspaceService.PhpMyAdmin: {
         const enabled = settings.phpmyadmin.enabled;
         const url = settings.web.https
           ? `https://phpmyadmin.f4box.localhost:${settings.web.httpsPort}`
@@ -310,12 +324,14 @@ export default function Services({
                   ? "phpMyAdmin'i tarayıcıda aç"
                   : "Önce ortamı başlatın",
               onClick: () =>
-                void run("phpMyAdmin açılıyor…", () => call("open_phpmyadmin")),
+                void run("phpMyAdmin açılıyor…", () =>
+                  packagesService.openPhpMyAdmin(),
+                ),
             },
           ],
         };
       }
-      case "mail":
+      case WorkspaceService.Mail:
         return {
           kind: kind(mail.installed, mail.repairable, mail.running),
           title: title(
@@ -332,14 +348,14 @@ export default function Services({
               mail.installed,
               mail.repairable,
               mail.running,
-              "mail",
+              ToolCommand.Mail,
               "Mailpit",
               "Mailpit durduruluyor",
             ),
             ...(mail.installed
               ? [
                   {
-                    id: "open",
+                    id: ToolAction.Open,
                     label: "Gelen kutusu",
                     tone: "secondary" as const,
                     icon: "open" as const,
@@ -349,14 +365,14 @@ export default function Services({
                       : "Önce Mailpit'i başlatın",
                     onClick: () =>
                       void run("Gelen kutusu açılıyor…", () =>
-                        call("mail", { action: "open" }),
+                        mailService.open(),
                       ),
                   },
                 ]
               : []),
           ],
         };
-      case "postgres":
+      case WorkspaceService.Postgres:
         return {
           kind: kind(postgres.installed, postgres.repairable, postgres.running),
           title: title(
@@ -372,12 +388,12 @@ export default function Services({
             postgres.installed,
             postgres.repairable,
             postgres.running,
-            "postgres",
+            ToolCommand.Postgres,
             "PostgreSQL",
             "PostgreSQL durduruluyor",
           ),
         };
-      case "redis":
+      case WorkspaceService.Redis:
         return {
           kind: kind(redis.installed, redis.repairable, redis.running),
           title: title(
@@ -393,12 +409,12 @@ export default function Services({
             redis.installed,
             redis.repairable,
             redis.running,
-            "redis",
+            ToolCommand.Redis,
             "Redis",
             "Redis durduruluyor",
           ),
         };
-      case "github":
+      case WorkspaceService.Github:
         return {
           kind: github.tokenSaved ? "ready" : "off",
           title: github.tokenSaved
@@ -412,7 +428,7 @@ export default function Services({
           issue: null,
           actions: [] as ConsoleAction[],
         };
-      case "tunnel":
+      case WorkspaceService.Tunnel:
         return {
           kind: kind(tunnel.installed, tunnel.repairable, tunnel.running),
           title: title(
@@ -432,14 +448,14 @@ export default function Services({
                   false,
                   false,
                   false,
-                  "tunnel",
+                  ToolCommand.Tunnel,
                   "Cloudflared",
                   "Tünel durduruluyor",
                 )
               : tunnel.installed
                 ? [
                     {
-                      id: tunnel.running ? "stop" : "start",
+                      id: tunnel.running ? ToolAction.Stop : ToolAction.Start,
                       label: tunnel.running ? "Durdur" : "Başlat",
                       tone: tunnel.running
                         ? ("secondary" as const)
@@ -457,9 +473,9 @@ export default function Services({
                             ? "Tünel durduruluyor…"
                             : "Tünel açılıyor…",
                           () =>
-                            call("tunnel", {
-                              action: tunnel.running ? "stop" : "start",
-                            }),
+                            tunnel.running
+                              ? tunnelService.stop()
+                              : tunnelService.start(),
                         ),
                     },
                   ]
@@ -544,15 +560,15 @@ export default function Services({
             <ServiceConsole {...serviceConsole(service as ServiceId)} />
           ) : null}
           {settingsOpen &&
-          (service === "pma" ||
-            service === "mail" ||
-            service === "postgres" ||
-            service === "redis") ? (
+          (service === WorkspaceService.PhpMyAdmin ||
+            service === WorkspaceService.Mail ||
+            service === WorkspaceService.Postgres ||
+            service === WorkspaceService.Redis) ? (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void run("Hizmet ayarları doğrulanıyor ve kaydediliyor…", () =>
-                  call("save_settings", { settings: values }),
+                  settingsService.save(values),
                 );
               }}
             >
@@ -562,16 +578,16 @@ export default function Services({
                   : "Kaydedilen portlar sonraki başlangıçta uygulanır."}
               </p>
               <fieldset disabled={locked} className="settings-fields">
-                {service === "pma" ? (
+                {service === WorkspaceService.PhpMyAdmin ? (
                   <PmaForm values={values} change={change} />
                 ) : null}
-                {service === "mail" ? (
+                {service === WorkspaceService.Mail ? (
                   <MailForm values={values} change={change} />
                 ) : null}
-                {service === "postgres" ? (
+                {service === WorkspaceService.Postgres ? (
                   <PostgresForm values={values} change={change} />
                 ) : null}
-                {service === "redis" ? (
+                {service === WorkspaceService.Redis ? (
                   <RedisForm values={values} change={change} />
                 ) : null}
               </fieldset>
@@ -600,14 +616,14 @@ export default function Services({
                 </button>
               </div>
             </form>
-          ) : settingsOpen && service === "github" ? (
+          ) : settingsOpen && service === WorkspaceService.Github ? (
             <GithubSettings
               github={github}
               busy={busy}
               run={run}
               pane="settings"
             />
-          ) : settingsOpen && service === "tunnel" ? (
+          ) : settingsOpen && service === WorkspaceService.Tunnel ? (
             <TunnelSettings
               tunnel={tunnel}
               busy={busy}
@@ -616,7 +632,7 @@ export default function Services({
             />
           ) : (
             <>
-              {service === "pma" ? (
+              {service === WorkspaceService.PhpMyAdmin ? (
                 <PmaActions
                   phpmyadmin={phpmyadmin}
                   busy={busy}
@@ -624,16 +640,16 @@ export default function Services({
                   run={run}
                 />
               ) : null}
-              {service === "mail" ? (
+              {service === WorkspaceService.Mail ? (
                 <MailActions mail={mail} busy={busy} run={run} />
               ) : null}
-              {service === "postgres" ? (
+              {service === WorkspaceService.Postgres ? (
                 <PostgresSettings postgres={postgres} busy={busy} run={run} />
               ) : null}
-              {service === "redis" ? (
+              {service === WorkspaceService.Redis ? (
                 <RedisActions redis={redis} busy={busy} run={run} />
               ) : null}
-              {service === "github" ? (
+              {service === WorkspaceService.Github ? (
                 <GithubSettings
                   github={github}
                   busy={busy}
@@ -641,7 +657,7 @@ export default function Services({
                   pane="ops"
                 />
               ) : null}
-              {service === "tunnel" ? (
+              {service === WorkspaceService.Tunnel ? (
                 <TunnelSettings
                   tunnel={tunnel}
                   busy={busy}
@@ -682,7 +698,7 @@ function PmaActions({
           "Dil, satır ve oturum ayarları",
           "MySQL verileri ve proje .env dosyaları",
         ]}
-        action={() => call("repair", { id: "phpmyadmin" })}
+        action={() => packagesService.repair(ComponentId.PhpMyAdmin)}
         blocked={running}
         blockedReason="Onarmak için ortamı durdurun. phpMyAdmin dosyaları web sunucusu açıkken kilitlenebilir."
       />

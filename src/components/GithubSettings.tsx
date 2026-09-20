@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
-import { call } from "../api";
+import { githubService } from "../services";
 import type { GithubState, Run } from "../types";
 
 export default function GithubSettings({
@@ -62,7 +62,7 @@ export default function GithubSettings({
               disabled={busy || !token.trim()}
               onClick={() =>
                 void run("GitHub jetonu kaydediliyor…", async () => {
-                  await call("github", { action: "save", token });
+                  await githubService.save(token);
                   setToken("");
                   return "GitHub hesabı kaydedildi. Proje ekle → GitHub ile klonlayabilirsiniz.";
                 })
@@ -76,7 +76,7 @@ export default function GithubSettings({
               disabled={busy || !github.tokenSaved}
               onClick={() =>
                 void run("GitHub jetonu siliniyor…", () =>
-                  call("github", { action: "forget" }),
+                  githubService.forget(),
                 )
               }
             >

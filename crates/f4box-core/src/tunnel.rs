@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf, time::Duration};
 
-pub const ID: &str = "cloudflared";
+pub const ID: &str = crate::domain::ComponentId::Cloudflared.as_str();
 /// cloudflared prints this once a tunnel connection is registered with Cloudflare.
 const READY_MARKER: &str = "Registered tunnel connection";
 

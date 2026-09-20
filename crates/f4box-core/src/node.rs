@@ -3,7 +3,7 @@ use anyhow::Result;
 use serde::Serialize;
 use std::path::PathBuf;
 
-pub const ID: &str = "node";
+pub const ID: &str = crate::domain::ComponentId::Node.as_str();
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

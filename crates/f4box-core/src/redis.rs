@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::HashMap;
 
-pub const ID: &str = "redis";
+pub const ID: &str = crate::domain::ComponentId::Redis.as_str();
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

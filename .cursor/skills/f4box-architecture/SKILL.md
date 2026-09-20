@@ -9,12 +9,17 @@ description: F4Box katmanları, veri dizini ve nereye kod yazılacağı. Mimari,
 
 | Yol | Görev |
 | --- | --- |
-| `crates/f4box-core` | Katalog, indirme, arşiv, süreç, MySQL, isteğe bağlı PostgreSQL/Redis, Caddy, projeler, kuyruk/zamanlayıcı, yerel sürüm, CLI |
-| `src-tauri` | Tauri komutları, tepsi, Windows başlangıç, klasör seçimi |
-| `src` | React/TypeScript. Tek yazma yolu `call()` → IPC |
+| `crates/f4box-core/src/domain` | `ComponentId`, `ToolAction`, `GithubAction`, `EnvironmentAction` |
+| `crates/f4box-core/src/repository` | `DataDir` — `config.json`, `bin/<id>/<version>` yerleşimi |
+| `crates/f4box-core` | `Manager` cephesi: katalog, indirme, süreç, MySQL, isteğe bağlı PostgreSQL/Redis, Caddy, projeler, kuyruk/zamanlayıcı, yerel sürüm, CLI |
+| `src-tauri` | Tauri komutları; eylem dizelerini domain enum’una parse eder |
+| `src/domain` | `Page`, `WorkspaceService`, `ToolCommand`, `ToolAction`, `ComponentId` |
+| `src/services` | IPC sarmalayıcılar (`mailService`, `environmentService`, …) |
+| `src/repositories` | `snapshotRepository.get()` |
+| `src` | React. Yeni yazma `services` üzerinden; ham `call("mail")` ekleme |
 | `crates/f4box-core/src/bin/f4box.rs` | Aynı `Manager` ile CLI |
 
-Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. F4Box Windows üretim ortamıdır (Forge hissi); uzak SSH ve Herd/Laragon geliştirme kopyası yoktur. Yerel sürüm tarifi `release.rs` + `Project.release`.
+Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. `Manager` tam rewrite edilmez. Tel dizileri değişmez: süreç `mailpit`, IPC komutu `mail`, eylem `install`/`start`. Komut adı süreç kimliği değildir. F4Box Windows üretim ortamıdır (Forge hissi); uzak SSH ve Herd/Laragon geliştirme kopyası yoktur. Yerel sürüm tarifi `release.rs` + `Project.release`.
 
 ## Veri dizini
 
