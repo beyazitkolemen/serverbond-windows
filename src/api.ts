@@ -126,6 +126,8 @@ const preview: Snapshot = {
     programs: [],
     defenderExclusion: false,
     pending: [],
+    helper: false,
+    declined: false,
   },
   busy: false,
   anyRunning: false,

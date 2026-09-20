@@ -652,16 +652,17 @@ fn the_mail_form_owns_the_php_smtp_directives() {
 }
 
 #[test]
-fn granting_windows_permissions_needs_installed_programs() {
+fn granting_windows_permissions_is_windows_only_and_starts_ungranted() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();
     let state = manager.snapshot().unwrap().permissions;
-    assert!(!state.granted && state.applied.is_empty() && state.pending.is_empty());
-    assert!(manager
-        .grant_permissions(false)
-        .unwrap_err()
-        .to_string()
-        .contains("bileşenleri kurun"));
+    assert!(!state.granted && !state.helper && !state.declined);
+    assert!(state.applied.is_empty() && state.pending.is_empty());
+    let error = manager.grant_permissions(false).unwrap_err().to_string();
+    assert!(
+        error.contains("yalnızca Windows") || error.contains("Yetki"),
+        "{error}"
+    );
     assert!(!home.path().join("config/permissions.json").exists());
 }
 

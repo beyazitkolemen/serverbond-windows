@@ -421,11 +421,20 @@ fn main() {
             if !minimized {
                 desktop::show(app.handle(), None);
             }
-            if manager.recovery_issue().is_none() && manager.snapshot()?.settings.start_on_launch {
+            if manager.recovery_issue().is_none() {
                 let app = app.handle().clone();
+                let start = manager.snapshot()?.settings.start_on_launch;
                 tauri::async_runtime::spawn_blocking(move || {
-                    if let Err(error) = manager.contain(|| manager.start("all")) {
-                        desktop::report(&app, format!("Otomatik başlangıç başarısız: {error:#}"));
+                    if let Err(error) = manager.contain(|| manager.ensure_permissions()) {
+                        manager.log(format!("Windows izinleri uygulanamadı: {error:#}"));
+                    }
+                    if start {
+                        if let Err(error) = manager.contain(|| manager.start("all")) {
+                            desktop::report(
+                                &app,
+                                format!("Otomatik başlangıç başarısız: {error:#}"),
+                            );
+                        }
                     }
                 });
             }

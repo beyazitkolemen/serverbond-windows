@@ -299,7 +299,8 @@
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe",
-      "Klasör yetkisi: C:\\Users\\dev\\F4Box"
+      "Klasör yetkisi: C:\\Users\\dev\\F4Box",
+      "Zamanlanmış görev: F4Box Permissions"
     ],
     "failed": [],
     "programs": [
@@ -310,7 +311,9 @@
       "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe"
     ],
     "defenderExclusion": false,
-    "pending": []
+    "pending": [],
+    "helper": true,
+    "declined": false
   },
   "logs": [
     "[21:14:58] mysql çalışıyor · 127.0.0.1:13306",

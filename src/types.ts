@@ -143,6 +143,8 @@ export interface PermissionState {
   programs: string[];
   defenderExclusion: boolean;
   pending: string[];
+  helper: boolean;
+  declined: boolean;
 }
 export interface Snapshot {
   packages: PackageStatus[];

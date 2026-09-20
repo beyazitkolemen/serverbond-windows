@@ -99,13 +99,14 @@ SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en
 
 ### Windows izinleri
 
-F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. **Ayarlar → Sistem → Windows izinleri** tek bir Windows onay penceresiyle şunları bir kez uygular:
+F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. Uygulama açılırken Windows’tan **bir kez** tam yetki ister. Onay şunları uygular:
 
 - F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
 - Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
-- İsteğe bağlı kutu işaretlenirse Microsoft Defender'da veri klasörü istisnası. Bu seçenek varsayılan olarak kapalıdır: Composer ve PHP hızlanır, ancak o klasörde tarama koruması kalkar.
+- Microsoft Defender'da veri klasörü istisnası (açılıştaki istek bunu da ister; Ayarlar’dan kapatılabilir).
+- Sonraki kurulumlarda yeniden sormamak için `F4Box Permissions` zamanlanmış görevi (en yüksek yetki).
 
-Yükseltilmiş yetkiyle yalnızca F4Box'ın ürettiği bu betik çalışır; uygulamanın kendisi yükseltilmez. Onay verilmezse hiçbir ayar değişmez. Uygulanan ve uygulanamayan maddeler kartta ve günlüklerde listelenir; yeni bir PHP sürümü veya cloudflared kurduktan sonra kart eksik programları bildirir ve **İzinleri yenile** ile eklenir. Komut satırından: `f4box permissions grant [defender]`.
+Yükseltilmiş yetkiyle yalnızca F4Box'ın ürettiği bu betik çalışır; uygulamanın kendisi her açılışta yükseltilmez. Onay bir kez verildikten sonra yeni PHP sürümü veya Mailpit kurulumu güvenlik duvarına sessizce eklenir. İstek reddedilirse F4Box bir daha kendiliğinden sormaz; **Ayarlar → Sistem** ekranından yeniden istenebilir. Komut satırından: `f4box permissions ensure|grant [defender]`.
 
 **Ayarlar → Kurulum gereksinimleri**, Windows x64, Visual C++ x64 çalışma zamanı, Windows PowerShell, veri klasörüne yazma, disk alanı ve portları denetler. F4Box'a ait açık portlar kullanılabilir kabul edilir; başka uygulamanın portu hata olarak gösterilir. Visual C++ eksikse Microsoft indirme bağlantısı sunulur. Paket indirmeden önce platform, çalışma zamanı ve yazma erişimi denetlenir; düşük disk alanı uyarı olarak gösterilir. WebView2 kurulumu Tauri kurulum paketi tarafından yönetilir.
 

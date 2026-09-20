@@ -12,16 +12,19 @@ export default function PermissionSettings({
   busy: boolean;
   run: Run;
 }) {
-  const [defender, setDefender] = useState(false);
+  const [defender, setDefender] = useState(
+    permissions.defenderExclusion || !permissions.granted,
+  );
   const pending = permissions.pending.length;
   return (
     <section className="settings-section permission-section">
       <h2>Windows izinleri</h2>
       <p className="section-note">
-        F4Box gündelik işini yönetici yetkisi olmadan yapar: servisler yalnızca
-        127.0.0.1 üzerinde dinler ve dosyalar kendi veri klasörüne yazılır. Tek
-        seferlik izin, Windows’un sonradan soru sormasını engellemek içindir.
-        Aşağıdaki işlem tek bir Windows onay penceresi açar.
+        F4Box açılırken Windows’tan bir kez tam yetki ister. Onay, güvenlik
+        duvarı kurallarını, veri klasörü erişimini ve isteğe bağlı Defender
+        istisnasını uygular; ardından bir zamanlanmış görev kurulur. Uygulamanın
+        kendisi yükseltilmiş yetkiyle çalışmaz. Sonraki açılışlarda ve yeni
+        paket kurulumlarında Windows bir daha soru sormaz.
       </p>
       <ul className="permission-list">
         <li>
@@ -30,6 +33,10 @@ export default function PermissionSettings({
         </li>
         <li>Veri klasöründe Windows kullanıcınıza tam erişim</li>
         <li>İsteğe bağlı: Microsoft Defender’da veri klasörü istisnası</li>
+        <li>
+          Tekrar sormamak için “F4Box Permissions” zamanlanmış görevi (en yüksek
+          yetki)
+        </li>
       </ul>
       <p>
         {permissions.granted ? (
@@ -37,15 +44,27 @@ export default function PermissionSettings({
             Verildi · <strong>{permissions.appliedAt}</strong> ·{" "}
             {permissions.programs.length} program
             {permissions.defenderExclusion ? " · Defender istisnası var" : ""}
+            {permissions.helper ? " · yardımcı görev kurulu" : ""}
+          </>
+        ) : permissions.declined ? (
+          <>
+            Açılıştaki yetki isteği onaylanmadı. F4Box bir daha kendiliğinden
+            sormaz; aşağıdaki düğmeyle yeniden isteyebilirsiniz.
           </>
         ) : (
-          <>Henüz tek seferlik izin verilmedi.</>
+          <>Henüz Windows onayı alınmadı. Sonraki açılışta bir kez sorulur.</>
         )}
       </p>
-      {pending > 0 && permissions.granted && (
+      {pending > 0 && permissions.granted && permissions.helper && (
         <p className="settings-feedback" role="status">
-          {pending} yeni program izin listesinde değil (yeni kurulan PHP sürümü
-          veya cloudflared). Yeniden izin verdiğinizde eklenir.
+          {pending} yeni program bir sonraki sessiz yenilemede eklenecek. Yeni
+          bir Windows penceresi açılmaz.
+        </p>
+      )}
+      {pending > 0 && permissions.granted && !permissions.helper && (
+        <p className="settings-feedback" role="status">
+          {pending} yeni program izin listesinde değil. Aşağıdan yenilediğinizde
+          yardımcı görev de kurulur; bundan sonra Windows soru sormaz.
         </p>
       )}
       {permissions.failed.length > 0 && (
@@ -79,7 +98,11 @@ export default function PermissionSettings({
         }
       >
         <ShieldCheck size={17} />
-        {permissions.granted ? "İzinleri yenile" : "Tek seferlik izin ver"}
+        {permissions.granted
+          ? "İzinleri yenile"
+          : permissions.declined
+            ? "Yeniden izin iste"
+            : "Tek seferlik izin ver"}
       </button>
       {permissions.applied.length > 0 && (
         <ul className="permission-list done">

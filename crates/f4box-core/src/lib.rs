@@ -237,6 +237,7 @@ impl Manager {
         let package = tool_package(id)?;
         self.check_install_requirements()?;
         install::install(&self.home, &package, |line| self.log(line))?;
+        self.refresh_permissions_quietly();
         Ok(())
     }
 
@@ -247,6 +248,7 @@ impl Manager {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .remove(id);
+        self.refresh_permissions_quietly();
         Ok(())
     }
 
@@ -466,6 +468,7 @@ impl Manager {
             }
         }
         self.log("Seçilen bileşenlerin kurulumu tamamlandı.");
+        self.refresh_permissions_quietly();
         Ok(())
     }
 
@@ -490,6 +493,7 @@ impl Manager {
             "{} onarıldı. Veri ve proje klasörleri korundu.",
             package.name
         ));
+        self.refresh_permissions_quietly();
         Ok(())
     }
 

@@ -26,7 +26,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 `mail.rs`: servis `mailpit`, isteğe bağlı paket `tools.json` içinde. Portlar `settings.mail` altında; `Settings::validate` bunları web/mysql/php portlarıyla birlikte tekilleştirir. Hazır olma ölçütü arayüz portunun dinlenmesi (`spawn_service`). `relayPhpMail` açıkken `PhpSettings::render` üretilen php.ini’ye `SMTP`/`smtp_port`/`sendmail_from` yazar; bu anahtarlar `extra_ini` içinde reddedilir. `start("all")` sonunda `autoStart` açıksa denenir; hata ortamı düşürmez.
 
-`permissions.rs`: tek yükseltilmiş PowerShell betiği (netsh güvenlik duvarı kuralları, `icacls`, isteğe bağlı `Add-MpPreference`). Betik metni saf fonksiyonla üretilir ve testlidir; yollar tek tırnak içinde kaçırılır. Sonuç `config/permissions.json`. Uygulamanın kendisi hiçbir zaman yükseltilmez.
+`permissions.rs`: açılışta `ensure_permissions` bir kez UAC açar (reddedilirse `declined` yazılır, bir daha sorulmaz). Betik netsh, `icacls`, isteğe bağlı Defender ve `F4Box Permissions` zamanlanmış görevini kurar (`RunLevel Highest`). Sonraki paket kurulumları `refresh_permissions_quietly` ile görevi çalıştırır; yeni UAC yoktur. Betik metni saf fonksiyonla üretilir ve testlidir. Uygulamanın kendisi `requireAdministrator` değildir.
 
 ## Projeler
 

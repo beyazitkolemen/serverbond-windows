@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -120,6 +120,10 @@ fn main() -> Result<()> {
             _ => bail!("Kullanım: node install|repair|status"),
         },
         "permissions" => match args.get(1).map(String::as_str).unwrap_or("status") {
+            "ensure" => println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.ensure_permissions()?)?
+            ),
             "grant" => println!(
                 "{}",
                 serde_json::to_string_pretty(
@@ -130,7 +134,7 @@ fn main() -> Result<()> {
                 "{}",
                 serde_json::to_string_pretty(&manager.permission_state())?
             ),
-            _ => bail!("Kullanım: permissions grant [defender]|status"),
+            _ => bail!("Kullanım: permissions ensure|grant [defender]|status"),
         },
         "smoke" => smoke(&manager)?,
         _ => bail!("Bilinmeyen komut. f4box help"),
