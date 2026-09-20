@@ -1,0 +1,12 @@
+---
+description: React arayüzü ve tasarım sistemi
+globs: src/**/*.{ts,tsx,css}
+---
+
+# Arayüz
+
+- Durum kaynağı Rust `snapshot` komutudur. Tarayıcı önizlemesi (`api.ts`) kurulum uydurmaz.
+- Tasarım: zemin `#f7f9f8`, vurgu `#157557`, kenar çubuğu 224px. [docs/design/design-system.md](../../docs/design/design-system.md).
+- Uzun yazma işlemlerini UI zaman aşımıyla yeniden başlatma; `call()` bunu zaten ayırır.
+- Ayar formu `key={JSON.stringify(settings)}` ile sunucu ayarı değişince sıfırlanır; taslağı poll ile ezme.
+- Yeni Laravel 12 için PHP karşılaştırması `phpSupportsLaravel12` ile yapılır; `Number("8.10")` kullanma.

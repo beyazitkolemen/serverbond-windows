@@ -1,0 +1,12 @@
+---
+description: Sabit paket kataloğu ve SHA-256
+globs: crates/f4box-core/catalog.json,crates/f4box-core/php-versions.json,docs/packages.md
+---
+
+# Paket kataloğu
+
+- Hareketli `latest` URL kullanma. Sürüm, URL, SHA-256, `prefix` ve `executable` birlikte değişir.
+- PHP varsayılanı değişirse `catalog.json` içindeki `php` kaydı `php-versions.json` ile aynı paket olmalıdır.
+- Kullanıcının kayıtlı sürümünü kırmak için eski yama sürümünü katalogdan çıkarma.
+- MySQL veri dizinini başka bir MySQL sürümüyle açacak güncelleme yapma.
+- Kaynak ve doğrulama adımları: [docs/packages.md](../../docs/packages.md). Skill: `f4box-catalog`.

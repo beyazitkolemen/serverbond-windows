@@ -1,6 +1,10 @@
 # F4Box — asistan notları
 
-Windows x64 için PHP, MySQL, Caddy ve Laravel projelerini yöneten Tauri + Rust uygulaması. Cloud Agent Linux üzerinde çalışır; masaüstü EXE burada üretilmez.
+Windows x64 için PHP, MySQL, Caddy ve Laravel projelerini yöneten Tauri + Rust uygulaması. Cloud Agent Linux üzerindedir; masaüstü EXE burada üretilmez.
+
+## Git
+
+Her zaman `main`. `git fetch --prune`, `origin/main` fast-forward, commit ve `git push origin main`. Özellik dalı veya PR açılmaz. Başka dalda kalmış iş `main`'e merge edilir. Force-push yok.
 
 ## Kurulum
 
@@ -14,7 +18,7 @@ bash scripts/ai/install.sh
 npm run test:ai
 ```
 
-Bu komut arayüz derlemesini, `f4box-core` testlerini, rustfmt ve clippy denetimini çalıştırır. Ayrıntılar: [docs/ai-environment.md](docs/ai-environment.md).
+Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md).
 
 ## Çalıştırma
 
@@ -26,4 +30,18 @@ Bu komut arayüz derlemesini, `f4box-core` testlerini, rustfmt ve clippy denetim
 - `crates/f4box-core`: katalog, indirme, süreç, MySQL, projeler
 - `src-tauri`: dar IPC ve tepsi
 - `src`: React arayüzü
-- Sabit paket sürümleri `crates/f4box-core/catalog.json` ve `php-versions.json` içindedir; SHA-256 olmadan güncellenmez
+- Sabit paketler `catalog.json` / `php-versions.json`; SHA-256 olmadan güncellenmez
+
+## Cursor skill ve kurallar
+
+Kurallar (otomatik): `.cursor/rules/` — `f4box.mdc`, `git-main.mdc`, `catalog.mdc`, `frontend.mdc`.
+
+Skill’ler (konuya göre oku):
+
+| Skill | Ne zaman |
+| --- | --- |
+| `f4box-architecture` | Katman, veri dizini, yeni özellik yeri |
+| `f4box-catalog` | PHP/MySQL/Caddy/Composer/phpMyAdmin sürüm ve hash |
+| `f4box-runtime` | Servis, proje, port, onarım, phpMyAdmin |
+| `f4box-desktop` | Tauri, tepsi, Windows başlangıç |
+| `f4box-testing` | Hangi testi nerede çalıştıracağın |

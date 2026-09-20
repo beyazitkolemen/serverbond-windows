@@ -1,0 +1,19 @@
+---
+description: F4Box genel asistan kuralları
+alwaysApply: true
+---
+
+# F4Box
+
+Windows x64 Laravel geliştirme ortamı yöneticisidir. Cloud Agent Linux üzerindedir; masaüstü EXE, NSIS, tepsi ve gerçek PHP/MySQL/Caddy burada çalışmaz.
+
+- Kullanıcıya dönük metin Türkçe kalır. Kod tanımlayıcıları mevcut İngilizce/Rust stilini korur.
+- Sahte servis durumu, uydurma ekran görüntüsü veya sahte kurulum sonucu üretme.
+- `catalog.json` / `php-versions.json` içinde SHA-256 veya sabit URL olmadan sürüm değiştirme. Eski PHP yama sürümlerini katalogdan silme.
+- Yapılandırma bozuksa sessizce sıfırlama. `config.last-good.json` ve kurtarma akışını koru.
+- Linux’ta `npm run test:ai`. Windows masaüstü/bütünleşme testini Linux’ta çalıştırıyormuş gibi davranma.
+- `src-tauri` ince kalır: iş kuralı `crates/f4box-core` içindedir.
+- Yeni proje adı `validate_slug` kurallarına uyar; `.env` dosyaları otomatik yazılmaz.
+- Git: yalnızca `main`. Özellik dalı veya PR açılmaz; diğer dallar `main`'e alınır.
+
+Ayrıntı: [AGENTS.md](../../AGENTS.md), [docs/ai-environment.md](../../docs/ai-environment.md).

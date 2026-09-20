@@ -2,6 +2,8 @@
 
 Cloud Agent ve diğer asistanlar Windows masaüstü uygulamasını bu Linux ortamında çalıştırmaz. Çekirdek mantık, arayüz derlemesi ve biçim denetimleri burada koşar.
 
+Git kuralı: yalnızca `main`. Özellik dalı veya PR açılmaz; diğer dallardaki iş `main`'e alınır.
+
 ## Ortam
 
 `.cursor/environment.json` her önyüklemede `scripts/ai/install.sh` çalıştırır, ardından salt okunur önizleme için `npm run dev` (`http://127.0.0.1:1420`) açar. Kurulum sonlanır; test veya uzun süren derleme içermez.
