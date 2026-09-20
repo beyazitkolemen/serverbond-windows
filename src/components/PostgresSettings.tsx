@@ -1,15 +1,8 @@
 import { useState } from "react";
-import {
-  Play,
-  Square,
-  Download,
-  Wrench,
-  Eye,
-  EyeOff,
-  Copy,
-} from "lucide-react";
+import { Play, Square, Download, Eye, EyeOff, Copy } from "lucide-react";
 import { call } from "../api";
 import type { PostgresState, Run } from "../types";
+import ServiceRepair from "./ServiceRepair";
 
 export default function PostgresSettings({
   postgres,
@@ -37,7 +30,9 @@ export default function PostgresSettings({
               ? `PostgreSQL çalışıyor · PID ${postgres.pid ?? "-"}`
               : postgres.installed
                 ? "PostgreSQL durdu"
-                : "PostgreSQL kurulu değil"}
+                : postgres.repairable
+                  ? "Kurulum eksik"
+                  : "PostgreSQL kurulu değil"}
           </strong>
           <p className="section-note">
             PostgreSQL {postgres.version} · 127.0.0.1:{postgres.port} ·
@@ -45,13 +40,13 @@ export default function PostgresSettings({
           </p>
         </div>
       </div>
-      {postgres.issue ? (
+      {postgres.issue && postgres.installed ? (
         <p role="alert" className="settings-feedback">
           {postgres.issue}
         </p>
       ) : null}
       <div className="settings-actions">
-        {!postgres.installed ? (
+        {!postgres.installed && !postgres.repairable ? (
           <button
             type="button"
             className="button secondary"
@@ -61,35 +56,24 @@ export default function PostgresSettings({
             <Download size={16} />
             PostgreSQL kur
           </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() =>
-                action(
-                  postgres.running ? "stop" : "start",
-                  postgres.running
-                    ? "PostgreSQL durduruluyor…"
-                    : "PostgreSQL başlatılıyor…",
-                )
-              }
-            >
-              {postgres.running ? <Square size={16} /> : <Play size={16} />}
-              {postgres.running ? "Durdur" : "Başlat"}
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() => action("repair", "PostgreSQL onarılıyor…")}
-            >
-              <Wrench size={16} />
-              Onar
-            </button>
-          </>
-        )}
+        ) : postgres.installed ? (
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() =>
+              action(
+                postgres.running ? "stop" : "start",
+                postgres.running
+                  ? "PostgreSQL durduruluyor…"
+                  : "PostgreSQL başlatılıyor…",
+              )
+            }
+          >
+            {postgres.running ? <Square size={16} /> : <Play size={16} />}
+            {postgres.running ? "Durdur" : "Başlat"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="button secondary"
@@ -223,6 +207,22 @@ export default function PostgresSettings({
           </div>
         </>
       ) : null}
+      <ServiceRepair
+        name="PostgreSQL"
+        installed={postgres.installed}
+        repairable={postgres.repairable}
+        running={postgres.running}
+        issue={postgres.issue}
+        busy={busy}
+        run={run}
+        keeps={[
+          "Veri dizini (data/postgresql-17)",
+          "postgres kullanıcısının parolası",
+          "Port ve otomatik başlatma",
+          "Proje .env dosyaları",
+        ]}
+        action={() => call("postgres", { action: "repair" })}
+      />
       <p className="section-note">
         Port ve otomatik başlatma Ayarlar düğmesindedir. MySQL varsayılan kalır;
         PostgreSQL isteğe bağlıdır ve ortamı bloke etmez. Laravel{" "}
@@ -230,7 +230,8 @@ export default function PostgresSettings({
         <code>DB_PORT={postgres.port}</code>, <code>DB_USERNAME=postgres</code>{" "}
         değerlerini kendi <code>.env</code> dosyanızda tanımlarsınız; F4Box
         yazmaz. PHP <code>pgsql</code> / <code>pdo_pgsql</code> uzantılarını PHP
-        sekmesinden açın. Komut: <code>f4box postgres install|start|stop</code>.
+        sekmesinden açın. Komut:{" "}
+        <code>f4box postgres install|start|stop|repair</code>.
       </p>
     </section>
   );

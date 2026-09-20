@@ -45,20 +45,20 @@ const shots = [
     file: "06-sistem.png",
     nav: "Ayarlar",
     tab: "Sistem",
-    height: 1960,
+    height: 2100,
   },
   { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1560 },
   {
     file: "11-postgresql.png",
     nav: "Hizmetler",
     service: "PostgreSQL",
-    height: 1560,
+    height: 1800,
   },
   {
     file: "15-redis.png",
     nav: "Hizmetler",
     service: "Redis",
-    height: 1280,
+    height: 1560,
   },
   {
     file: "12-github.png",

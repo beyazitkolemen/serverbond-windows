@@ -54,13 +54,13 @@ Hizmetler → E-posta → Ayarlar: Mailpit SMTP ve arayüz portları, saklama s�
 
 ## İsteğe bağlı PostgreSQL
 
-MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: kur/başlat/onar ve parola hizmet kartında; port ve otomatik başlatma Ayarlar’dadır. `.env` yazılmaz.
+MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: kur/başlat ve parola hizmet kartında; port Ayarlar’da; program onarımı ayrı Onarım kartındadır. `.env` yazılmaz.
 
 ![İsteğe bağlı PostgreSQL](11-postgresql.png)
 
 ## İsteğe bağlı Redis
 
-Laravel kuyruk, önbellek ve oturum için Redis 8: kur/başlat/onar hizmet kartında; port 16379 ve otomatik başlatma Ayarlar’dadır. `.env` yazılmaz; Laravel `predis` kullanır.
+Laravel kuyruk, önbellek ve oturum için Redis 8: kur/başlat hizmet kartında; port 16379 Ayarlar’da; program onarımı Onarım kartındadır. `.env` yazılmaz; Laravel `predis` kullanır.
 
 ![İsteğe bağlı Redis](15-redis.png)
 

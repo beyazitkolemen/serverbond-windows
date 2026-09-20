@@ -286,6 +286,7 @@
   "tunnel": {
     "version": "2026.9.1",
     "installed": true,
+    "repairable": true,
     "running": true,
     "pid": 18120,
     "tokenSaved": true,
@@ -295,6 +296,7 @@
   "mail": {
     "version": "1.31.2",
     "installed": true,
+    "repairable": true,
     "running": true,
     "pid": 17920,
     "smtpPort": 1025,
@@ -306,6 +308,7 @@
   "postgres": {
     "version": "17.11",
     "installed": true,
+    "repairable": true,
     "running": false,
     "pid": null,
     "port": 15432,
@@ -316,6 +319,7 @@
   "redis": {
     "version": "8.10.2",
     "installed": true,
+    "repairable": true,
     "running": true,
     "pid": 18240,
     "port": 16379,
@@ -329,7 +333,9 @@
   "node": {
     "version": "24.21.0",
     "installed": true,
-    "directory": "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0"
+    "repairable": true,
+    "directory": "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0",
+    "issue": null
   },
   "permissions": {
     "granted": true,

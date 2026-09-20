@@ -104,6 +104,10 @@ Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı 
 
 **Ayarlar → Sistem → Node.js** sabit Node.js LTS paketini kurar. Özet resmî `SHASUMS256.txt` dosyasından alınır. Kurulumdan sonra proje kartındaki **Terminal** penceresinde `node`, `npm` ve `npx` projenin PHP sürümüyle birlikte hazır olur; `npm install` ve `npm run dev` doğrudan çalışır. Sistem PATH'i değiştirilmez, bu yüzden bilgisayarınızdaki başka bir Node kurulumu etkilenmez. Açık terminalleri kurulumdan sonra kapatıp yeniden açın. Komut satırından: `f4box node install|repair|status`.
 
+### Hizmet onarımı
+
+Hizmet kartındaki **Onarım** program dosyalarını SHA-256 doğrulanmış paketten yeniden kurar ve onay ister. Eksik kurulumda **Kur** yerine **Kurulumu onar** görünür. Yakalanan e-postalar, veritabanı dizini, jeton, parola ve proje `.env` dosyalarına dokunulmaz. Önceki program klasörü `before-repair` adıyla saklanır.
+
 ### Yerel e-posta yakalama
 
 **Hizmetler → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.

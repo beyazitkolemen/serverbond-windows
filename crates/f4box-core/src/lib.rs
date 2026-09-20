@@ -265,23 +265,13 @@ impl Manager {
     }
 
     fn package_status(&self, package: Package, process: Option<&ManagedChild>) -> PackageStatus {
-        let dir = self
-            .home
-            .join("bin")
-            .join(&package.id)
-            .join(&package.version);
-        let check = install::validate_installation(&dir, &package);
-        let issue = if dir.exists() {
-            check.as_ref().err().map(|e| format!("{e:#}"))
-        } else {
-            None
-        };
+        let health = install::health(&self.home, &package);
         PackageStatus {
-            installed: check.is_ok(),
+            installed: health.installed,
             running: process.is_some(),
             pid: process.map(|p| p.child.id()),
-            repairable: dir.exists(),
-            issue: issue.or_else(|| {
+            repairable: health.repairable,
+            issue: health.issue.or_else(|| {
                 self.service_errors
                     .lock()
                     .unwrap_or_else(|e| e.into_inner())
@@ -290,6 +280,20 @@ impl Manager {
             }),
             package,
         }
+    }
+
+    pub(crate) fn tool_health(&self, id: &str) -> install::InstallHealth {
+        let package = tool_package(id).expect("embedded tool package");
+        let mut health = install::health(&self.home, &package);
+        if health.issue.is_none() {
+            health.issue = self
+                .service_errors
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .get(id)
+                .cloned();
+        }
+        health
     }
 
     pub fn snapshot(&self) -> Result<Snapshot> {

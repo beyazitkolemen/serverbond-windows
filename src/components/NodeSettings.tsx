@@ -1,6 +1,7 @@
-import { Download, Wrench } from "lucide-react";
+import { Download } from "lucide-react";
 import { call } from "../api";
 import type { NodeState, Run } from "../types";
+import ServiceRepair from "./ServiceRepair";
 
 export default function NodeSettings({
   node,
@@ -26,7 +27,9 @@ export default function NodeSettings({
           <strong>
             {node.installed
               ? `Node.js ${node.version} kurulu`
-              : "Node.js kurulu değil"}
+              : node.repairable
+                ? "Kurulum eksik"
+                : "Node.js kurulu değil"}
           </strong>
           <p className="section-note">
             {node.directory ??
@@ -34,8 +37,13 @@ export default function NodeSettings({
           </p>
         </div>
       </div>
-      <div className="settings-actions">
-        {!node.installed ? (
+      {node.issue && node.installed ? (
+        <p role="alert" className="settings-feedback">
+          {node.issue}
+        </p>
+      ) : null}
+      {!node.installed && !node.repairable ? (
+        <div className="settings-actions">
           <button
             type="button"
             className="button secondary"
@@ -49,22 +57,22 @@ export default function NodeSettings({
             <Download size={16} />
             Node.js kur
           </button>
-        ) : (
-          <button
-            type="button"
-            className="button secondary"
-            disabled={busy}
-            onClick={() =>
-              void run("Node.js onarılıyor…", () =>
-                call("node", { action: "repair" }),
-              )
-            }
-          >
-            <Wrench size={16} />
-            Onar
-          </button>
-        )}
-      </div>
+        </div>
+      ) : null}
+      <ServiceRepair
+        name="Node.js"
+        installed={node.installed}
+        repairable={node.repairable}
+        issue={node.issue}
+        busy={busy}
+        run={run}
+        keeps={[
+          "Sistem PATH",
+          "Proje node_modules ve .env dosyaları",
+          "Açık terminaller (yeniden açın)",
+        ]}
+        action={() => call("node", { action: "repair" })}
+      />
       <p className="section-note">
         Kurduktan sonra proje kartındaki <strong>Terminal</strong> düğmesiyle
         açılan pencerede <code>npm install</code> ve <code>npm run dev</code>{" "}

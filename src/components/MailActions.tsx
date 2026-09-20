@@ -1,6 +1,7 @@
-import { Play, Square, Download, Wrench, ExternalLink } from "lucide-react";
+import { Play, Square, Download, ExternalLink } from "lucide-react";
 import { call } from "../api";
 import type { MailState, Run } from "../types";
+import ServiceRepair from "./ServiceRepair";
 
 export default function MailActions({
   mail,
@@ -24,7 +25,9 @@ export default function MailActions({
               ? `Mailpit çalışıyor · PID ${mail.pid ?? "-"}`
               : mail.installed
                 ? "Mailpit durdu"
-                : "Mailpit kurulu değil"}
+                : mail.repairable
+                  ? "Kurulum eksik"
+                  : "Mailpit kurulu değil"}
           </strong>
           <p className="section-note">
             Mailpit {mail.version} · SMTP 127.0.0.1:{mail.smtpPort} · arayüz
@@ -32,13 +35,13 @@ export default function MailActions({
           </p>
         </div>
       </div>
-      {mail.issue && (
+      {mail.issue && mail.installed ? (
         <p role="alert" className="settings-feedback">
           {mail.issue}
         </p>
-      )}
+      ) : null}
       <div className="settings-actions">
-        {!mail.installed ? (
+        {!mail.installed && !mail.repairable ? (
           <button
             type="button"
             className="button secondary"
@@ -48,7 +51,7 @@ export default function MailActions({
             <Download size={16} />
             Mailpit kur
           </button>
-        ) : (
+        ) : mail.installed ? (
           <>
             <button
               type="button"
@@ -80,18 +83,24 @@ export default function MailActions({
               <ExternalLink size={16} />
               Gelen kutusu
             </button>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() => action("repair", "Mailpit onarılıyor…")}
-            >
-              <Wrench size={16} />
-              Onar
-            </button>
           </>
-        )}
+        ) : null}
       </div>
+      <ServiceRepair
+        name="Mailpit"
+        installed={mail.installed}
+        repairable={mail.repairable}
+        running={mail.running}
+        issue={mail.issue}
+        busy={busy}
+        run={run}
+        keeps={[
+          "Yakalanan e-postalar (data/mailpit)",
+          "SMTP, arayüz portu ve otomatik başlatma",
+          "Proje .env dosyaları",
+        ]}
+        action={() => call("mail", { action: "repair" })}
+      />
       <p className="section-note">
         SMTP, arayüz portu ve otomatik başlatma Ayarlar düğmesindedir. Laravel
         için <code>.env</code> dosyasına <code>MAIL_MAILER=smtp</code>,{" "}

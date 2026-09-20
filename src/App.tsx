@@ -473,6 +473,7 @@ export default function App() {
               postgres={state.postgres}
               redis={state.redis}
               github={state.github}
+              phpmyadmin={state.packages.find((p) => p.id === "phpmyadmin")}
             />
           ) : null}
           {page === "settings" ? (

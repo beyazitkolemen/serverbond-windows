@@ -4,13 +4,13 @@ import {
   Play,
   Square,
   Download,
-  Wrench,
   Trash2,
   Eye,
   EyeOff,
 } from "lucide-react";
 import { call } from "../api";
 import type { Run, TunnelState } from "../types";
+import ServiceRepair from "./ServiceRepair";
 
 export default function TunnelSettings({
   tunnel,
@@ -64,7 +64,9 @@ export default function TunnelSettings({
               ? `Tünel çalışıyor · PID ${tunnel.pid ?? "-"}`
               : tunnel.installed
                 ? "Cloudflared kurulu · tünel durdu"
-                : "Cloudflared henüz kurulmadı"}
+                : tunnel.repairable
+                  ? "Kurulum eksik"
+                  : "Cloudflared henüz kurulmadı"}
           </strong>
           <p className="section-note">
             {tunnel.tokenSaved
@@ -75,11 +77,11 @@ export default function TunnelSettings({
           </p>
         </div>
       </div>
-      {tunnel.issue && (
+      {tunnel.issue && tunnel.installed ? (
         <p role="alert" className="settings-feedback">
           {tunnel.issue}
         </p>
-      )}
+      ) : null}
 
       {showOps ? (
         <>
@@ -88,8 +90,8 @@ export default function TunnelSettings({
             Sabit Windows x64 paketi SHA-256 ile doğrulanarak F4Box klasörüne
             iner. Ortamın çalışması için gerekli değildir.
           </p>
-          <div className="settings-actions">
-            {!tunnel.installed ? (
+          {!tunnel.installed && !tunnel.repairable ? (
+            <div className="settings-actions">
               <button
                 type="button"
                 className="button secondary"
@@ -103,22 +105,23 @@ export default function TunnelSettings({
                 <Download size={16} />
                 Cloudflared kur
               </button>
-            ) : (
-              <button
-                type="button"
-                className="button secondary"
-                disabled={busy}
-                onClick={() =>
-                  void run("Cloudflared onarılıyor…", () =>
-                    call("tunnel", { action: "repair" }),
-                  )
-                }
-              >
-                <Wrench size={16} />
-                Onar
-              </button>
-            )}
-          </div>
+            </div>
+          ) : null}
+          <ServiceRepair
+            name="Cloudflared"
+            installed={tunnel.installed}
+            repairable={tunnel.repairable}
+            running={tunnel.running}
+            issue={tunnel.issue}
+            busy={busy}
+            run={run}
+            keeps={[
+              "Kayıtlı tünel jetonu",
+              "Otomatik başlatma tercihi",
+              "Proje .env dosyaları",
+            ]}
+            action={() => call("tunnel", { action: "repair" })}
+          />
         </>
       ) : null}
 

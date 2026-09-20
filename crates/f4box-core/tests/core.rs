@@ -436,6 +436,31 @@ fn installed_receipt_without_fastcgi_is_reported_as_broken() {
 }
 
 #[test]
+fn optional_service_exposes_repair_when_install_is_broken() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let package = f4box_core::model::tool_package("mailpit").unwrap();
+    let dir = home.path().join("bin/mailpit").join(&package.version);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("installed.json"),
+        serde_json::to_vec(&package).unwrap(),
+    )
+    .unwrap();
+    let mail = manager.snapshot().unwrap().mail;
+    assert!(!mail.installed);
+    assert!(mail.repairable);
+    assert!(mail
+        .issue
+        .as_ref()
+        .unwrap()
+        .contains("Onar düğmesini kullanın"));
+    let redis = manager.snapshot().unwrap().redis;
+    assert!(!redis.installed);
+    assert!(!redis.repairable);
+}
+
+#[test]
 fn archive_fallback_is_only_for_official_php_release_urls() {
     let mut php = catalog().remove(0);
     assert!(f4box_core::install::archive_fallback(&php)

@@ -145,6 +145,29 @@ pub fn required_files(package: &Package) -> Vec<&str> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InstallHealth {
+    pub installed: bool,
+    pub repairable: bool,
+    pub issue: Option<String>,
+}
+
+pub fn health(home: &Path, package: &Package) -> InstallHealth {
+    let directory = home.join("bin").join(&package.id).join(&package.version);
+    match validate_installation(&directory, package) {
+        Ok(()) => InstallHealth {
+            installed: true,
+            repairable: true,
+            issue: None,
+        },
+        Err(error) => InstallHealth {
+            installed: false,
+            repairable: directory.exists(),
+            issue: directory.exists().then(|| format!("{error:#}")),
+        },
+    }
+}
+
 pub fn validate_installation(directory: &Path, package: &Package) -> Result<()> {
     let receipt: Package = serde_json::from_slice(
         &crate::storage::read_limited(&directory.join("installed.json"), 256 * 1024)
@@ -315,6 +338,25 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn health_marks_missing_and_incomplete_installs() {
+        let home = tempfile::tempdir().unwrap();
+        let mut package = crate::model::catalog().remove(0);
+        package.id = "fixture".into();
+        package.version = "1".into();
+        package.executable = "app.exe".into();
+        let absent = health(home.path(), &package);
+        assert!(!absent.installed);
+        assert!(!absent.repairable);
+        assert!(absent.issue.is_none());
+        let dir = home.path().join("bin/fixture/1");
+        std::fs::create_dir_all(&dir).unwrap();
+        let broken = health(home.path(), &package);
+        assert!(!broken.installed);
+        assert!(broken.repairable);
+        assert!(broken.issue.as_ref().unwrap().contains("Onar"));
+    }
 
     #[test]
     fn download_client_uses_current_version_and_long_transfer_timeout() {

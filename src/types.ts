@@ -170,6 +170,7 @@ export interface GithubState {
 export interface PostgresState {
   version: string;
   installed: boolean;
+  repairable: boolean;
   running: boolean;
   pid: number | null;
   port: number;
@@ -180,6 +181,7 @@ export interface PostgresState {
 export interface RedisState {
   version: string;
   installed: boolean;
+  repairable: boolean;
   running: boolean;
   pid: number | null;
   port: number;
@@ -189,6 +191,7 @@ export interface RedisState {
 export interface MailState {
   version: string;
   installed: boolean;
+  repairable: boolean;
   running: boolean;
   pid: number | null;
   smtpPort: number;
@@ -200,11 +203,14 @@ export interface MailState {
 export interface NodeState {
   version: string;
   installed: boolean;
+  repairable: boolean;
   directory: string | null;
+  issue: string | null;
 }
 export interface TunnelState {
   version: string;
   installed: boolean;
+  repairable: boolean;
   running: boolean;
   pid: number | null;
   tokenSaved: boolean;

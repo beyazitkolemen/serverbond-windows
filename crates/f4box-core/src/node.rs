@@ -10,17 +10,21 @@ pub const ID: &str = "node";
 pub struct NodeState {
     pub version: String,
     pub installed: bool,
+    pub repairable: bool,
     pub directory: Option<PathBuf>,
+    pub issue: Option<String>,
 }
 
 impl Manager {
     pub(crate) fn node_state(&self) -> NodeState {
         let package = tool_package(ID).expect("embedded node package");
-        let directory = self.tool_directory(ID).ok();
+        let health = self.tool_health(ID);
         NodeState {
             version: package.version,
-            installed: directory.is_some(),
-            directory,
+            installed: health.installed,
+            repairable: health.repairable,
+            directory: self.tool_directory(ID).ok(),
+            issue: health.issue,
         }
     }
 

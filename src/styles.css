@@ -1241,6 +1241,38 @@ td:first-child {
   line-height: 1.7;
   color: var(--muted);
 }
+.service-repair {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.service-repair.needed {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+}
+.service-repair-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.service-repair-head h3 {
+  margin: 0;
+}
+.service-repair-keeps,
+.service-repair-steps {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-5);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.service-repair-steps {
+  margin-top: var(--space-4);
+}
 .settings-layout {
   max-width: 1060px;
 }

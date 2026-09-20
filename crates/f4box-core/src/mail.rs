@@ -10,6 +10,7 @@ pub const ID: &str = "mailpit";
 pub struct MailState {
     pub version: String,
     pub installed: bool,
+    pub repairable: bool,
     pub running: bool,
     pub pid: Option<u32>,
     pub smtp_port: u16,
@@ -26,22 +27,18 @@ impl Manager {
         settings: &MailSettings,
     ) -> MailState {
         let package = tool_package(ID).expect("embedded mailpit package");
-        let directory = self.home.join("bin").join(ID).join(&package.version);
+        let health = self.tool_health(ID);
         MailState {
             version: package.version.clone(),
-            installed: crate::install::validate_installation(&directory, &package).is_ok(),
+            installed: health.installed,
+            repairable: health.repairable,
             running: processes.contains_key(ID),
             pid: processes.get(ID).map(|child| child.child.id()),
             smtp_port: settings.smtp_port,
             web_port: settings.web_port,
             auto_start: settings.auto_start,
             relay_php_mail: settings.relay_php_mail,
-            issue: self
-                .service_errors
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .get(ID)
-                .cloned(),
+            issue: health.issue,
         }
     }
 

@@ -9,7 +9,9 @@ import type {
   PostgresState,
   RedisState,
   GithubState,
+  PackageStatus,
 } from "../types";
+import ServiceRepair from "./ServiceRepair";
 import MailActions from "./MailActions";
 import PostgresSettings from "./PostgresSettings";
 import RedisActions from "./RedisActions";
@@ -110,6 +112,7 @@ export default function Services({
   postgres,
   redis,
   github,
+  phpmyadmin,
 }: {
   settings: Values;
   busy: boolean;
@@ -120,6 +123,7 @@ export default function Services({
   postgres: PostgresState;
   redis: RedisState;
   github: GithubState;
+  phpmyadmin?: PackageStatus;
 }) {
   const [values, setValues] = useState(() => structuredClone(settings));
   const [service, setService] = useState<ServiceId | null>(null);
@@ -153,7 +157,9 @@ export default function Services({
             ? "Çalışıyor"
             : mail.installed
               ? "Kurulu"
-              : "Kurulmadı",
+              : mail.repairable
+                ? "Onarım gerekir"
+                : "Kurulmadı",
         };
       case "postgres":
         return {
@@ -162,7 +168,9 @@ export default function Services({
             ? "Çalışıyor"
             : postgres.installed
               ? "Kurulu"
-              : "Kurulmadı",
+              : postgres.repairable
+                ? "Onarım gerekir"
+                : "Kurulmadı",
         };
       case "redis":
         return {
@@ -171,7 +179,9 @@ export default function Services({
             ? "Çalışıyor"
             : redis.installed
               ? "Kurulu"
-              : "Kurulmadı",
+              : redis.repairable
+                ? "Onarım gerekir"
+                : "Kurulmadı",
         };
       case "github":
         return {
@@ -189,7 +199,9 @@ export default function Services({
             ? "Çalışıyor"
             : tunnel.installed
               ? "Kurulu"
-              : "Kurulmadı",
+              : tunnel.repairable
+                ? "Onarım gerekir"
+                : "Kurulmadı",
         };
     }
   };
@@ -341,6 +353,7 @@ export default function Services({
               {service === "pma" ? (
                 <PmaActions
                   settings={settings}
+                  phpmyadmin={phpmyadmin}
                   busy={busy}
                   running={running}
                   run={run}
@@ -381,11 +394,13 @@ export default function Services({
 
 function PmaActions({
   settings,
+  phpmyadmin,
   busy,
   running,
   run,
 }: {
   settings: Values;
+  phpmyadmin?: PackageStatus;
   busy: boolean;
   running: boolean;
   run: Run;
@@ -428,9 +443,26 @@ function PmaActions({
           Aç
         </button>
       </div>
+      <ServiceRepair
+        name="phpMyAdmin"
+        installed={Boolean(phpmyadmin?.installed)}
+        repairable={Boolean(phpmyadmin?.repairable)}
+        issue={phpmyadmin?.issue ?? null}
+        busy={busy}
+        run={run}
+        keeps={[
+          "Oturum dosyaları (data/phpmyadmin)",
+          "Dil, satır ve oturum ayarları",
+          "MySQL verileri ve proje .env dosyaları",
+        ]}
+        action={() => call("repair", { id: "phpmyadmin" })}
+        blocked={running}
+        blockedReason="Onarmak için ortamı durdurun. phpMyAdmin dosyaları web sunucusu açıkken kilitlenebilir."
+      />
       <p className="section-note">
         Dil, satır sayısı ve oturum süresi Ayarlar düğmesindedir. Giriş:{" "}
-        <strong>root</strong>; MySQL parolası Ayarlar → Sistem’de.
+        <strong>root</strong>; MySQL parolası Ayarlar → Sistem’de. Onarım ortam
+        çalışırken kilitlenir; önce ortamı durdurun.
       </p>
     </section>
   );

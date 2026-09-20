@@ -12,6 +12,7 @@ const READY_MARKER: &str = "Registered tunnel connection";
 pub struct TunnelState {
     pub version: String,
     pub installed: bool,
+    pub repairable: bool,
     pub running: bool,
     pub pid: Option<u32>,
     pub token_saved: bool,
@@ -60,21 +61,16 @@ impl Manager {
         auto_start: bool,
     ) -> TunnelState {
         let package = tool_package(ID).expect("embedded cloudflared package");
-        let directory = self.home.join("bin").join(ID).join(&package.version);
-        let installed = crate::install::validate_installation(&directory, &package).is_ok();
+        let health = self.tool_health(ID);
         TunnelState {
             version: package.version,
-            installed,
+            installed: health.installed,
+            repairable: health.repairable,
             running: processes.contains_key(ID),
             pid: processes.get(ID).map(|child| child.child.id()),
             token_saved: self.tunnel_token_path().is_file(),
             auto_start,
-            issue: self
-                .service_errors
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .get(ID)
-                .cloned(),
+            issue: health.issue,
         }
     }
 

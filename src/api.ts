@@ -100,6 +100,7 @@ const preview: Snapshot = {
   tunnel: {
     version: toolVersion("cloudflared"),
     installed: false,
+    repairable: false,
     running: false,
     pid: null,
     tokenSaved: false,
@@ -109,6 +110,7 @@ const preview: Snapshot = {
   mail: {
     version: toolVersion("mailpit"),
     installed: false,
+    repairable: false,
     running: false,
     pid: null,
     smtpPort: 1025,
@@ -120,6 +122,7 @@ const preview: Snapshot = {
   postgres: {
     version: toolVersion("postgres"),
     installed: false,
+    repairable: false,
     running: false,
     pid: null,
     port: 15432,
@@ -130,6 +133,7 @@ const preview: Snapshot = {
   redis: {
     version: toolVersion("redis"),
     installed: false,
+    repairable: false,
     running: false,
     pid: null,
     port: 16379,
@@ -143,7 +147,9 @@ const preview: Snapshot = {
   node: {
     version: toolVersion("node"),
     installed: false,
+    repairable: false,
     directory: null,
+    issue: null,
   },
   permissions: {
     granted: false,

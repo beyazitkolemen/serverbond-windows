@@ -1,6 +1,7 @@
-import { Play, Square, Download, Wrench } from "lucide-react";
+import { Play, Square, Download } from "lucide-react";
 import { call } from "../api";
 import type { RedisState, Run } from "../types";
+import ServiceRepair from "./ServiceRepair";
 
 export default function RedisActions({
   redis,
@@ -24,7 +25,9 @@ export default function RedisActions({
               ? `Redis çalışıyor · PID ${redis.pid ?? "-"}`
               : redis.installed
                 ? "Redis durdu"
-                : "Redis kurulu değil"}
+                : redis.repairable
+                  ? "Kurulum eksik"
+                  : "Redis kurulu değil"}
           </strong>
           <p className="section-note">
             Redis {redis.version} · 127.0.0.1:{redis.port} · loopback, parola
@@ -32,13 +35,13 @@ export default function RedisActions({
           </p>
         </div>
       </div>
-      {redis.issue ? (
+      {redis.issue && redis.installed ? (
         <p role="alert" className="settings-feedback">
           {redis.issue}
         </p>
       ) : null}
       <div className="settings-actions">
-        {!redis.installed ? (
+        {!redis.installed && !redis.repairable ? (
           <button
             type="button"
             className="button secondary"
@@ -48,34 +51,38 @@ export default function RedisActions({
             <Download size={16} />
             Redis kur
           </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() =>
-                action(
-                  redis.running ? "stop" : "start",
-                  redis.running ? "Redis durduruluyor…" : "Redis başlatılıyor…",
-                )
-              }
-            >
-              {redis.running ? <Square size={16} /> : <Play size={16} />}
-              {redis.running ? "Durdur" : "Başlat"}
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() => action("repair", "Redis onarılıyor…")}
-            >
-              <Wrench size={16} />
-              Onar
-            </button>
-          </>
-        )}
+        ) : redis.installed ? (
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() =>
+              action(
+                redis.running ? "stop" : "start",
+                redis.running ? "Redis durduruluyor…" : "Redis başlatılıyor…",
+              )
+            }
+          >
+            {redis.running ? <Square size={16} /> : <Play size={16} />}
+            {redis.running ? "Durdur" : "Başlat"}
+          </button>
+        ) : null}
       </div>
+      <ServiceRepair
+        name="Redis"
+        installed={redis.installed}
+        repairable={redis.repairable}
+        running={redis.running}
+        issue={redis.issue}
+        busy={busy}
+        run={run}
+        keeps={[
+          "Veri dizini (data/redis)",
+          "Port ve otomatik başlatma",
+          "Proje .env dosyaları",
+        ]}
+        action={() => call("redis", { action: "repair" })}
+      />
       <p className="section-note">
         Port ve otomatik başlatma Ayarlar düğmesindedir. Laravel{" "}
         <code>.env</code> dosyasına <code>REDIS_CLIENT=predis</code>,{" "}
@@ -84,7 +91,7 @@ export default function RedisActions({
         <code>QUEUE_CONNECTION=redis</code> yazın. F4Box <code>.env</code>{" "}
         yazmaz. Resmî PHP paketinde <code>redis</code> uzantısı yoktur;{" "}
         <code>predis/predis</code> kullanın. Komut:{" "}
-        <code>f4box redis install|start|stop</code>.
+        <code>f4box redis install|start|stop|repair</code>.
       </p>
     </section>
   );
