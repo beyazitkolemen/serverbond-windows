@@ -2,7 +2,7 @@
 
 Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rust + Tauri masaüstü uygulaması. Laravel Forge’un uzak VPS katmanı yoktur; PHP, MySQL, Caddy, kuyruk, zamanlayıcı ve yapılandırılmış sürüm aynı makinede yönetilir. Herd veya Laragon geliştirme kopyası değildir.
 
-PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
+PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
 ## İndir — v1.1
 
@@ -31,8 +31,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png) |
 | Yerel HTTPS | Proje günlükleri |
 | ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png) |
-| Yerel sürüm |  |
-| ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) |  |
+| Yerel sürüm | İsteğe bağlı PostgreSQL |
+| ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -53,6 +53,7 @@ Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `
 | phpMyAdmin | 5.2.3, tüm diller | Tarayıcıdan MySQL yönetimi |
 | Cloudflared | 2026.9.1 | İsteğe bağlı Cloudflare tüneli |
 | Mailpit | 1.31.2 | İsteğe bağlı yerel e-posta yakalama |
+| PostgreSQL | 17.11 | İsteğe bağlı pgsql sunucusu |
 | Node.js | 24.21.0 LTS | İsteğe bağlı npm / npx |
 
 Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklarından indirilir. Windows x64 Visual C++ 2015–2022 Redistributable ve WebView2 Runtime gerekir. Bu bilgisayarda ikisi de mevcuttur. Başka bir bilgisayarda PHP/MySQL başlatılamıyorsa önce [Microsoft Visual C++ Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) kurulmalıdır. Tauri kurulum paketi WebView2 gereksinimini yönetir.
@@ -69,7 +70,7 @@ Projenin sürümü değiştirilmeden önce paket ve uzantılar doğrulanır. Yal
 
 ### Proje terminali ve gereksinimler
 
-Proje kartındaki **Terminal**, o proje klasöründe Windows PowerShell açar. `php`, `composer` ve Composer'ın `@php` alt komutları projenin seçili PHP sürümünü kullanır. Örneğin `php artisan migrate` doğrudan çalıştırılabilir. Yalnızca açılan terminalin ortamı ayarlanır; sistem PATH'i değişmez. Proje sürümü değiştikten sonra açık terminali kapatıp yeniden açın. PHP ve Composer paketlerinin kurulu olması gerekir; terminal açılması servisleri başlatmaz.
+Proje kartındaki **Terminal**, o proje klasöründe Windows PowerShell açar. `php`, `composer` ve Composer'ın `@php` alt komutları projenin seçili PHP sürümünü kullanır. Örneğin `php artisan migrate` doğrudan çalıştırılabilir. Kuruluysa `node`/`npm`/`npx` ve PostgreSQL `bin` (`psql`) de PATH’e eklenir. Yalnızca açılan terminalin ortamı ayarlanır; sistem PATH'i değişmez. Proje sürümü değiştikten sonra açık terminali kapatıp yeniden açın. PHP ve Composer paketlerinin kurulu olması gerekir; terminal açılması servisleri başlatmaz.
 
 ### Kuyruk ve zamanlama
 
@@ -85,7 +86,7 @@ Proje detayındaki **Sürüm** sekmesi Laravel Forge Deployments’ın bu Window
 
 ### Proje günlükleri
 
-Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi süreç kayıtlarını aynı görüntüleyicide açar. Kaynak sekmeleri, metin araması, satır numarası, hata/uyarı vurgusu, kopyalama ve açıkken otomatik yenileme vardır. **Günlükler** sayfası aynı görüntüleyiciyi F4Box, PHP, MySQL, Caddy ve Composer için kullanır.
+Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi süreç kayıtlarını aynı görüntüleyicide açar. Kaynak sekmeleri, metin araması, satır numarası, hata/uyarı vurgusu, kopyalama ve açıkken otomatik yenileme vardır. **Günlükler** sayfası aynı görüntüleyiciyi F4Box, PHP, MySQL, Caddy, Composer ve PostgreSQL için kullanır.
 
 ### Node.js, npm ve npx
 
@@ -100,6 +101,14 @@ SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en
 **PHP mail() çağrılarını Mailpit'e yönlendir** açıkken üretilen `php.ini` dosyasına `SMTP` ve `smtp_port` anahtarları yazılır, böylece Laravel dışındaki kodun `mail()` çağrıları da yakalanır. Bu anahtarlar bu formdan yönetildiği için PHP sekmesindeki ek ayarlar alanına yazılamaz; değişiklik PHP yeniden başladığında geçerli olur.
 
 **Ortam başlatıldığında Mailpit'i de başlat** açıkken **Ortamı başlat** gelen kutusunu da açar. Mailpit başlatılamazsa ortam çalışmaya devam eder; hata e-posta kartında ve **Günlükler → mailpit** bölümünde görünür. Yakalanan e-postalar veri klasöründeki `data/mailpit/mailpit.db` dosyasında tutulur. Tepsi menüsündeki **Gelen kutusunu aç** ve komut satırındaki `f4box mail install|start|stop|open|status` aynı işi yapar.
+
+### İsteğe bağlı PostgreSQL
+
+**Ayarlar → PostgreSQL** bölümü resmi EDB Windows x64 arşivinden PostgreSQL 17 kurar. MySQL varsayılan kalır; PostgreSQL ortamın çalışması için gerekli değildir. Port varsayılanı 15432’dir (sistem 5432 ile çakışmaz). İlk başlatmada veri dizini `data/postgresql-17` oluşturulur; `postgres` kullanıcısının parolası Windows DPAPI ile saklanır. Sunucu `postgres.exe` ile 127.0.0.1’e bağlanır; kapatırken `pg_ctl stop` kullanılır.
+
+Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`, `DB_PORT=15432`, `DB_USERNAME=postgres` ve F4Box’ın gösterdiği parolayı yazın. F4Box `.env` dosyanızı değiştirmez. PHP `pgsql` ve `pdo_pgsql` uzantıları Ayarlar → PHP’den açılır.
+
+**Ortam başlatıldığında PostgreSQL'i de başlat** açıkken **Ortamı başlat** PostgreSQL’i de açar. PostgreSQL başlatılamazsa ortam çalışmaya devam eder; hata PostgreSQL kartında ve **Günlükler → postgres** bölümünde görünür. Tepsi menüsü → Servisler → PostgreSQL ve komut satırı `f4box postgres install|start|stop|repair|password [parola]|status` aynı işi yapar.
 
 ### Cloudflare tüneli
 

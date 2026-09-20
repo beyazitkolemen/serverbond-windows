@@ -299,6 +299,7 @@ impl Manager {
                     self.rollback_new_services(&before);
                 } else {
                     self.start_mail_autostart();
+                    self.start_postgres_autostart();
                     self.start_tunnel_autostart();
                 }
                 outcome
@@ -306,6 +307,7 @@ impl Manager {
             "mysql" => self.start_mysql(),
             crate::tunnel::ID => self.start_tunnel_inner(),
             crate::mail::ID => self.start_mail_inner(),
+            crate::postgres::ID => self.start_postgres_inner(),
             "php" => self.start_php(),
             "caddy" => {
                 let before = self
@@ -560,7 +562,7 @@ impl Manager {
         ids.sort_by_key(|id| {
             if id == "caddy" {
                 0
-            } else if id == "mysql" {
+            } else if id == "mysql" || id == crate::postgres::ID {
                 2
             } else {
                 1
@@ -602,7 +604,15 @@ impl Manager {
     }
 
     pub(crate) fn stop_service(&self, id: &str) -> Result<()> {
-        if !["caddy", "php", "mysql", crate::tunnel::ID, crate::mail::ID].contains(&id)
+        if ![
+            "caddy",
+            "php",
+            "mysql",
+            crate::tunnel::ID,
+            crate::mail::ID,
+            crate::postgres::ID,
+        ]
+        .contains(&id)
             && !Self::is_project_service_id(id)
             && !Self::is_job_service_id(id)
         {
@@ -627,6 +637,15 @@ impl Manager {
                     let _ = child.wait_timeout(Duration::from_secs(30));
                 } else {
                     self.log("MySQL normal kapatma başarısız; sahip olunan süreç sonlandırılıyor.");
+                }
+            }
+            if id == crate::postgres::ID && child.alive() {
+                if self.shutdown_postgres().is_ok() {
+                    let _ = child.wait_timeout(Duration::from_secs(30));
+                } else {
+                    self.log(
+                        "PostgreSQL normal kapatma başarısız; sahip olunan süreç sonlandırılıyor.",
+                    );
                 }
             }
             drop(child);

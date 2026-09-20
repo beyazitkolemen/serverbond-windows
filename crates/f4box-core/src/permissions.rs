@@ -207,7 +207,12 @@ impl Manager {
                 programs.push(path);
             }
         }
-        for tool in [crate::tunnel::ID, crate::mail::ID, crate::node::ID] {
+        for tool in [
+            crate::tunnel::ID,
+            crate::mail::ID,
+            crate::postgres::ID,
+            crate::node::ID,
+        ] {
             if let Ok(path) = self.tool_executable(tool) {
                 programs.push(path);
             }

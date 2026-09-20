@@ -40,6 +40,12 @@ Mailpit'in SMTP ve arayüz portları, saklama sınırı, PHP `mail()` yönlendir
 
 ![E-posta ayarları ve Mailpit servisi](04-eposta.png)
 
+## İsteğe bağlı PostgreSQL
+
+MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: port, otomatik başlatma, kur/başlat/onar ve parola. `.env` yazılmaz.
+
+![İsteğe bağlı PostgreSQL](11-postgresql.png)
+
 ## Cloudflare tüneli
 
 Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte otomatik başlatma tercihi.

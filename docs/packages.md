@@ -19,8 +19,9 @@ Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her
 | Cloudflare Tunnel bağlayıcısı | `cloudflared-windows-amd64.exe` 2026.9.1, 54976432 bayt | yerelde hesaplandı | Ayarlar → Tünel |
 | Mailpit | `mailpit-windows-amd64.zip` 1.31.2, 10479883 bayt | yerelde hesaplandı | Ayarlar → E-posta |
 | Node.js | `node-v24.21.0-win-x64.zip` | resmî [`SHASUMS256.txt`](https://nodejs.org/dist/v24.21.0/SHASUMS256.txt) | Ayarlar → Sistem |
+| PostgreSQL | `postgresql-17.11-1-windows-x64-binaries.zip`, 340719294 bayt | yerelde hesaplandı | Ayarlar → PostgreSQL |
 
-Cloudflared ve Mailpit yayımlanmış bir özet dosyası sunmadığı için bu iki kaydın SHA-256'sı indirilen dosyadan yerelde hesaplanmıştır. MySQL, cloudflared ve Mailpit özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
+Cloudflared, Mailpit ve PostgreSQL yayımlanmış bir özet dosyası sunmadığı için bu kayıtların SHA-256'sı indirilen dosyadan yerelde hesaplanmıştır. MySQL, cloudflared, Mailpit ve PostgreSQL özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
 
 ## Sürüm güncelleme
 
@@ -40,4 +41,5 @@ Paketlerin lisansları kendilerine aittir. F4Box internetten resmî paketleri in
 - [PHP Windows kurulumu](https://www.php.net/manual/en/install.windows.php)
 - [PHP desteklenen sürümler ve destek takvimi](https://www.php.net/supported-versions.php)
 - [MySQL Windows ZIP kurulumu](https://dev.mysql.com/doc/refman/8.4/en/windows-install-archive.html)
+- [PostgreSQL Windows ikili arşivi](https://www.enterprisedb.com/download-postgresql-binaries)
 - [Caddy PHP FastCGI](https://caddyserver.com/docs/caddyfile/directives/php_fastcgi)

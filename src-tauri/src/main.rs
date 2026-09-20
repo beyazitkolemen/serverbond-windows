@@ -431,6 +431,30 @@ async fn mail(state: tauri::State<'_, State>, action: String) -> Result<(), Stri
     .await
 }
 #[tauri::command]
+async fn postgres(
+    state: tauri::State<'_, State>,
+    action: String,
+    password: Option<String>,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "install" => state.install_postgres().map(|_| String::new()),
+        "repair" => state.repair_postgres().map(|_| String::new()),
+        "start" => state.start_postgres().map(|_| String::new()),
+        "stop" => state.stop_postgres().map(|_| String::new()),
+        "credentials" => state.postgres_credentials(),
+        "password" => state
+            .change_postgres_password(
+                password
+                    .as_deref()
+                    .ok_or_else(|| anyhow::anyhow!("Yeni PostgreSQL parolası gerekli."))?,
+            )
+            .map(|_| String::new()),
+        _ => Err(anyhow::anyhow!("Bilinmeyen PostgreSQL işlemi")),
+    })
+    .await
+}
+#[tauri::command]
 async fn node(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || match action.as_str() {
@@ -674,6 +698,7 @@ fn main() {
             project_git_status,
             tunnel,
             mail,
+            postgres,
             node,
             save_tunnel_token,
             save_tunnel_auto_start,

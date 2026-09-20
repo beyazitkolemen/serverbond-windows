@@ -133,6 +133,13 @@ pub fn required_files(package: &Package) -> Vec<&str> {
             "bin/mysqladmin.exe",
             "bin/mysqldump.exe",
         ],
+        "postgres" => vec![
+            "bin/postgres.exe",
+            "bin/initdb.exe",
+            "bin/pg_ctl.exe",
+            "bin/psql.exe",
+            "bin/pg_isready.exe",
+        ],
         _ => vec![&package.executable],
     }
 }

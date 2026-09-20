@@ -9,7 +9,7 @@ F4Box bir yerel geliştirme kopyası (Herd / Laragon) değildir. Amaç, Windows 
 | Ürün | Rol | F4Box karşılığı |
 | --- | --- | --- |
 | **Laravel Herd** | macOS/Windows **geliştirme**: yerel PHP/nginx, site isolate, Pro’da dump / Xdebug / günlük, Expose | PHP 7.4–8.5, proje PHP, Caddy, HTTPS, Mailpit, Cloudflare tüneli. Dump, Xdebug ve Expose yok; bunlar geliştirme aracıdır. |
-| **Laragon** | Taşınabilir **geliştirme** WAMP; Quick-add, Quick-app, Mailpit, Auto SSL, Procfile | Caddy + MySQL 8.4, Mailpit, HTTPS, kuyruk/zamanlayıcı. Redis/Postgres/Apache ve serbest Procfile yok. |
+| **Laragon** | Taşınabilir **geliştirme** WAMP; Quick-add, Quick-app, Mailpit, Auto SSL, Procfile | Caddy + MySQL 8.4, isteğe bağlı PostgreSQL 17, Mailpit, HTTPS, kuyruk/zamanlayıcı. Redis/Apache ve serbest Procfile yok. |
 | **Laravel Forge** | Uzak Linux VPS üretimi: git push-to-deploy, script, zero-downtime, Supervisor, Let’s Encrypt | **Aynı iş, bu Windows makinede**: sürüm tarifi, kuyruk/zamanlayıcı, tünel. Uzak SSH ve sunucu provision yok. |
 
 ```mermaid
@@ -47,7 +47,7 @@ Forge’da sürüm uzak sunucuda çalışır: depo çekilir, isteğe bağlı scr
 
 ## Bilinçli olarak eklenmeyenler
 
-Ürün kuralı ve önceki kapsam: Apache/Nginx seçimi, Redis, Horizon, uzak SSH, Expose/ngrok, dump penceresi, Xdebug uzantısı, serbest PowerShell scripti, zero-downtime symlink sürümü ve genel sertifika otoritesi.
+Ürün kuralı ve önceki kapsam: Apache/Nginx seçimi, Redis, Horizon, uzak SSH, Expose/ngrok, dump penceresi, Xdebug uzantısı, serbest PowerShell scripti, zero-downtime symlink sürümü ve genel sertifika otoritesi. PostgreSQL isteğe bağlı bir araçtır; MySQL varsayılan kalır.
 
 Herd’in site isolate ve paylaşım katmanı Cloudflare tüneli ile kısmen karşılanır; genel adres eşlemesi Cloudflare panelindedir. Laragon Quick-add paketleri F4Box katalog doğrulamasıyla sınırlıdır.
 

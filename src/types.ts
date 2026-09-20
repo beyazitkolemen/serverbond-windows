@@ -142,6 +142,7 @@ export interface Settings {
     autoStart: boolean;
   };
   mail: MailSettings;
+  postgres: PostgresSettings;
   projectsDir: string;
   backupsDir: string;
   startOnLaunch: boolean;
@@ -152,6 +153,20 @@ export interface MailSettings {
   autoStart: boolean;
   relayPhpMail: boolean;
   maxMessages: number;
+}
+export interface PostgresSettings {
+  port: number;
+  autoStart: boolean;
+}
+export interface PostgresState {
+  version: string;
+  installed: boolean;
+  running: boolean;
+  pid: number | null;
+  port: number;
+  autoStart: boolean;
+  passwordSaved: boolean;
+  issue: string | null;
 }
 export interface MailState {
   version: string;
@@ -195,6 +210,7 @@ export interface Snapshot {
   projects: Project[];
   tunnel: TunnelState;
   mail: MailState;
+  postgres: PostgresState;
   node: NodeState;
   permissions: PermissionState;
   logs: string[];

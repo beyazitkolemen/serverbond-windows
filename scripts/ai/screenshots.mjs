@@ -36,6 +36,12 @@ const shots = [
   },
   { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1560 },
   {
+    file: "11-postgresql.png",
+    nav: "Ayarlar",
+    tab: "PostgreSQL",
+    height: 1560,
+  },
+  {
     file: "08-web-https.png",
     nav: "Ayarlar",
     tab: "Web sunucusu",

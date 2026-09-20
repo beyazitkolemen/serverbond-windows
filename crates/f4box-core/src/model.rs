@@ -189,6 +189,8 @@ pub struct Settings {
     pub phpmyadmin: crate::preferences::PmaSettings,
     pub tunnel: crate::preferences::TunnelSettings,
     pub mail: crate::preferences::MailSettings,
+    #[serde(default)]
+    pub postgres: crate::preferences::PostgresSettings,
     pub projects_dir: String,
     pub backups_dir: String,
     pub start_on_launch: bool,
@@ -207,6 +209,7 @@ impl Default for Settings {
             phpmyadmin: Default::default(),
             tunnel: Default::default(),
             mail: Default::default(),
+            postgres: Default::default(),
             projects_dir: String::new(),
             backups_dir: String::new(),
             start_on_launch: false,
@@ -215,7 +218,7 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub fn reserved_ports(&self) -> [u16; 6] {
+    pub fn reserved_ports(&self) -> [u16; 7] {
         [
             self.web_port,
             self.mysql_port,
@@ -223,6 +226,7 @@ impl Settings {
             self.mail.smtp_port,
             self.mail.web_port,
             self.web.https_port,
+            self.postgres.port,
         ]
     }
 
@@ -263,7 +267,7 @@ impl Settings {
 
 pub fn validate_mysql_password(password: &str) -> Result<()> {
     if !(8..=128).contains(&password.chars().count()) {
-        bail!("MySQL parolası 8–128 karakter olmalı.");
+        bail!("Parola 8–128 karakter olmalı.");
     }
     if password
         .chars()
@@ -314,6 +318,7 @@ pub struct Snapshot {
     pub projects: Vec<ProjectStatus>,
     pub tunnel: crate::tunnel::TunnelState,
     pub mail: crate::mail::MailState,
+    pub postgres: crate::postgres::PostgresState,
     pub node: crate::node::NodeState,
     pub permissions: crate::permissions::PermissionState,
     pub logs: Vec<String>,

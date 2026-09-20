@@ -35,10 +35,16 @@ impl Manager {
         let php = q(&directory.join("php.exe"));
         let ext = q(&directory.join("ext"));
         // Node is optional; its npm and npx wrappers only join PATH once installed.
-        let prefix = match self.tool_directory(crate::node::ID) {
-            Ok(node) => format!("{} + ';' + {}", q(&directory), q(&node)),
-            Err(_) => q(&directory),
-        };
+        let mut path_dirs = vec![q(&directory)];
+        if let Ok(node) = self.tool_directory(crate::node::ID) {
+            path_dirs.push(q(&node));
+        }
+        if let Ok(postgres) = self.tool_executable(crate::postgres::ID) {
+            if let Some(bin) = postgres.parent() {
+                path_dirs.push(q(bin));
+            }
+        }
+        let prefix = path_dirs.join(" + ';' + ");
         Ok(format!(
             "$ErrorActionPreference = 'Stop'\n$env:PATH = {prefix} + ';' + $env:PATH\n$env:PHPRC = {}\n$env:F4BOX_PHP_EXT = {ext}\n$env:PHP_INI_SCAN_DIR = ''\nfunction global:php {{ & {php} -c {} @args }}\nfunction global:composer {{ & {php} -c {} {} @args }}\nSet-Location -LiteralPath {}\n",
             q(&ini), q(&ini), q(&ini), q(&composer), q(&path)

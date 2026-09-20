@@ -554,6 +554,7 @@ impl Manager {
             "composer",
             crate::tunnel::ID,
             crate::mail::ID,
+            crate::postgres::ID,
         ]
         .contains(&id)
         {

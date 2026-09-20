@@ -6,6 +6,7 @@ pub mod model;
 pub mod node;
 pub mod permissions;
 mod phpmyadmin;
+mod postgres;
 pub mod preferences;
 mod process;
 mod project_runtime;
@@ -319,6 +320,7 @@ impl Manager {
             .collect();
         let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
         let mail = self.mail_state_with(&processes, &config.settings.mail);
+        let postgres = self.postgres_state_with(&processes, &config.settings.postgres);
         let node = self.node_state();
         Ok(Snapshot {
             packages,
@@ -409,6 +411,7 @@ impl Manager {
                 .collect(),
             tunnel,
             mail,
+            postgres,
             node,
             permissions: self.permission_state(),
             logs: self
@@ -549,6 +552,9 @@ impl Manager {
                 for port in [settings.mail.smtp_port, settings.mail.web_port] {
                     services::port_free(port)?;
                 }
+            }
+            if settings.postgres.auto_start {
+                services::port_free(settings.postgres.port)?;
             }
         }
         let mut config = self

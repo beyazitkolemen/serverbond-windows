@@ -167,6 +167,22 @@ impl Default for MailSettings {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct PostgresSettings {
+    pub port: u16,
+    pub auto_start: bool,
+}
+
+impl Default for PostgresSettings {
+    fn default() -> Self {
+        Self {
+            port: 15432,
+            auto_start: false,
+        }
+    }
+}
+
 fn range(value: u32, min: u32, max: u32, name: &str) -> Result<()> {
     if !(min..=max).contains(&value) {
         bail!("{name}: {min}–{max} arasında olmalı.");

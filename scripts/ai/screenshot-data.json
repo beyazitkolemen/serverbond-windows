@@ -187,6 +187,7 @@
       "relayPhpMail": true,
       "maxMessages": 500
     },
+    "postgres": { "port": 15432, "autoStart": false },
     "projectsDir": "",
     "backupsDir": "",
     "startOnLaunch": true
@@ -301,6 +302,16 @@
     "relayPhpMail": true,
     "issue": null
   },
+  "postgres": {
+    "version": "17.11",
+    "installed": true,
+    "running": false,
+    "pid": null,
+    "port": 15432,
+    "autoStart": false,
+    "passwordSaved": true,
+    "issue": null
+  },
   "node": {
     "version": "24.21.0",
     "installed": true,
@@ -314,6 +325,7 @@
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\postgres\\17.11\\bin\\postgres.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe",
       "Klasör yetkisi: C:\\Users\\dev\\F4Box",
       "Zamanlanmış görev: F4Box Permissions"

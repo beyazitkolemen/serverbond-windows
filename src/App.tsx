@@ -471,6 +471,7 @@ export default function App() {
               run={run}
               tunnel={state.tunnel}
               mail={state.mail}
+              postgres={state.postgres}
               node={state.node}
               permissions={state.permissions}
               appUpdate={appUpdate}

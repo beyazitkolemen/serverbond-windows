@@ -61,6 +61,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
     for (id, name) in [
         ("php", "PHP"),
         ("mysql", "MySQL"),
+        ("postgres", "PostgreSQL"),
         ("caddy", "Web sunucusu"),
         ("cloudflared", "Cloudflare tüneli"),
     ] {
@@ -207,6 +208,13 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
                 !busy && healthy && snapshot.tunnel.token_saved && !snapshot.tunnel.running,
             )?;
             stop.set_enabled(!busy && snapshot.tunnel.running)?;
+            continue;
+        }
+        if id == "postgres" {
+            start.set_enabled(
+                !busy && healthy && snapshot.postgres.installed && !snapshot.postgres.running,
+            )?;
+            stop.set_enabled(!busy && snapshot.postgres.running)?;
             continue;
         }
         if let Some(package) = snapshot.packages.iter().find(|p| p.package.id == *id) {

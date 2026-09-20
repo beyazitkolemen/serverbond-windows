@@ -22,5 +22,13 @@
     "sha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
     "archive": true, "prefix": "node-v24.21.0-win-x64", "executable": "node.exe",
     "license": "MIT", "source": "https://nodejs.org/dist/v24.21.0/SHASUMS256.txt"
+  },
+  {
+    "id": "postgres", "name": "PostgreSQL", "version": "17.11",
+    "description": "İsteğe bağlı PostgreSQL sunucusu · Laravel pgsql bağlantısı.",
+    "url": "https://get.enterprisedb.com/postgresql/postgresql-17.11-1-windows-x64-binaries.zip",
+    "sha256": "6eabdf00d2893713b75db4336a23c3fdf505f056e217ec6e2e95d901750cfea3",
+    "archive": true, "prefix": "pgsql", "executable": "bin/postgres.exe",
+    "license": "PostgreSQL", "source": "https://www.enterprisedb.com/download-postgresql-binaries"
   }
 ]

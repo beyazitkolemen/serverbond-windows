@@ -9,7 +9,7 @@ description: F4Box katmanları, veri dizini ve nereye kod yazılacağı. Mimari,
 
 | Yol | Görev |
 | --- | --- |
-| `crates/f4box-core` | Katalog, indirme, arşiv, süreç, MySQL, Caddy, projeler, kuyruk/zamanlayıcı, yerel sürüm, CLI |
+| `crates/f4box-core` | Katalog, indirme, arşiv, süreç, MySQL, isteğe bağlı PostgreSQL, Caddy, projeler, kuyruk/zamanlayıcı, yerel sürüm, CLI |
 | `src-tauri` | Tauri komutları, tepsi, Windows başlangıç, klasör seçimi |
 | `src` | React/TypeScript. Tek yazma yolu `call()` → IPC |
 | `crates/f4box-core/src/bin/f4box.rs` | Aynı `Manager` ile CLI |
@@ -30,7 +30,7 @@ bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 
 ## Sabitler
 
-- Web `8088`, MySQL `13306`, PHP FastCGI `19000`, isteğe bağlı HTTPS `8443` (ilk açılışta boş port seçilebilir)
+- Web `8088`, MySQL `13306`, PHP FastCGI `19000`, isteğe bağlı HTTPS `8443`, isteğe bağlı PostgreSQL `15432` (ilk açılışta boş port seçilebilir)
 - Proje adresi `{name}.localhost` — hosts dosyası yok
 - phpMyAdmin `phpmyadmin.f4box.localhost`
 - Ortam loopback; dışarı açılmaz

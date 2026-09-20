@@ -10,12 +10,14 @@ import type {
   TunnelState,
   MailState,
   NodeState,
+  PostgresState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
 import TunnelSettings from "./TunnelSettings";
 import MailActions from "./MailActions";
+import PostgresSettings from "./PostgresSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
@@ -27,6 +29,7 @@ const sections = [
   "Web sunucusu",
   "phpMyAdmin",
   "E-posta",
+  "PostgreSQL",
   "Tünel",
   "Yedek ve aktarım",
   "Sistem",
@@ -39,7 +42,7 @@ const sectionGroups = [
   },
   {
     label: "Hizmetler",
-    items: ["phpMyAdmin", "E-posta", "Tünel"],
+    items: ["phpMyAdmin", "E-posta", "PostgreSQL", "Tünel"],
   },
   {
     label: "Yönetim",
@@ -138,6 +141,7 @@ export default function Settings({
   run,
   tunnel,
   mail,
+  postgres,
   node,
   permissions,
   appUpdate,
@@ -154,6 +158,7 @@ export default function Settings({
   run: Run;
   tunnel: TunnelState;
   mail: MailState;
+  postgres: PostgresState;
   node: NodeState;
   permissions: PermissionState;
   appUpdate: UpdateInfo | null;
@@ -786,6 +791,34 @@ export default function Settings({
               </p>
             </section>
           )}
+          {section === "PostgreSQL" && (
+            <section className="settings-section">
+              <h2>İsteğe bağlı PostgreSQL</h2>
+              <p className="section-note">
+                MySQL varsayılan kalır. İsterseniz aynı Windows makinesinde
+                PostgreSQL 17 de kurulur; ortamı bloke etmez. <code>.env</code>{" "}
+                yazılmaz.
+              </p>
+              <div className="settings-grid">
+                <NumberField
+                  label="Port"
+                  value={values.postgres.port}
+                  min={1}
+                  max={65535}
+                  onChange={(v) =>
+                    change("postgres", { ...values.postgres, port: v })
+                  }
+                />
+              </div>
+              <Toggle
+                label="Ortam başlatıldığında PostgreSQL'i de başlat"
+                value={values.postgres.autoStart}
+                onChange={(v) =>
+                  change("postgres", { ...values.postgres, autoStart: v })
+                }
+              />
+            </section>
+          )}
           {section === "Yedek ve aktarım" && (
             <section className="settings-section">
               <h2>Ayarları aktar</h2>
@@ -940,6 +973,9 @@ export default function Settings({
       </form>
       {section === "E-posta" && (
         <MailActions mail={mail} busy={busy} run={run} />
+      )}
+      {section === "PostgreSQL" && (
+        <PostgresSettings postgres={postgres} busy={busy} run={run} />
       )}
       {section === "Tünel" && (
         <TunnelSettings tunnel={tunnel} busy={busy} run={run} />

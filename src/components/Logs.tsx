@@ -7,6 +7,7 @@ const sources = [
   { id: "mysql", label: "MySQL" },
   { id: "caddy", label: "Caddy" },
   { id: "composer", label: "Composer" },
+  { id: "postgres", label: "PostgreSQL" },
 ];
 
 export function LogPreview({

@@ -778,6 +778,43 @@ fn mail_catcher_reports_its_ports_and_rejects_port_collisions() {
 }
 
 #[test]
+fn postgres_is_optional_and_rejects_port_collisions() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().postgres;
+    assert!(!state.installed && !state.running);
+    assert_eq!(state.port, 15432);
+    assert!(!state.auto_start && !state.password_saved);
+
+    let mut settings = available_settings(Settings::default());
+    settings.postgres.port = settings.web_port;
+    assert!(manager.save_settings(settings.clone()).is_err());
+
+    settings.postgres.port = 15433;
+    settings.postgres.auto_start = true;
+    manager.save_settings(settings).unwrap();
+    let saved = manager.snapshot().unwrap().postgres;
+    assert_eq!(saved.port, 15433);
+    assert!(saved.auto_start);
+
+    assert!(manager
+        .start_postgres()
+        .unwrap_err()
+        .to_string()
+        .contains("PostgreSQL kurulu değil"));
+    assert!(manager.stop_postgres().is_ok());
+    assert!(manager
+        .postgres_credentials()
+        .unwrap_err()
+        .to_string()
+        .contains("henüz hazır değil"));
+    assert_eq!(
+        manager.read_log("postgres").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+}
+
+#[test]
 fn node_stays_out_of_the_project_terminal_until_it_is_installed() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();
