@@ -659,6 +659,23 @@ impl Manager {
         Ok((cmd, file))
     }
 
+    pub fn change_mysql_password(&self, password: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        crate::model::validate_mysql_password(password)?;
+        if !self.mysql_is_running() {
+            bail!("Parolayı değiştirmek için önce MySQL'i başlatın.");
+        }
+        if !self.home.join("config/mysql-ready").is_file() {
+            bail!("MySQL henüz ilk kurulumu bitirmedi. Önce ortamı bir kez başlatın.");
+        }
+        self.mysql_query(&format!(
+            "ALTER USER 'root'@'localhost' IDENTIFIED BY '{password}'"
+        ))?;
+        crate::secrets::save(&self.home.join("config/mysql-password.dpapi"), password)?;
+        self.log("MySQL root parolası güncellendi. Proje .env dosyaları yazılmadı.");
+        Ok(())
+    }
+
     pub fn mysql_query(&self, sql: &str) -> Result<String> {
         let (mut cmd, _credentials) = self.mysql_command("mysql.exe")?;
         cmd.args(["--batch", "--skip-column-names", "--execute", sql]);

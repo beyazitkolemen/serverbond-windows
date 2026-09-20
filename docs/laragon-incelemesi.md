@@ -29,7 +29,7 @@
 
 **PHP:** saat dilimi, bellek, dosya yükleme ve POST limitleri, çalışma/giriş süreleri, giriş değişkeni sayısı, hata gösterme/kaydetme, OPcache ve belleği, uzantılar, ek `anahtar=değer` ini seçenekleri. Ortak profil tüm sürümlere temel olur. Sürüm profili tam bir kopya olarak ayrılır; ortak ayarlar sonraki değişikliklerde bu profili değiştirmez. “Ortak ayarlara dön” özel profili kaldırır. PHP 7.4 GD kütüphanesi `gd2` adıyla yüklenir; PHP 8.5 gömülü OPcache için DLL yüklenmez. OPcache kapatıldığında 8.5 üzerinde de açıkça devre dışı kalır. Bkz. [PHP OPcache değişikliği](https://wiki.php.net/rfc/make_opcache_required).
 
-**MySQL:** InnoDB buffer pool, en fazla bağlantı, en büyük paket, boşta bağlantı süresi, karşılaştırma düzeni, SQL modları, yavaş sorgu kaydı ve eşiği. Karakter seti utf8mb4; root parolası otomatik üretilip şifreli saklanır. Bu sürümde parola değiştirme arayüzü yok. Karşılaştırma tercihi var olan tabloları dönüştürmez.
+**MySQL:** InnoDB buffer pool, en fazla bağlantı, en büyük paket, boşta bağlantı süresi, karşılaştırma düzeni, SQL modları, yavaş sorgu kaydı ve eşiği. Karakter seti utf8mb4; root parolası otomatik üretilip şifreli saklanır. Ayarlar → Sistem’den gösterilir, kopyalanır ve MySQL çalışırken değiştirilir. Karşılaştırma tercihi var olan tabloları dönüştürmez.
 
 **Web:** proje alan adı kalıbı, FastCGI bağlantı ve yanıt süreleri, Gzip/Zstandard sıkıştırma, erişim günlükleri, isteğe bağlı yerel HTTPS ve HTTPS portu. HTTP loopback korunur; HTTPS açıkken HTTP istekleri yönlendirilir. `.localhost` dışında DNS/hosts yönetimi uygulanmadığından diğer son ekler kabul edilmez. Proje adresi değişikliği `.env` içindeki `APP_URL` değerini otomatik değiştirmez.
 

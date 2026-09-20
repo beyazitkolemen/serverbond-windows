@@ -446,6 +446,12 @@ export default function App() {
               key={JSON.stringify(state.settings)}
               settings={state.settings}
               versions={state.phpVersions}
+              phpVersion={
+                state.packages.find((p) => p.id === "php")?.version ?? ""
+              }
+              mysqlRunning={state.packages.some(
+                (p) => p.id === "mysql" && p.running,
+              )}
               home={state.home}
               busy={disabled}
               running={running}

@@ -522,20 +522,30 @@ impl Manager {
     pub fn save_settings(&self, settings: Settings) -> Result<()> {
         let _guard = self.gate()?;
         settings.validate()?;
-        if self.snapshot()?.any_running {
-            bail!("Portları değiştirmeden önce ortamı durdurun.");
+        let current = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .clone();
+        let runtime = current.runtime_changed(&settings);
+        let running = self.snapshot()?.any_running;
+        if running && runtime {
+            bail!("Portları ve sunucu ayarlarını değiştirmeden önce ortamı durdurun.");
         }
-        for port in [settings.web_port, settings.mysql_port, settings.php_port] {
-            services::port_free(port)?;
-        }
-        if settings.web.https {
-            services::port_free(settings.web.https_port)?;
-        }
-        // The mail catcher only binds when it is started, so a busy port is worth
-        // reporting here only when the environment will start it on its own.
-        if settings.mail.auto_start {
-            for port in [settings.mail.smtp_port, settings.mail.web_port] {
+        if !running {
+            for port in [settings.web_port, settings.mysql_port, settings.php_port] {
                 services::port_free(port)?;
+            }
+            if settings.web.https {
+                services::port_free(settings.web.https_port)?;
+            }
+            // The mail catcher only binds when it is started, so a busy port is worth
+            // reporting here only when the environment will start it on its own.
+            if settings.mail.auto_start {
+                for port in [settings.mail.smtp_port, settings.mail.web_port] {
+                    services::port_free(port)?;
+                }
             }
         }
         let mut config = self
@@ -568,7 +578,11 @@ impl Manager {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clear();
-        self.log("Port ayarları kaydedildi.");
+        self.log(if runtime {
+            "Sunucu ayarları kaydedildi."
+        } else {
+            "Çalışma alanı tercihleri kaydedildi."
+        });
         Ok(())
     }
 

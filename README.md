@@ -133,7 +133,7 @@ Kullanıcı `root`; parola **Ayarlar → Sistem → MySQL bağlantısı → Paro
 phpMyAdmin'in isteğe bağlı yapılandırma depolaması tabloları otomatik oluşturulmaz. Bu nedenle gelişmiş özelliklerle ilgili bir bildirim görülebilir; veritabanlarını görüntüleme ve SQL çalıştırma kullanılabilir.
 
 - İlk başlangıçta veri dizini hazırlanır ve rastgele root parolası atanır.
-- Parola Ayarlar → Sistem → MySQL bağlantısı → **Parolayı göster** üzerinden görülür; diskte kullanıcıya bağlı Windows DPAPI ile şifrelenir.
+- Parola Ayarlar → Sistem → MySQL bağlantısı üzerinden gösterilir, kopyalanır ve MySQL çalışırken değiştirilir; diskte kullanıcıya bağlı Windows DPAPI ile şifrelenir. `.env` yazılmaz.
 - Varsayılan bağlantı `127.0.0.1:13306`, kullanıcı `root`.
 - Proje satırındaki veritabanı düğmesi proje adıyla veritabanı oluşturur; tireler alt çizgiye dönüşür.
 - Yedek düğmesi `mysqldump` ile SQL yedeği alır. Yedekler `backups/` altında saklanır.

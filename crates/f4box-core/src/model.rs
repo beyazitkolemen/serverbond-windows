@@ -216,6 +216,32 @@ impl Settings {
         }
         self.validate_preferences()
     }
+
+    /// Port, PHP, MySQL, web ve e-posta gibi servis dosyalarını değiştiren alanlar.
+    /// Klasör ve açılış tercihleri ortam çalışırken de kaydedilebilir.
+    pub fn runtime_changed(&self, other: &Self) -> bool {
+        fn strip(settings: &Settings) -> Settings {
+            let mut copy = settings.clone();
+            copy.projects_dir.clear();
+            copy.backups_dir.clear();
+            copy.start_on_launch = false;
+            copy
+        }
+        serde_json::to_vec(&strip(self)).ok() != serde_json::to_vec(&strip(other)).ok()
+    }
+}
+
+pub fn validate_mysql_password(password: &str) -> Result<()> {
+    if !(8..=128).contains(&password.chars().count()) {
+        bail!("MySQL parolası 8–128 karakter olmalı.");
+    }
+    if password
+        .chars()
+        .any(|c| c.is_control() || "#'\";\\ \t".contains(c))
+    {
+        bail!("Parola boşluk, tırnak, noktalı virgül veya denetim karakteri içeremez.");
+    }
+    Ok(())
 }
 
 #[derive(Clone, Serialize, Deserialize)]

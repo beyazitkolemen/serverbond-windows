@@ -140,6 +140,17 @@ async fn credentials(state: tauri::State<'_, State>) -> Result<String, String> {
     blocking(state.clone(), move || state.credentials()).await
 }
 #[tauri::command]
+async fn change_mysql_password(
+    state: tauri::State<'_, State>,
+    password: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.change_mysql_password(&password)
+    })
+    .await
+}
+#[tauri::command]
 async fn database(
     state: tauri::State<'_, State>,
     name: String,
@@ -596,6 +607,7 @@ fn main() {
             settings_validate_import,
             read_log,
             credentials,
+            change_mysql_password,
             database,
             discover_projects,
             import_projects,

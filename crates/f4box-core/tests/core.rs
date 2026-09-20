@@ -1,7 +1,8 @@
 use f4box_core::{
     install::{extract_zip, verify_hash},
     model::{
-        caddy_config, catalog, slug_from_folder, validate_slug, Project, QueueWorker, Settings,
+        caddy_config, catalog, slug_from_folder, validate_mysql_password, validate_slug, Project,
+        QueueWorker, Settings,
     },
     Manager,
 };
@@ -377,6 +378,23 @@ fn broken_download_does_not_replace_selected_php() {
     let original = fs::read(home.path().join("config.json")).unwrap();
     assert!(manager.select_php("7.4.33").is_err());
     assert_eq!(fs::read(home.path().join("config.json")).unwrap(), original);
+}
+
+#[test]
+fn mysql_password_rules_and_workspace_settings_are_not_runtime() {
+    assert!(validate_mysql_password("short").is_err());
+    assert!(validate_mysql_password("has space!!").is_err());
+    assert!(validate_mysql_password("bad'quote").is_err());
+    assert!(validate_mysql_password("good-Pass_99").is_ok());
+    let base = Settings::default();
+    let mut folders = base.clone();
+    folders.projects_dir = "C:\\Projeler".into();
+    folders.backups_dir = "C:\\Yedek".into();
+    folders.start_on_launch = true;
+    assert!(!base.runtime_changed(&folders));
+    let mut ports = base.clone();
+    ports.web_port = 8089;
+    assert!(base.runtime_changed(&ports));
 }
 
 #[test]

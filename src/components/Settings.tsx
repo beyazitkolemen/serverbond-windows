@@ -109,9 +109,15 @@ function Toggle({
   );
 }
 
+function runtimeSlice(settings: Values) {
+  return { ...settings, projectsDir: "", backupsDir: "", startOnLaunch: false };
+}
+
 export default function Settings({
   settings,
   versions,
+  phpVersion,
+  mysqlRunning,
   home,
   busy,
   running,
@@ -126,6 +132,8 @@ export default function Settings({
 }: {
   settings: Values;
   versions: PackageStatus[];
+  phpVersion: string;
+  mysqlRunning: boolean;
   home: string;
   busy: boolean;
   running: boolean;
@@ -145,10 +153,17 @@ export default function Settings({
   }, [openUpdates]);
   const [version, setVersion] = useState("");
   const [password, setPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNext, setShowNext] = useState(false);
   const [note, setNote] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const dirty = JSON.stringify(values) !== JSON.stringify(settings);
+  const runtimeDirty =
+    JSON.stringify(runtimeSlice(values)) !==
+    JSON.stringify(runtimeSlice(settings));
   const locked = busy || running;
+  const canSave = dirty && !busy && (!running || !runtimeDirty);
   const php = (version && values.phpVersions[version]) || values.php;
   const setPhp = (patch: Partial<PhpSettings>) =>
     setValues((v) =>
@@ -211,7 +226,7 @@ export default function Settings({
       </nav>
       <p className="section-note">
         {running
-          ? "PHP ve sunucu ayarlarını değiştirmek için önce ortamı durdurun. Masaüstü tercihlerini aşağıdan değiştirebilirsiniz."
+          ? "Çalışma alanı, yedek klasörü ve açılış tercihi ortam çalışırken kaydedilir. Port, PHP, MySQL ve web ayarları için önce ortamı durdurun."
           : "Kaydedilen ayarlar sonraki servis başlangıcında uygulanır. Açık terminalleri yeniden açın."}
       </p>
       {note && (
@@ -228,7 +243,7 @@ export default function Settings({
           );
         }}
       >
-        <fieldset disabled={locked} className="settings-fields">
+        <fieldset disabled={busy} className="settings-fields">
           {section === "Genel" && (
             <section className="settings-section">
               <h2>Çalışma alanı</h2>
@@ -252,6 +267,26 @@ export default function Settings({
                 Kurulu PHP, MySQL ve web sunucusunu başlatır. Windows başlangıcı
                 için yukarıdaki masaüstü tercihini de açın.
               </p>
+            </section>
+          )}
+          {section === "Yedek ve aktarım" && (
+            <section className="settings-section">
+              <h2>Veritabanı yedekleri</h2>
+              {folder(
+                "backupsDir",
+                "SQL yedeklerinin klasörü",
+                `${home}\\backups`,
+              )}
+              <p className="section-note">
+                Boş değer varsayılan backups klasörünü kullanır. Bundan sonraki
+                yedekler bu klasöre yazılır; eski yedekler taşınmaz.
+              </p>
+            </section>
+          )}
+        </fieldset>
+        <fieldset disabled={locked} className="settings-fields">
+          {section === "Genel" && (
+            <section className="settings-section">
               <h2>Bağlantı portları</h2>
               <div className="settings-grid">
                 {(
@@ -275,6 +310,32 @@ export default function Settings({
           {section === "PHP" && (
             <section className="settings-section">
               <h2>PHP çalışma ayarları</h2>
+              <label>
+                Varsayılan PHP sürümü
+                <select
+                  value={phpVersion}
+                  disabled={busy || running}
+                  onChange={(e) => {
+                    const version = e.target.value;
+                    if (version && version !== phpVersion)
+                      void run("Varsayılan PHP sürümü uygulanıyor…", () =>
+                        call("select_php", { version }),
+                      );
+                  }}
+                >
+                  {versions.map((p) => (
+                    <option key={p.version} value={p.version}>
+                      PHP {p.version}
+                      {p.installed ? " · Kurulu" : " · Kurulu değil"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="section-note">
+                Yeni projeler ve ortak FastCGI bu sürümü kullanır. Kurulu değilse
+                indirilir. Ortam çalışırken değiştirilemez; proje kartından ayrı
+                sürüm seçilebilir.
+              </p>
               <label>
                 Ayar kapsamı
                 <select
@@ -698,16 +759,6 @@ export default function Settings({
           )}
           {section === "Yedek ve aktarım" && (
             <section className="settings-section">
-              <h2>Veritabanı yedekleri</h2>
-              {folder(
-                "backupsDir",
-                "SQL yedeklerinin klasörü",
-                `${home}\\backups`,
-              )}
-              <p className="section-note">
-                Boş değer varsayılan backups klasörünü kullanır. Bundan sonraki
-                yedekler bu klasöre yazılır; eski yedekler taşınmaz.
-              </p>
               <h2>Ayarları aktar</h2>
               <p className="section-note">
                 JSON yalnızca tercihleri içerir; MySQL yönetici parolası,
@@ -831,7 +882,11 @@ export default function Settings({
         {!["Sistem", "Güncellemeler", "Tünel"].includes(section) && (
           <div className="settings-save">
             <span>
-              {dirty ? "Kaydedilmemiş değişiklikler var" : "Ayarlar güncel"}
+              {dirty
+                ? running && runtimeDirty
+                  ? "Sunucu ayarlarını kaydetmek için ortamı durdurun"
+                  : "Kaydedilmemiş değişiklikler var"
+                : "Ayarlar güncel"}
             </span>
             <button
               type="button"
@@ -847,7 +902,7 @@ export default function Settings({
             <button
               type="submit"
               className="button primary"
-              disabled={locked || !dirty}
+              disabled={!canSave}
             >
               Ayarları kaydet
             </button>
@@ -885,10 +940,108 @@ export default function Settings({
               >
                 {password ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
+              <button
+                type="button"
+                className="button secondary small"
+                disabled={busy || !password}
+                onClick={() =>
+                  void run("Parola kopyalanıyor…", async () => {
+                    await navigator.clipboard.writeText(password);
+                    return "Parola panoya kopyalandı.";
+                  })
+                }
+              >
+                Kopyala
+              </button>
             </div>
             <p className="section-note">
-              Rastgele parola Windows hesabınıza bağlı olarak şifrelenir.
+              Rastgele parola Windows hesabınıza bağlı olarak şifrelenir. Proje
+              .env dosyaları yazılmaz.
             </p>
+            <h3>Parolayı değiştir</h3>
+            <p className="section-note">
+              MySQL çalışırken kök parolasını buradan değiştirin. 8–128 karakter;
+              boşluk ve tırnak kullanmayın.
+            </p>
+            <div className="settings-grid">
+              <label>
+                Yeni parola
+                <div className="input-with-button">
+                  <input
+                    type={showNext ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={nextPassword}
+                    disabled={busy}
+                    onChange={(e) => setNextPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="icon-button"
+                    disabled={busy}
+                    aria-label={showNext ? "Parolayı gizle" : "Parolayı göster"}
+                    onClick={() => setShowNext((v) => !v)}
+                  >
+                    {showNext ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </label>
+              <label>
+                Yeni parolayı doğrula
+                <input
+                  type={showNext ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  disabled={busy}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="settings-actions">
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy}
+                onClick={() => {
+                  const generated = Array.from(
+                    crypto.getRandomValues(new Uint8Array(16)),
+                  )
+                    .map((n) => n.toString(16).padStart(2, "0"))
+                    .join("");
+                  setNextPassword(generated);
+                  setConfirmPassword(generated);
+                  setShowNext(true);
+                }}
+              >
+                Rastgele üret
+              </button>
+              <button
+                type="button"
+                className="button primary"
+                disabled={
+                  busy || !nextPassword || nextPassword !== confirmPassword
+                }
+                onClick={() =>
+                  void run("MySQL parolası güncelleniyor…", async () => {
+                    if (!mysqlRunning)
+                      throw new Error(
+                        "Parolayı değiştirmek için önce MySQL'i başlatın.",
+                      );
+                    if (nextPassword !== confirmPassword)
+                      throw new Error("Parola doğrulaması eşleşmiyor.");
+                    await call("change_mysql_password", {
+                      password: nextPassword,
+                    });
+                    setPassword(nextPassword);
+                    setNextPassword("");
+                    setConfirmPassword("");
+                    setShowNext(false);
+                    return "MySQL parolası güncellendi. Proje .env dosyaları yazılmadı.";
+                  })
+                }
+              >
+                Parolayı kaydet
+              </button>
+            </div>
           </section>
           <section className="settings-section">
             <h2>F4Box veri klasörü</h2>

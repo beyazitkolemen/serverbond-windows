@@ -44,7 +44,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 ## Ayarlar
 
-`save_settings` ortam çalışırken port/php/mysql/web tercihlerini reddeder. Masaüstü tepsi tercihleri `config/desktop.json` ayrıdır ve çalışırken kaydedilebilir.
+`save_settings` ortam çalışırken port/php/mysql/web tercihlerini reddeder. `projects_dir`, `backups_dir` ve `start_on_launch` çalışırken kaydedilir. Varsayılan PHP Ayarlar ve Bileşenler’den `select_php` ile seçilir. MySQL root parolası Ayarlar → Sistem’den gösterilir/kopyalanır/`change_mysql_password` ile değiştirilir (MySQL açık olmalı; `.env` yazılmaz). Masaüstü tepsi tercihleri `config/desktop.json` ayrıdır ve çalışırken kaydedilebilir.
 
 ## phpMyAdmin
 
