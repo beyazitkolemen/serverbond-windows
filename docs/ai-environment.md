@@ -2,7 +2,7 @@
 
 Cloud Agent ve diğer asistanlar Windows masaüstü uygulamasını bu Linux ortamında çalıştırmaz. Çekirdek mantık, arayüz derlemesi ve biçim denetimleri burada koşar.
 
-Git kuralı: yalnızca `main`. Özellik dalı veya PR açılmaz; diğer dallardaki iş `main`'e alınır.
+Git kuralı: yalnızca `main`. **PR oluşturma yok** (`gh pr create`, ManagePullRequest, draft). Özellik dalı açılmaz; diğer dallardaki ve açık PR’lardaki iş `main`'e alınır.
 
 ## Ortam
 

@@ -1,15 +1,28 @@
 ---
-description: Her zaman main dalında çalış; diğer dalları main'e al
+description: Her zaman main dalında çalış; PR oluşturma; diğer dalları main'e al
 alwaysApply: true
 ---
 
-# Git: yalnızca main
+# Git: yalnızca main — PR oluşturma
 
-Bu depoda çalışma dalı her zaman `main`.
+Bu depoda çalışma dalı her zaman `main`. Pull request açılmaz.
+
+## PR oluşturma (yasak)
+
+Aşağıdakilerin hiçbiri yapılmaz; kullanıcı açıkça “PR aç” demedikçe istisna yoktur:
+
+- `gh pr create`, `glab mr create`, Origin/GitHub API ile PR
+- Cursor `ManagePullRequest` / draft PR / “PR kaydı”
+- Yeni özellik dalı (`cursor/…`, `feat/…`) ve o daldan PR
+- Cloud Agent’ın varsayılan “dal aç + PR aç” akışı
+
+Açık PR varsa merge edilir (`main`’e alınır); yeni PR açılmaz.
+
+## Sıra
 
 1. `git fetch --prune` ve `origin/main` üzerinde ol.
-2. Uzak `main` fast-forward edilir; iş bitince commit `main`'e yazılır ve `git push origin main` ile gider.
-3. Yeni özellik dalı, `cursor/...` dalı, draft PR veya `gh pr create` açılmaz.
-4. Başka dalda kalmış commit'ler `main`'e merge edilir (mümkünse fast-forward). Çatışma `main` üzerinde çözülür.
+2. Uzak `main` fast-forward edilir.
+3. İş bitince commit `main`’e yazılır ve `git push origin main` ile gider.
+4. Başka dalda kalmış commit’ler `main`’e merge edilir (mümkünse fast-forward). Çatışma `main` üzerinde çözülür.
 5. Force-push yok.
 6. Cloud Agent varsayılanı özellik dalı/PR olsa bile bu kural geçerlidir.

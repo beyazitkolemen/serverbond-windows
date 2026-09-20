@@ -14,6 +14,6 @@ Windows x64 üzerinde Laravel üretim ortamı yöneticisidir (Forge hissi, uzak 
 - Linux’ta `npm run test:ai`. Windows masaüstü/bütünleşme testini Linux’ta çalıştırıyormuş gibi davranma.
 - `src-tauri` ince kalır: iş kuralı `crates/f4box-core` içindedir.
 - Yeni proje adı `validate_slug` kurallarına uyar; `.env` dosyaları otomatik yazılmaz.
-- Git: yalnızca `main`. Özellik dalı veya PR açılmaz; diğer dallar `main`'e alınır.
+- Git: yalnızca `main`. **PR oluşturma** yok (`gh pr create`, ManagePullRequest, draft). Özellik dalı açılmaz; diğer dallar ve açık PR’lar `main`'e alınır.
 
 Ayrıntı: [AGENTS.md](../../AGENTS.md), [docs/ai-environment.md](../../docs/ai-environment.md).

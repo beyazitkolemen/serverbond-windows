@@ -4,7 +4,7 @@ Windows x64 üzerinde Laravel üretim ortamını (Forge hissi, uzak VPS yok) yö
 
 ## Git
 
-Her zaman `main`. `git fetch --prune`, `origin/main` fast-forward, commit ve `git push origin main`. Özellik dalı veya PR açılmaz. Başka dalda kalmış iş `main`'e merge edilir. Force-push yok.
+Her zaman `main`. `git fetch --prune`, `origin/main` fast-forward, commit ve `git push origin main`. **PR oluşturma yok** (`gh pr create`, ManagePullRequest, draft PR). Özellik dalı açılmaz. Başka dalda veya açık PR’da kalmış iş `main`'e merge edilir. Force-push yok.
 
 ## Kurulum
 
