@@ -178,13 +178,32 @@ pub fn validate_slug(name: &str) -> Result<()> {
         bail!("Proje adı 1–48 karakter olmalı; küçük harf, rakam ve arada tire kullanın.");
     }
     let reserved = [
-        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
-        "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+        "con", "prn", "aux", "nul", "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
+        "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8",
+        "lpt9",
     ];
     if reserved.contains(&name) {
         bail!("Bu ad Windows tarafından ayrılmış.");
     }
     Ok(())
+}
+
+/// Compare a `major.minor.patch` PHP version against a minimum series.
+pub fn php_meets(version: &str, major: u32, minor: u32) -> bool {
+    let mut parts = version.split('.');
+    let parsed_major = parts
+        .next()
+        .and_then(|part| part.parse::<u32>().ok())
+        .unwrap_or(0);
+    let parsed_minor = parts
+        .next()
+        .and_then(|part| part.parse::<u32>().ok())
+        .unwrap_or(0);
+    (parsed_major, parsed_minor) >= (major, minor)
+}
+
+pub fn php_supports_laravel12(version: &str) -> bool {
+    php_meets(version, 8, 2)
 }
 
 pub fn caddy_config(

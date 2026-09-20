@@ -370,6 +370,7 @@ export default function App() {
                 (p) => p.id === "mysql" && p.running,
               )}
               home={state.settings.projectsDir || `${state.home}/www`}
+              hostPattern={state.settings.web.hostPattern}
             />
           ) : null}
           {page === "overview" ? <LogPreview logs={state.logs} /> : null}

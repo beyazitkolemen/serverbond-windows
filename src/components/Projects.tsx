@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { call, chooseFolder } from "../api";
 import type { Project, Run, PackageStatus } from "../types";
+import { phpSupportsLaravel12, projectAddress } from "../version";
 
 export default function Projects({
   projects,
@@ -26,6 +27,7 @@ export default function Projects({
   phpVersion,
   phpVersions,
   anyRunning,
+  hostPattern,
 }: {
   projects: Project[];
   busy: boolean;
@@ -39,6 +41,7 @@ export default function Projects({
   phpVersion: string;
   phpVersions: PackageStatus[];
   anyRunning: boolean;
+  hostPattern: string;
 }) {
   const [modal, setModal] = useState(false);
   const [remove, setRemove] = useState<Project | null>(null);
@@ -174,6 +177,7 @@ export default function Projects({
           run={run}
           serverError={serverError}
           phpVersion={phpVersion}
+          hostPattern={hostPattern}
           close={() => setModal(false)}
         />
       ) : null}
@@ -300,6 +304,7 @@ function ProjectDialog({
   close,
   serverError,
   phpVersion,
+  hostPattern,
 }: {
   home: string;
   busy: boolean;
@@ -307,13 +312,14 @@ function ProjectDialog({
   close: () => void;
   serverError: string;
   phpVersion: string;
+  hostPattern: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [create, setCreate] = useState(false);
   const [name, setName] = useState("");
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
-  const canCreate = Number(phpVersion.split(".").slice(0, 2).join(".")) >= 8.2;
+  const canCreate = phpSupportsLaravel12(phpVersion);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
@@ -398,7 +404,7 @@ function ProjectDialog({
           />
         </label>
         <p className="field-hint">
-          {name || "ornek-proje"}.localhost adresinden erişilir.
+          {projectAddress(hostPattern, name)} adresinden erişilir.
         </p>
         <label htmlFor="project-path">
           {create ? "Oluşturulacağı üst klasör" : "Laravel proje klasörü"}

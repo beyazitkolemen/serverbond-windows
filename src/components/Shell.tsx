@@ -12,6 +12,7 @@ import {
 import type { Page } from "../types";
 import type { ReactNode } from "react";
 import { desktop } from "../api";
+import { APP_VERSION } from "../version";
 
 const navigation = [
   { id: "overview", title: "Genel bakış", icon: Home },
@@ -81,7 +82,7 @@ export function Shell({
         <div className="sidebar-footer">
           <Monitor size={17} />
           <span>Windows x64</span>
-          <span className="build-version">v1.0.0</span>
+          <span className="build-version">v{APP_VERSION}</span>
         </div>
       </aside>
       <div className="workspace">
@@ -90,7 +91,7 @@ export function Shell({
         </main>
         <footer>
           {desktop
-            ? "F4Box v1.0.0"
+            ? `F4Box v${APP_VERSION}`
             : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
         </footer>
       </div>

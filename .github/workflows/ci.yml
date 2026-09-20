@@ -11,6 +11,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: npm ci
       - name: Frontend build
@@ -24,9 +29,24 @@ jobs:
       - name: Real Windows environment tests
         if: github.event_name == 'workflow_dispatch'
         run: cargo test -p f4box-core --tests --locked -- --ignored --nocapture --test-threads=1
-      - name: Desktop executable
-        run: cargo build -p f4box-desktop --features tauri/custom-protocol --release --locked
+      - name: Desktop executable and installer
+        run: npm run desktop:build
+      - name: Package versioned artifacts
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Copy-Item target/release/f4box-desktop.exe "artifacts/F4Box_${version}_x64.exe"
+          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $setup) {
+            throw "NSIS kurulum paketi bulunamadı."
+          }
+          Copy-Item $setup.FullName "artifacts/F4Box_${version}_x64-setup.exe"
+          Get-ChildItem artifacts/*.exe | ForEach-Object {
+            "$(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()  $($_.Name)"
+          } | Set-Content -Encoding ascii artifacts/SHA256SUMS.txt
+          Get-Content artifacts/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: F4Box-Windows-x64
-          path: target/release/f4box-desktop.exe
+          path: artifacts/*

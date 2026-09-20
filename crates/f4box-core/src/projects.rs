@@ -69,7 +69,7 @@ impl Manager {
     pub fn create_project(&self, name: String, parent: PathBuf) -> Result<Project> {
         let _guard = self.gate()?;
         let version = self.package("php")?.version;
-        if version.starts_with("7.") || version.starts_with("8.0.") || version.starts_with("8.1.") {
+        if !crate::model::php_supports_laravel12(&version) {
             bail!("Yeni Laravel 12 projesi için PHP 8.2 veya üzerini seçin. Eski PHP sürümleriyle mevcut projelerinizi ekleyebilirsiniz.");
         }
         validate_slug(&name)?;

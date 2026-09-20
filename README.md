@@ -4,11 +4,15 @@ Windows x64 üzerinde PHP, MySQL, Caddy ve Composer indirip kuran; Laravel proje
 
 PHP sürümü seçimi, projeye özel çalışma ortamları, phpMyAdmin, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
-## İndir — v1.0
+## İndir — v1.1
 
-- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.0/F4Box_1.0.0_x64-setup.exe): F4Box'ı kurar ve WebView2 gereksinimini yönetir.
-- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.0/F4Box_1.0.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\F4Box` altında saklar.
-- [Sürüm notları ve SHA-256 doğrulama dosyası](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0).
+Uygulama sürümü **1.1.0**. Windows x64 paketleri CI tarafından `F4Box_1.1.0_x64-setup.exe`, `F4Box_1.1.0_x64.exe` ve `SHA256SUMS.txt` olarak üretilir.
+
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/F4Box_1.1.0_x64-setup.exe): F4Box'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/F4Box_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\F4Box` altında saklar.
+- [v1.1 sürüm notları](docs/releases/v1.1.md)
+
+v1.1 ikili paketi henüz yayımlanmadıysa son yayımlanan [v1.0](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0) kullanılabilir.
 
 Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir. Depo özel olduğu sürece indirme bağlantıları için depoya erişimi olan bir GitHub hesabıyla oturum açılmalıdır.
 
@@ -110,7 +114,7 @@ Uygulama kapanırken servisler durur. Windows Job Objects beklenmeyen kapanışt
 - Onarım SHA-256 doğrulanmış önbellekten veya resmî indirmeden yapılır. Yeni paket tamamen açılmadan mevcut klasör değiştirilmez. Önceki program klasörü `bin/<bileşen>/<sürüm>-before-repair-<kimlik>` adıyla korunur; `data`, `www`, `backups` ve proje `.env` dosyalarına dokunulmaz.
 - **Beklenmedik servis kapanışı:** Bileşenler ekranındaki uyarıyı ve ilgili günlüğü inceleyin; **Başlat** başarılı olduğunda uyarı temizlenir.
 - Portlar kaydedilirken kullanımda olup olmadıkları kontrol edilir. Port sonradan başka program tarafından alınırsa servis başlangıcında tekrar kontrol edilir.
-- PHP resmî sürüm adresi 404/410 döndürürse aynı sabit paket resmî arşivde aranır; SHA-256 kontrolü değişmez. İndirmede bağlantı için 30 saniye, her okuma işlemi için 60 saniye bekleme sınırı vardır.
+- PHP resmî sürüm adresi 404/410 döndürürse aynı sabit paket resmî arşivde aranır; SHA-256 kontrolü değişmez. İndirmede bağlantı için 30 saniye, tüm aktarım için 30 dakika bekleme sınırı vardır.
 - PHP doğrulaması 20 saniye, MySQL sorguları 30 saniye ile sınırlıdır. Zaman aşımında sahip olunan alt süreçler kapatılır. Yedek dosyaları benzersiz ad taşır; peş peşe yedekler birbirinin üzerine yazılmaz.
 
 ## Geliştirme
@@ -130,7 +134,7 @@ npm run desktop
 npm run desktop:build
 ```
 
-Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir.
+Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Windows CI aynı adımlarla `artifacts/F4Box_<sürüm>_x64.exe`, `F4Box_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
 
 ### Doğrulama
 

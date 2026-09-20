@@ -28,6 +28,8 @@ fn rejects_command_and_path_injection_in_project_names() {
         "foo-",
         "foo.localhost",
         "con",
+        "com0",
+        "lpt0",
         "lpt1",
     ] {
         assert!(validate_slug(invalid).is_err(), "{invalid}");
@@ -276,6 +278,20 @@ fn saved_php_selection_controls_paths_and_package_status() {
         .unwrap_err();
     assert!(err.to_string().contains("PHP 8.2"));
     assert!(!home.path().join("demo").exists());
+}
+
+#[test]
+fn laravel12_requires_php_8_2_or_newer_by_series() {
+    use f4box_core::model::{php_meets, php_supports_laravel12};
+    assert!(!php_supports_laravel12("7.4.33"));
+    assert!(!php_supports_laravel12("8.0.30"));
+    assert!(!php_supports_laravel12("8.1.34"));
+    assert!(php_supports_laravel12("8.2.33"));
+    assert!(php_supports_laravel12("8.4.25"));
+    assert!(php_supports_laravel12("8.10.0"));
+    assert!(php_meets("8.10.0", 8, 2));
+    assert!(!php_meets("8.10.0", 8, 11));
+    assert!(!php_supports_laravel12(""));
 }
 
 #[test]

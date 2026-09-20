@@ -10,6 +10,7 @@ use std::{
 };
 
 pub fn command(executable: impl AsRef<std::ffi::OsStr>) -> Command {
+    #[allow(unused_mut)]
     let mut cmd = Command::new(executable);
     #[cfg(windows)]
     cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -35,6 +36,7 @@ impl ManagedChild {
     }
 
     fn spawn_redirected(mut cmd: Command) -> Result<Self> {
+        #[allow(unused_mut)]
         let mut child = cmd
             .spawn()
             .context("Program başlatılamadı; Visual C++ x64 Runtime kurulumunu kontrol edin.")?;
@@ -66,6 +68,11 @@ impl ManagedChild {
         Ok(())
     }
 
+    fn terminate(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+
     fn wait_status(&mut self, timeout: Duration) -> Result<ExitStatus> {
         let started = Instant::now();
         loop {
@@ -73,6 +80,7 @@ impl ManagedChild {
                 return Ok(status);
             }
             if started.elapsed() > timeout {
+                self.terminate();
                 bail!("İşlem zaman aşımına uğradı. Günlükleri kontrol edin.");
             }
             std::thread::sleep(Duration::from_millis(150));
@@ -95,12 +103,14 @@ impl ManagedChild {
                 .saturating_add(stderr.metadata()?.len())
                 > 8 * 1024 * 1024
             {
+                child.terminate();
                 bail!("Komut çıktısı 8 MB sınırını aştı; işlem durduruldu.");
             }
             if let Some(status) = child.child.try_wait()? {
                 break status;
             }
             if started.elapsed() > timeout {
+                child.terminate();
                 bail!("İşlem zaman aşımına uğradı; işlem durduruldu.");
             }
             std::thread::sleep(Duration::from_millis(50));

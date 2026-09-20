@@ -8,6 +8,26 @@ use std::{
     time::Duration,
 };
 
+pub(crate) const DOWNLOAD_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+pub(crate) const DOWNLOAD_TOTAL_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+
+pub(crate) fn download_user_agent() -> String {
+    format!("F4Box/{}", env!("CARGO_PKG_VERSION"))
+}
+
+pub(crate) fn download_client() -> Result<reqwest::blocking::Client> {
+    // reqwest's blocking client has no per-read timeout. A 60s total timeout
+    // aborted MySQL (~200 MB) on ordinary connections; bound the whole transfer
+    // instead and keep a short connect timeout.
+    reqwest::blocking::Client::builder()
+        .https_only(true)
+        .connect_timeout(DOWNLOAD_CONNECT_TIMEOUT)
+        .timeout(DOWNLOAD_TOTAL_TIMEOUT)
+        .user_agent(download_user_agent())
+        .build()
+        .context("İndirme istemcisi oluşturulamadı.")
+}
+
 pub fn verify_hash(path: &Path, expected: &str) -> Result<()> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
@@ -188,12 +208,7 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
     }
     if !cache.exists() {
         log(format!("{} {} indiriliyor…", package.name, package.version));
-        let client = reqwest::blocking::Client::builder()
-            .https_only(true)
-            .connect_timeout(Duration::from_secs(30))
-            .timeout(Duration::from_secs(60))
-            .user_agent("F4Box/0.1")
-            .build()?;
+        let client = download_client()?;
         let mut response = client.get(&package.url).send()?;
         if matches!(response.status().as_u16(), 404 | 410) {
             if let Some(archive) = archive_fallback(package) {
@@ -280,4 +295,21 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
     }
     log(format!("{} {} kuruldu.", package.name, package.version));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn download_client_uses_current_version_and_long_transfer_timeout() {
+        assert_eq!(DOWNLOAD_CONNECT_TIMEOUT, Duration::from_secs(30));
+        assert_eq!(DOWNLOAD_TOTAL_TIMEOUT, Duration::from_secs(30 * 60));
+        assert_eq!(
+            download_user_agent(),
+            format!("F4Box/{}", env!("CARGO_PKG_VERSION"))
+        );
+        assert!(download_user_agent().starts_with("F4Box/1."));
+        download_client().unwrap();
+    }
 }
