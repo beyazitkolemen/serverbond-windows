@@ -213,6 +213,8 @@
           "maxTries": 1,
           "memory": 128,
           "backoff": 0,
+          "maxJobs": 0,
+          "maxTime": 0,
           "enabled": true,
           "autoStart": true
         },
@@ -227,6 +229,8 @@
           "maxTries": 3,
           "memory": 256,
           "backoff": 10,
+          "maxJobs": 50,
+          "maxTime": 3600,
           "enabled": true,
           "autoStart": false
         }

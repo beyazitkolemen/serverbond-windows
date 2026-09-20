@@ -6,6 +6,11 @@ import {
   Trash2,
   ListTodo,
   ChevronDown,
+  RotateCw,
+  ScrollText,
+  CircleAlert,
+  RotateCcw,
+  Eraser,
 } from "lucide-react";
 import { call } from "../api";
 import type { Project, ProjectSchedule, QueueWorker, Run } from "../types";
@@ -22,8 +27,19 @@ function emptyWorker(name = "default"): QueueWorker {
     maxTries: 1,
     memory: 128,
     backoff: 0,
+    maxJobs: 0,
+    maxTime: 0,
     enabled: true,
     autoStart: true,
+  };
+}
+
+function normalizeWorker(worker: QueueWorker): QueueWorker {
+  return {
+    ...emptyWorker(worker.name),
+    ...worker,
+    maxJobs: worker.maxJobs ?? 0,
+    maxTime: worker.maxTime ?? 0,
   };
 }
 
@@ -38,14 +54,20 @@ export default function ProjectJobs({
 }) {
   const [open, setOpen] = useState(false);
   const [workers, setWorkers] = useState<QueueWorker[]>(() =>
-    structuredClone(project.workers ?? []),
+    (project.workers ?? []).map((worker) =>
+      normalizeWorker(structuredClone(worker)),
+    ),
   );
   const [schedule, setSchedule] = useState<ProjectSchedule>(
     () => project.schedule ?? { enabled: false, autoStart: false },
   );
   const [tasks, setTasks] = useState("");
+  const [scheduleLog, setScheduleLog] = useState("");
+  const [failed, setFailed] = useState("");
+  const [workerLogs, setWorkerLogs] = useState<Record<string, string>>({});
   const dirty =
-    JSON.stringify(workers) !== JSON.stringify(project.workers ?? []) ||
+    JSON.stringify(workers) !==
+      JSON.stringify((project.workers ?? []).map(normalizeWorker)) ||
     JSON.stringify(schedule) !== JSON.stringify(project.schedule);
   const runningWorkers = (project.workerStates ?? []).filter(
     (item) => item.running > 0,
@@ -66,6 +88,8 @@ export default function ProjectJobs({
     setWorkers((list) =>
       list.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     );
+  const locked = (title?: string) =>
+    dirty ? "Önce kuyruk ve zamanlayıcı ayarlarını kaydedin" : title;
   return (
     <div className="project-jobs">
       <button
@@ -84,7 +108,8 @@ export default function ProjectJobs({
         <div className="project-jobs-panel">
           <p className="section-note">
             İşçiler Supervisor gibi `queue:work` çalıştırır. Zamanlayıcı her
-            dakika Laravel `schedule:run` komutunu yürütür.
+            dakika Laravel `schedule:run` komutunu yürütür. Azami iş veya süre
+            dolunca işçi çıkar; otomatik yeniden başlamaz.
           </p>
           {!workers.length && !schedule.enabled && (
             <button
@@ -174,6 +199,24 @@ export default function ProjectJobs({
               <button
                 type="button"
                 className="button secondary small"
+                disabled={busy || dirty || !schedule.enabled}
+                title={locked(
+                  !schedule.enabled
+                    ? "Zamanlayıcıyı etkinleştirip kaydedin"
+                    : undefined,
+                )}
+                onClick={() =>
+                  void run("Zamanlayıcı yeniden başlatılıyor…", () =>
+                    call("restart_project_schedule", { id: project.id }),
+                  )
+                }
+              >
+                <RotateCw size={14} />
+                Yeniden başlat
+              </button>
+              <button
+                type="button"
+                className="button secondary small"
                 disabled={busy}
                 onClick={() =>
                   void run("Zamanlanmış görevler okunuyor…", async () =>
@@ -188,17 +231,36 @@ export default function ProjectJobs({
                 <ListTodo size={14} />
                 Görevler
               </button>
+              <button
+                type="button"
+                className="button secondary small"
+                disabled={busy}
+                onClick={() =>
+                  void run("Zamanlayıcı günlüğü okunuyor…", async () =>
+                    setScheduleLog(
+                      await call<string>("read_project_schedule_log", {
+                        id: project.id,
+                      }),
+                    ),
+                  )
+                }
+              >
+                <ScrollText size={14} />
+                Günlük
+              </button>
             </div>
           </div>
           {project.scheduleIssue && (
             <p className="project-job-issue">{project.scheduleIssue}</p>
           )}
           {tasks && <pre className="project-console">{tasks}</pre>}
+          {scheduleLog && <pre className="project-console">{scheduleLog}</pre>}
           {workers.map((worker, index) => {
             const state = (project.workerStates ?? []).find(
               (item) => item.id === worker.id,
             );
             const running = (state?.running ?? 0) > 0;
+            const log = workerLogs[worker.id];
             return (
               <div className="project-worker" key={worker.id}>
                 <div className="project-worker-head">
@@ -218,9 +280,7 @@ export default function ProjectJobs({
                       type="button"
                       className="button secondary small"
                       disabled={
-                        busy ||
-                        dirty ||
-                        (!running && !worker.enabled)
+                        busy || dirty || (!running && !worker.enabled)
                       }
                       title={
                         dirty
@@ -244,6 +304,47 @@ export default function ProjectJobs({
                     >
                       {running ? <Square size={14} /> : <Play size={14} />}
                       {running ? "Durdur" : "Başlat"}
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary small"
+                      disabled={busy || dirty || !worker.enabled}
+                      title={locked(
+                        !worker.enabled
+                          ? "İşçiyi etkinleştirip kaydedin"
+                          : undefined,
+                      )}
+                      onClick={() =>
+                        void run("İşçi yeniden başlatılıyor…", () =>
+                          call("restart_project_worker", {
+                            id: project.id,
+                            workerId: worker.id,
+                          }),
+                        )
+                      }
+                    >
+                      <RotateCw size={14} />
+                      Yeniden başlat
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary small"
+                      disabled={busy}
+                      onClick={() =>
+                        void run("İşçi günlüğü okunuyor…", async () => {
+                          const text = await call<string>(
+                            "read_project_worker_log",
+                            { id: project.id, workerId: worker.id },
+                          );
+                          setWorkerLogs((current) => ({
+                            ...current,
+                            [worker.id]: text,
+                          }));
+                        })
+                      }
+                    >
+                      <ScrollText size={14} />
+                      Günlük
                     </button>
                     <button
                       type="button"
@@ -358,6 +459,30 @@ export default function ProjectJobs({
                         }
                       />
                     </label>
+                    <label>
+                      Azami iş (0=sınırsız)
+                      <input
+                        type="number"
+                        min={0}
+                        max={1000000}
+                        value={worker.maxJobs}
+                        onChange={(e) =>
+                          update(index, { maxJobs: Number(e.target.value) })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Azami süre (sn)
+                      <input
+                        type="number"
+                        min={0}
+                        max={604800}
+                        value={worker.maxTime}
+                        onChange={(e) =>
+                          update(index, { maxTime: Number(e.target.value) })
+                        }
+                      />
+                    </label>
                   </div>
                 </details>
                 <div className="project-job-row">
@@ -385,9 +510,77 @@ export default function ProjectJobs({
                 {state?.issue && (
                   <p className="project-job-issue">{state.issue}</p>
                 )}
+                {log && <pre className="project-console">{log}</pre>}
               </div>
             );
           })}
+          <div className="project-failed">
+            <div className="project-job-row">
+              <strong>Başarısız kuyruk işleri</strong>
+              <div className="project-job-actions">
+                <button
+                  type="button"
+                  className="button secondary small"
+                  disabled={busy}
+                  onClick={() =>
+                    void run("Başarısız işler okunuyor…", async () =>
+                      setFailed(
+                        await call<string>("list_failed_jobs", {
+                          id: project.id,
+                        }),
+                      ),
+                    )
+                  }
+                >
+                  <CircleAlert size={14} />
+                  Listele
+                </button>
+                <button
+                  type="button"
+                  className="button secondary small"
+                  disabled={busy}
+                  onClick={() =>
+                    void run("Başarısız işler yeniden kuyruğa alınıyor…", async () =>
+                      setFailed(
+                        await call<string>("retry_failed_jobs", {
+                          id: project.id,
+                          job: "all",
+                        }),
+                      ),
+                    )
+                  }
+                >
+                  <RotateCcw size={14} />
+                  Yeniden kuyruğa al
+                </button>
+                <button
+                  type="button"
+                  className="button secondary small"
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Tüm başarısız kuyruk işleri silinecek. Devam edilsin mi?",
+                      )
+                    ) {
+                      return;
+                    }
+                    void run("Başarısız işler temizleniyor…", async () =>
+                      setFailed(
+                        await call<string>("flush_failed_jobs", {
+                          id: project.id,
+                        }),
+                      ),
+                    );
+                  }}
+                >
+                  <Eraser size={14} />
+                  Temizle
+                </button>
+              </div>
+            </div>
+            {failed && <pre className="project-console">{failed}</pre>}
+          </div>
           <div className="project-jobs-footer">
             <button
               type="button"

@@ -584,6 +584,8 @@ fn project_jobs_persist_and_reject_invalid_workers() {
         connection: "database".into(),
         queue: "high,default".into(),
         processes: 2,
+        max_jobs: 100,
+        max_time: 3600,
         ..Default::default()
     };
     manager
@@ -596,14 +598,46 @@ fn project_jobs_persist_and_reject_invalid_workers() {
         .save_project_jobs(&project.id, vec![bad], Default::default())
         .is_err());
     assert_eq!(fs::read(home.path().join("config.json")).unwrap(), before);
+    let mut disabled = worker.clone();
+    disabled.enabled = false;
+    manager
+        .save_project_jobs(&project.id, vec![disabled], Default::default())
+        .unwrap();
+    assert!(manager
+        .start_project_worker(&project.id, &worker.id)
+        .unwrap_err()
+        .to_string()
+        .contains("kapalı"));
+    assert!(manager
+        .restart_project_worker(&project.id, &worker.id)
+        .unwrap_err()
+        .to_string()
+        .contains("kapalı"));
+    assert!(manager
+        .start_project_schedule(&project.id)
+        .unwrap_err()
+        .to_string()
+        .contains("kapalı"));
     drop(manager);
     let reopened = Manager::new(home.path().into()).unwrap();
     let saved = &reopened.snapshot().unwrap().projects[0];
     assert_eq!(saved.project.workers[0].name, "emails");
     assert_eq!(saved.project.workers[0].queue, "high,default");
+    assert_eq!(saved.project.workers[0].max_jobs, 100);
+    assert_eq!(saved.project.workers[0].max_time, 3600);
     assert_eq!(saved.worker_states[0].running, 0);
+    assert_eq!(
+        reopened
+            .read_project_worker_log(&project.id, &worker.id)
+            .unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+    assert_eq!(
+        reopened.read_project_schedule_log(&project.id).unwrap(),
+        "Henüz günlük kaydı yok."
+    );
     assert!(reopened
-        .start_project_worker(&project.id, &worker.id)
+        .list_failed_jobs(&project.id)
         .unwrap_err()
         .to_string()
         .contains("artisan"));

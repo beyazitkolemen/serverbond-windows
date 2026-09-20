@@ -73,6 +73,8 @@ pub struct QueueWorker {
     pub max_tries: u32,
     pub memory: u32,
     pub backoff: u32,
+    pub max_jobs: u32,
+    pub max_time: u32,
     pub enabled: bool,
     pub auto_start: bool,
 }
@@ -90,6 +92,8 @@ impl Default for QueueWorker {
             max_tries: 1,
             memory: 128,
             backoff: 0,
+            max_jobs: 0,
+            max_time: 0,
             enabled: true,
             auto_start: true,
         }

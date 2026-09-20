@@ -71,11 +71,11 @@ Proje kartındaki **Terminal**, o proje klasöründe Windows PowerShell açar. `
 
 ### Kuyruk ve zamanlama
 
-Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıcı vardır. İşçi `php artisan queue:work` sürecidir: bağlantı, kuyruk adı, süreç sayısı, zaman aşımı ve bellek limiti ayarlanır. Birden fazla işçi (örneğin `default` ve `emails`) eklenebilir. **Ortamla başlat** açıkken **Ortamı başlat** bu süreçleri de açar; ayrı **Başlat / Durdur** ile tek tek yönetilir.
+Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıcı vardır. İşçi `php artisan queue:work` sürecidir: bağlantı, kuyruk adı, süreç sayısı, zaman aşımı, bellek, azami iş (`--max-jobs`) ve azami süre (`--max-time`) ayarlanır. Sıfır değer bayrağı eklemez. Birden fazla işçi (örneğin `default` ve `emails`) eklenebilir. **Ortamla başlat** açıkken **Ortamı başlat** bu süreçleri de açar; ayrı **Başlat / Durdur / Yeniden başlat** ile tek tek yönetilir. Ortam çalışırken kaydedilen yeni veya yeni etkinleştirilen `Ortamla başlat` işçileri de açılır.
 
-**Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** düğmesi `schedule:list` çıktısını gösterir. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz.
+**Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
 
-Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek sınırından çıkan işçi otomatik yeniden başlamaz; **Başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir.
+Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]` ve `f4box schedule <ad> start|stop|restart|list|log`.
 
 ### Node.js, npm ve npx
 
@@ -223,6 +223,9 @@ cargo run -p f4box-core --bin f4box -- php
 cargo run -p f4box-core --bin f4box -- php 7.4.33
 cargo run -p f4box-core --bin f4box -- serve
 cargo run -p f4box-core --bin f4box -- add benim-projem C:\Projeler\benim-projem
+cargo run -p f4box-core --bin f4box -- queue benim-projem start default
+cargo run -p f4box-core --bin f4box -- queue benim-projem failed
+cargo run -p f4box-core --bin f4box -- schedule benim-projem list
 ```
 
 Tüm PHP paketlerini indirerek FastCGI, uzantılar, Composer, çalışan ortamda sürüm geçişi, başarısız geçişten geri dönüş ve seçim kalıcılığı testi (ayrı geçici veri dizini kullanır):

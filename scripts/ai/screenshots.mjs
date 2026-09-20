@@ -22,8 +22,8 @@ const shots = [
   {
     file: "03-projeler-kuyruk.png",
     nav: "Projeler",
-    expand: ".project-jobs-toggle",
-    height: 1620,
+    expand: [".project-jobs-toggle", ".project-worker-more summary"],
+    height: 2100,
   },
   { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1300 },
   { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1550 },
@@ -67,7 +67,11 @@ addEventListener("DOMContentLoaded", () => {
     [
       [".nav-item", shot.nav],
       shot.tab ? [".settings-tabs button", shot.tab] : null,
-      shot.expand ? [shot.expand, null] : null,
+      ...(Array.isArray(shot.expand)
+        ? shot.expand.map((selector) => [selector, null])
+        : shot.expand
+          ? [[shot.expand, null]]
+          : []),
     ].filter(Boolean),
   )};
   let index = 0;

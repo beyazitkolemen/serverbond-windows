@@ -44,7 +44,7 @@ pub fn parse_queue_service_id(id: &str) -> Option<(String, String, u8)> {
 }
 
 pub fn queue_work_args(worker: &QueueWorker) -> Vec<String> {
-    vec![
+    let mut args = vec![
         "artisan".into(),
         "queue:work".into(),
         worker.connection.clone(),
@@ -55,7 +55,15 @@ pub fn queue_work_args(worker: &QueueWorker) -> Vec<String> {
         format!("--memory={}", worker.memory),
         format!("--backoff={}", worker.backoff),
         "--no-interaction".into(),
-    ]
+        "--no-ansi".into(),
+    ];
+    if worker.max_jobs > 0 {
+        args.push(format!("--max-jobs={}", worker.max_jobs));
+    }
+    if worker.max_time > 0 {
+        args.push(format!("--max-time={}", worker.max_time));
+    }
+    args
 }
 
 pub fn schedule_work_args() -> Vec<String> {
@@ -63,6 +71,48 @@ pub fn schedule_work_args() -> Vec<String> {
         "artisan".into(),
         "schedule:work".into(),
         "--no-interaction".into(),
+        "--no-ansi".into(),
+    ]
+}
+
+pub fn schedule_list_args(next: bool) -> Vec<String> {
+    let mut args = vec![
+        "artisan".into(),
+        "schedule:list".into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
+    ];
+    if next {
+        args.push("--next".into());
+    }
+    args
+}
+
+pub fn queue_failed_args() -> Vec<String> {
+    vec![
+        "artisan".into(),
+        "queue:failed".into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
+    ]
+}
+
+pub fn queue_retry_args(job: &str) -> Vec<String> {
+    vec![
+        "artisan".into(),
+        "queue:retry".into(),
+        job.into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
+    ]
+}
+
+pub fn queue_flush_args() -> Vec<String> {
+    vec![
+        "artisan".into(),
+        "queue:flush".into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
     ]
 }
 
@@ -121,6 +171,12 @@ pub fn validate_worker(worker: &QueueWorker) -> Result<()> {
     if worker.backoff > 3600 {
         bail!("Geri offset en fazla 3600 saniye olabilir.");
     }
+    if worker.max_jobs > 1_000_000 {
+        bail!("Azami iş sayısı en fazla 1000000 olabilir.");
+    }
+    if worker.max_time > 604_800 {
+        bail!("Azami çalışma süresi en fazla 604800 saniye (7 gün) olabilir.");
+    }
     Ok(())
 }
 
@@ -145,6 +201,51 @@ pub fn should_respawn_worker(worker: &QueueWorker, was_running: bool) -> bool {
 
 pub fn should_stop_schedule(enabled: bool, running: bool) -> bool {
     running && !enabled
+}
+
+pub fn should_start_saved_worker(
+    previous: Option<&QueueWorker>,
+    current: &QueueWorker,
+    running: bool,
+    env_active: bool,
+) -> bool {
+    current.enabled
+        && current.auto_start
+        && env_active
+        && !running
+        && match previous {
+            None => true,
+            Some(old) => !old.enabled || !old.auto_start,
+        }
+}
+
+pub fn should_start_saved_schedule(
+    previous: &ProjectSchedule,
+    current: &ProjectSchedule,
+    running: bool,
+    env_active: bool,
+) -> bool {
+    current.enabled
+        && current.auto_start
+        && env_active
+        && !running
+        && (!previous.enabled || !previous.auto_start)
+}
+
+pub fn failed_job_token(value: Option<&str>) -> Result<String> {
+    let value = value.unwrap_or("all").trim();
+    if value.eq_ignore_ascii_case("all") {
+        return Ok("all".into());
+    }
+    if value.is_empty()
+        || value.len() > 64
+        || !value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+    {
+        bail!("İş kimliği harf, rakam veya tire olmalı; tümü için all kullanın.");
+    }
+    Ok(value.into())
 }
 
 pub fn assign_worker_ids(workers: Vec<QueueWorker>) -> Result<Vec<QueueWorker>> {
@@ -202,31 +303,35 @@ impl Manager {
 
     pub fn start_project_worker(&self, id: &str, worker_id: &str) -> Result<()> {
         let _guard = self.gate()?;
-        let project = self.project(id)?;
-        let worker = project
-            .workers
-            .iter()
-            .find(|w| w.id == worker_id)
-            .cloned()
-            .context("Kuyruk işçisi bulunamadı.")?;
+        let (project, worker) = self.project_worker(id, worker_id)?;
+        if !worker.enabled {
+            bail!("Bu kuyruk işçisi kapalı. Etkinleştirip kaydedin.");
+        }
         self.spawn_queue_worker(&project, &worker)
     }
 
     pub fn stop_project_worker(&self, id: &str, worker_id: &str) -> Result<()> {
         let _guard = self.cleanup_gate()?;
-        let project = self.project(id)?;
-        let worker = project
-            .workers
-            .iter()
-            .find(|w| w.id == worker_id)
-            .cloned()
-            .context("Kuyruk işçisi bulunamadı.")?;
+        let (project, worker) = self.project_worker(id, worker_id)?;
         self.stop_queue_worker(&project.id, &worker)
+    }
+
+    pub fn restart_project_worker(&self, id: &str, worker_id: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        let (project, worker) = self.project_worker(id, worker_id)?;
+        if !worker.enabled {
+            bail!("Bu kuyruk işçisi kapalı. Etkinleştirip kaydedin.");
+        }
+        self.stop_queue_worker(&project.id, &worker)?;
+        self.spawn_queue_worker(&project, &worker)
     }
 
     pub fn start_project_schedule(&self, id: &str) -> Result<()> {
         let _guard = self.gate()?;
         let project = self.project(id)?;
+        if !project.schedule.enabled {
+            bail!("Zamanlayıcı kapalı. Etkinleştirip kaydedin.");
+        }
         self.spawn_schedule(&project)
     }
 
@@ -235,26 +340,103 @@ impl Manager {
         self.stop_service(&schedule_service_id(id))
     }
 
+    pub fn restart_project_schedule(&self, id: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        let project = self.project(id)?;
+        if !project.schedule.enabled {
+            bail!("Zamanlayıcı kapalı. Etkinleştirip kaydedin.");
+        }
+        self.stop_service(&schedule_service_id(id))?;
+        self.spawn_schedule(&project)
+    }
+
     pub fn list_project_schedule(&self, id: &str) -> Result<String> {
         let project = self.project(id)?;
-        artisan_file(&project)?;
-        let mut cmd = self.project_php_command(&project)?;
-        cmd.args(["artisan", "schedule:list", "--no-interaction"]);
-        let output = ManagedChild::output(cmd, Duration::from_secs(20))?;
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        if !output.status.success() {
-            bail!(
-                "Zamanlanmış görevler listelenemedi: {}",
-                if stderr.is_empty() { stdout } else { stderr }
-            );
-        }
-        Ok(if stdout.is_empty() {
+        let output = match self.artisan_output(&project, &schedule_list_args(true)) {
+            Ok(output) => output,
+            Err(error)
+                if error.to_string().contains("--next")
+                    || error.to_string().contains("nknown option") =>
+            {
+                self.artisan_output(&project, &schedule_list_args(false))?
+            }
+            Err(error) => {
+                return Err(error).context("Zamanlanmış görevler listelenemedi");
+            }
+        };
+        Ok(if output.is_empty() {
             "Kayıtlı zamanlanmış görev yok. app/Console veya routes/console.php içinde Schedule tanımlayın."
                 .into()
         } else {
-            stdout
+            output
         })
+    }
+
+    pub fn list_failed_jobs(&self, id: &str) -> Result<String> {
+        let project = self.project(id)?;
+        let output = self
+            .artisan_output(&project, &queue_failed_args())
+            .context("Başarısız kuyruk işleri listelenemedi")?;
+        Ok(if output.is_empty() {
+            "Başarısız kuyruk işi yok.".into()
+        } else {
+            output
+        })
+    }
+
+    pub fn retry_failed_jobs(&self, id: &str, job: Option<&str>) -> Result<String> {
+        let _guard = self.gate()?;
+        let project = self.project(id)?;
+        let job = failed_job_token(job)?;
+        let output = self
+            .artisan_output(&project, &queue_retry_args(&job))
+            .context("Başarısız kuyruk işleri yeniden kuyruğa alınamadı")?;
+        self.log(format!(
+            "{} başarısız kuyruk işleri yeniden denenecek: {job}",
+            project.name
+        ));
+        Ok(if output.is_empty() {
+            "Başarısız işler yeniden kuyruğa alındı.".into()
+        } else {
+            output
+        })
+    }
+
+    pub fn flush_failed_jobs(&self, id: &str) -> Result<String> {
+        let _guard = self.gate()?;
+        let project = self.project(id)?;
+        let output = self
+            .artisan_output(&project, &queue_flush_args())
+            .context("Başarısız kuyruk işleri temizlenemedi")?;
+        self.log(format!(
+            "{} başarısız kuyruk işleri temizlendi.",
+            project.name
+        ));
+        Ok(if output.is_empty() {
+            "Başarısız kuyruk işleri temizlendi.".into()
+        } else {
+            output
+        })
+    }
+
+    pub fn read_project_worker_log(&self, id: &str, worker_id: &str) -> Result<String> {
+        let (project, worker) = self.project_worker(id, worker_id)?;
+        let mut parts = Vec::new();
+        for index in 0..worker.processes.max(1) {
+            let sid = queue_service_id(&project.id, &worker.id, index);
+            let text = self.read_log(&sid)?;
+            if worker.processes > 1 {
+                parts.push(format!("— süreç {} —\n{text}", index + 1));
+            } else {
+                parts.push(text);
+            }
+        }
+        Ok(parts.join("\n\n"))
+    }
+
+    pub fn read_project_schedule_log(&self, id: &str) -> Result<String> {
+        let _project = self.project(id)?;
+        self.read_log(&schedule_service_id(id))
     }
 
     pub(crate) fn start_autostart_jobs(&self) {
@@ -353,6 +535,41 @@ impl Manager {
             .context("Proje bulunamadı.")
     }
 
+    fn project_worker(&self, id: &str, worker_id: &str) -> Result<(Project, QueueWorker)> {
+        let project = self.project(id)?;
+        let worker = project
+            .workers
+            .iter()
+            .find(|w| w.id == worker_id)
+            .cloned()
+            .context("Kuyruk işçisi bulunamadı.")?;
+        Ok((project, worker))
+    }
+
+    fn artisan_output(&self, project: &Project, args: &[String]) -> Result<String> {
+        artisan_file(project)?;
+        let mut cmd = self.project_php_command(project)?;
+        cmd.args(args);
+        let output = ManagedChild::output(cmd, Duration::from_secs(20))?;
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if !output.status.success() {
+            bail!("{}", if stderr.is_empty() { stdout } else { stderr });
+        }
+        Ok(stdout)
+    }
+
+    fn project_jobs_env_active(&self, project_id: &str) -> bool {
+        let processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
+        if processes.contains_key(&Self::project_service_id(project_id)) {
+            return true;
+        }
+        processes.keys().any(|id| {
+            parse_queue_service_id(id).is_some_and(|(p, _, _)| p == project_id)
+                || id.as_str() == schedule_service_id(project_id)
+        })
+    }
+
     fn start_project_autostart(&self, project: &Project) -> Result<()> {
         for worker in &project.workers {
             if worker.enabled && worker.auto_start {
@@ -425,7 +642,7 @@ impl Manager {
         project_id: &str,
         previous: &[QueueWorker],
         current: &[QueueWorker],
-        _previous_schedule: &ProjectSchedule,
+        previous_schedule: &ProjectSchedule,
         current_schedule: &ProjectSchedule,
     ) -> Result<()> {
         for old in previous {
@@ -443,6 +660,15 @@ impl Manager {
                 Some(_) => {}
             }
         }
+        let env_active = self.project_jobs_env_active(project_id);
+        for worker in current {
+            let previous_worker = previous.iter().find(|item| item.id == worker.id);
+            let running = self.queue_worker_running(project_id, worker);
+            if should_start_saved_worker(previous_worker, worker, running, env_active) {
+                let project = self.project(project_id)?;
+                self.spawn_queue_worker(&project, worker)?;
+            }
+        }
         let schedule_id = schedule_service_id(project_id);
         let schedule_running = self
             .processes
@@ -451,6 +677,14 @@ impl Manager {
             .contains_key(&schedule_id);
         if should_stop_schedule(current_schedule.enabled, schedule_running) {
             self.stop_service(&schedule_id)?;
+        } else if should_start_saved_schedule(
+            previous_schedule,
+            current_schedule,
+            schedule_running,
+            env_active,
+        ) {
+            let project = self.project(project_id)?;
+            self.spawn_schedule(&project)?;
         }
         Ok(())
     }
@@ -556,10 +790,26 @@ mod tests {
         assert_eq!(args[2], "redis");
         assert!(args.contains(&"--queue=high,default".into()));
         assert!(args.contains(&"--timeout=90".into()));
-        assert!(args
+        assert!(args.contains(&"--no-ansi".into()));
+        assert!(args.contains(&"--no-interaction".into()));
+        assert!(!args.iter().any(|arg| arg.starts_with("--max-jobs=")));
+        assert!(!args.iter().any(|arg| arg.starts_with("--max-time=")));
+        worker.max_jobs = 250;
+        worker.max_time = 3600;
+        let limited = queue_work_args(&worker);
+        assert!(limited.contains(&"--max-jobs=250".into()));
+        assert!(limited.contains(&"--max-time=3600".into()));
+        assert!(limited
             .iter()
             .all(|arg| !arg.contains('&') && !arg.contains('|')));
         assert_eq!(schedule_work_args()[1], "schedule:work");
+        assert!(schedule_work_args().contains(&"--no-ansi".into()));
+        assert!(schedule_list_args(true).contains(&"--next".into()));
+        assert!(!schedule_list_args(false).contains(&"--next".into()));
+        assert_eq!(queue_retry_args("all")[2], "all");
+        assert_eq!(failed_job_token(None).unwrap(), "all");
+        assert_eq!(failed_job_token(Some("42")).unwrap(), "42");
+        assert!(failed_job_token(Some("rm;rf")).is_err());
     }
 
     #[test]
@@ -578,6 +828,14 @@ mod tests {
         sample.processes = 1;
         sample.memory = 8;
         assert!(validate_worker(&sample).is_err());
+        sample.memory = 128;
+        sample.max_jobs = 1_000_001;
+        assert!(validate_worker(&sample).is_err());
+        sample.max_jobs = 10;
+        sample.max_time = 604_801;
+        assert!(validate_worker(&sample).is_err());
+        sample.max_time = 60;
+        validate_worker(&sample).unwrap();
         let many = (0..=MAX_WORKERS)
             .map(|index| {
                 let mut extra = worker();
@@ -599,5 +857,57 @@ mod tests {
         assert!(should_stop_schedule(false, true));
         assert!(!should_stop_schedule(true, true));
         assert!(!should_stop_schedule(false, false));
+        let mut enabled = worker.clone();
+        enabled.enabled = true;
+        enabled.auto_start = true;
+        assert!(should_start_saved_worker(None, &enabled, false, true));
+        assert!(!should_start_saved_worker(None, &enabled, false, false));
+        assert!(!should_start_saved_worker(None, &enabled, true, true));
+        assert!(!should_start_saved_worker(
+            Some(&enabled),
+            &enabled,
+            false,
+            true
+        ));
+        let mut disabled = enabled.clone();
+        disabled.enabled = false;
+        assert!(should_start_saved_worker(
+            Some(&disabled),
+            &enabled,
+            false,
+            true
+        ));
+        let off = ProjectSchedule::default();
+        let on = ProjectSchedule {
+            enabled: true,
+            auto_start: true,
+        };
+        assert!(should_start_saved_schedule(&off, &on, false, true));
+        assert!(!should_start_saved_schedule(&on, &on, false, true));
+        assert!(!should_start_saved_schedule(&off, &on, true, true));
+        assert!(!should_start_saved_schedule(&off, &on, false, false));
+    }
+
+    #[test]
+    fn saved_worker_json_defaults_new_limits() {
+        let worker: QueueWorker = serde_json::from_str(
+            r#"{
+                "id": "11111111-1111-1111-1111-111111111111",
+                "name": "default",
+                "connection": "default",
+                "queue": "default",
+                "processes": 1,
+                "timeout": 60,
+                "sleep": 3,
+                "maxTries": 1,
+                "memory": 128,
+                "backoff": 0,
+                "enabled": true,
+                "autoStart": true
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(worker.max_jobs, 0);
+        assert_eq!(worker.max_time, 0);
     }
 }

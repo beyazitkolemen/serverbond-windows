@@ -18,7 +18,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 ## Kuyruk ve zamanlama
 
-`crates/f4box-core/src/jobs.rs`. İşçi: `queue-{projectUuid}-{workerUuid}-{n}` → `php artisan queue:work`. Zamanlayıcı: `schedule-{projectUuid}` → `schedule:work` (crontab’daki dakikalık `schedule:run`). En fazla 8 işçi, işçi başına 8 süreç. `artisan` yoksa başlatma reddedilir. `.env` yazılmaz. Ortam `start("php"|"all")` sonrası `autoStart` olanlar açılır; `stop` hepsini kapatır. Beklenmedik çıkışta otomatik yeniden başlama yok.
+`crates/f4box-core/src/jobs.rs`. İşçi: `queue-{projectUuid}-{workerUuid}-{n}` → `php artisan queue:work` (`--no-ansi`; `maxJobs`/`maxTime` 0 değilse `--max-jobs`/`--max-time`). Zamanlayıcı: `schedule-{projectUuid}` → `schedule:work`. En fazla 8 işçi, işçi başına 8 süreç. `artisan` yoksa veya işçi/zamanlayıcı `enabled` değilse başlatma reddedilir. `.env` yazılmaz. Ortam `start("php"|"all")` sonrası `autoStart` olanlar açılır; kayıt sırasında PHP veya bir iş süreci çalışıyorsa yeni/yeni etkin `autoStart` işçiler ve zamanlayıcı da açılır. `stop` hepsini kapatır. Beklenmedik çıkışta otomatik yeniden başlama yok; `restart_*` durdurup yeniden açar. `queue:failed` / `queue:retry` / `queue:flush` ve işçi/zamanlayıcı günlükleri (`read_project_*_log`) proje kartından ve CLI’dan okunur. `schedule:list` önce `--next` dener.
 
 ## Cloudflare tüneli, Mailpit ve Windows izinleri
 

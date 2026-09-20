@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  db <name> create|backup|restore <sql>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  db <name> create|backup|restore <sql>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -91,7 +91,7 @@ fn main() -> Result<()> {
                 .find(|p| p.project.name == *name)
                 .context("Proje bulunamadı.")?;
             match (args[0].as_str(), action) {
-                ("queue", "start") => {
+                ("queue", "start" | "stop" | "restart" | "log") => {
                     let worker = args.get(3).map(String::as_str).unwrap_or("default");
                     let id = project
                         .project
@@ -101,27 +101,37 @@ fn main() -> Result<()> {
                         .context("Kuyruk işçisi bulunamadı. Önce arayüzden ekleyin.")?
                         .id
                         .clone();
-                    manager.start_project_worker(&project.project.id, &id)?;
+                    match action {
+                        "start" => manager.start_project_worker(&project.project.id, &id)?,
+                        "stop" => manager.stop_project_worker(&project.project.id, &id)?,
+                        "restart" => manager.restart_project_worker(&project.project.id, &id)?,
+                        _ => println!(
+                            "{}",
+                            manager.read_project_worker_log(&project.project.id, &id)?
+                        ),
+                    }
                 }
-                ("queue", "stop") => {
-                    let worker = args.get(3).map(String::as_str).unwrap_or("default");
-                    let id = project
-                        .project
-                        .workers
-                        .iter()
-                        .find(|w| w.name == worker || w.id == worker)
-                        .context("Kuyruk işçisi bulunamadı.")?
-                        .id
-                        .clone();
-                    manager.stop_project_worker(&project.project.id, &id)?;
+                ("queue", "failed") => {
+                    println!("{}", manager.list_failed_jobs(&project.project.id)?)
+                }
+                ("queue", "retry") => println!(
+                    "{}",
+                    manager.retry_failed_jobs(&project.project.id, args.get(3).map(String::as_str))?
+                ),
+                ("queue", "flush") => {
+                    println!("{}", manager.flush_failed_jobs(&project.project.id)?)
                 }
                 ("schedule", "start") => manager.start_project_schedule(&project.project.id)?,
                 ("schedule", "stop") => manager.stop_project_schedule(&project.project.id)?,
+                ("schedule", "restart") => manager.restart_project_schedule(&project.project.id)?,
                 ("schedule", "list") => {
                     println!("{}", manager.list_project_schedule(&project.project.id)?)
                 }
+                ("schedule", "log") => {
+                    println!("{}", manager.read_project_schedule_log(&project.project.id)?)
+                }
                 _ => bail!(
-                    "Kullanım: queue <ad> start|stop [işçi]  veya  schedule <ad> start|stop|list"
+                    "Kullanım: queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]  veya  schedule <ad> start|stop|restart|list|log"
                 ),
             }
         }

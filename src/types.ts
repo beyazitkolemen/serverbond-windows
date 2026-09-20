@@ -22,6 +22,8 @@ export interface QueueWorker {
   maxTries: number;
   memory: number;
   backoff: number;
+  maxJobs: number;
+  maxTime: number;
   enabled: boolean;
   autoStart: boolean;
 }

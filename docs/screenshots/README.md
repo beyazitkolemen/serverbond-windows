@@ -18,7 +18,7 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Projeler, kuyruk ve zamanlama
 
-Proje kartından PHP sürümü seçimi; kart içindeki panelden Laravel `schedule:run` zamanlayıcısı ve Supervisor benzeri `queue:work` işçileri.
+Proje kartından PHP sürümü seçimi; kart içindeki panelden Laravel `schedule:run` zamanlayıcısı, Supervisor benzeri `queue:work` işçileri, yeniden başlatma, günlükler ve başarısız işler.
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 

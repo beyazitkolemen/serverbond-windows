@@ -282,6 +282,68 @@ async fn list_project_schedule(
     let state = state.inner().clone();
     blocking(state.clone(), move || state.list_project_schedule(&id)).await
 }
+#[tauri::command]
+async fn restart_project_worker(
+    state: tauri::State<'_, State>,
+    id: String,
+    worker_id: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.restart_project_worker(&id, &worker_id)
+    })
+    .await
+}
+#[tauri::command]
+async fn restart_project_schedule(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.restart_project_schedule(&id)).await
+}
+#[tauri::command]
+async fn list_failed_jobs(state: tauri::State<'_, State>, id: String) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.list_failed_jobs(&id)).await
+}
+#[tauri::command]
+async fn retry_failed_jobs(
+    state: tauri::State<'_, State>,
+    id: String,
+    job: Option<String>,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.retry_failed_jobs(&id, job.as_deref())
+    })
+    .await
+}
+#[tauri::command]
+async fn flush_failed_jobs(state: tauri::State<'_, State>, id: String) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.flush_failed_jobs(&id)).await
+}
+#[tauri::command]
+async fn read_project_worker_log(
+    state: tauri::State<'_, State>,
+    id: String,
+    worker_id: String,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.read_project_worker_log(&id, &worker_id)
+    })
+    .await
+}
+#[tauri::command]
+async fn read_project_schedule_log(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.read_project_schedule_log(&id)).await
+}
 
 #[tauri::command]
 async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
@@ -537,7 +599,14 @@ fn main() {
             stop_project_worker,
             start_project_schedule,
             stop_project_schedule,
+            restart_project_worker,
+            restart_project_schedule,
             list_project_schedule,
+            list_failed_jobs,
+            retry_failed_jobs,
+            flush_failed_jobs,
+            read_project_worker_log,
+            read_project_schedule_log,
             tunnel,
             mail,
             node,

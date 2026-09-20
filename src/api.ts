@@ -150,6 +150,10 @@ export async function call<T = void>(
       ![
         "snapshot",
         "read_log",
+        "read_project_worker_log",
+        "read_project_schedule_log",
+        "list_project_schedule",
+        "list_failed_jobs",
         "settings_previous",
         "settings_defaults",
         "desktop_status",
@@ -194,8 +198,15 @@ export async function call<T = void>(
       .__F4BOX_PREVIEW__;
     return structuredClone(sample ?? preview) as T;
   }
-  if (command === "read_log")
+  if (
+    command === "read_log" ||
+    command === "read_project_worker_log" ||
+    command === "read_project_schedule_log"
+  )
     return "Günlükler masaüstü uygulamasında görüntülenir." as T;
+  if (command === "list_project_schedule")
+    return "  * * * * *  php artisan inspire  Next Due: 1 minute from now" as T;
+  if (command === "list_failed_jobs") return "Başarısız kuyruk işi yok." as T;
   throw new Error(
     "Bu işlem için F4Box masaüstü uygulamasını açın. Tarayıcı görünümü yalnızca önizlemedir.",
   );
