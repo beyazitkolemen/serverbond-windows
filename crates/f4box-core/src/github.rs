@@ -75,6 +75,46 @@ pub fn parse_github_repository(raw: &str) -> Result<GithubRepository> {
     })
 }
 
+/// Accept only the transports the release flow can drive without prompts:
+/// `https://` remotes and absolute `file://` repositories (used by tests and
+/// for mirroring from another disk). SSH would need an agent, and `ext::`
+/// or bare paths would let a remote string act as a command line.
+pub fn validate_git_url(raw: &str) -> Result<String> {
+    let url = raw.trim();
+    if url.is_empty() {
+        bail!("Git deposu adresi gerekli.");
+    }
+    if url.len() > 512 {
+        bail!("Git deposu adresi en fazla 512 karakter olabilir.");
+    }
+    if url.starts_with('-') || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        bail!("Git deposu adresi boşluk veya denetim karakteri içeremez.");
+    }
+    let rest = if let Some(rest) = url.strip_prefix("https://") {
+        rest
+    } else if let Some(rest) = url.strip_prefix("file://") {
+        if rest.is_empty() {
+            bail!("file:// adresi mutlak bir klasör yolu içermeli.");
+        }
+        return Ok(url.to_string());
+    } else {
+        bail!("Yalnızca https:// veya file:// git adresleri desteklenir.");
+    };
+    let (host, path) = rest.split_once('/').unwrap_or((rest, ""));
+    if host.is_empty()
+        || host.contains('@')
+        || !host
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b':'))
+    {
+        bail!("Git deposu sunucu adı geçersiz.");
+    }
+    if path.is_empty() || path.split('/').any(|segment| segment == "..") {
+        bail!("Git deposu yolu owner/repo biçiminde olmalı.");
+    }
+    Ok(url.to_string())
+}
+
 pub fn validate_github_token(raw: &str) -> Result<String> {
     let token: String = raw.chars().filter(|c| !c.is_whitespace()).collect();
     if !(20..=255).contains(&token.len()) {
@@ -108,7 +148,10 @@ fn valid_github_name(value: &str) -> bool {
 pub fn apply_github_git_auth(cmd: &mut Command, token: Option<&str>) {
     cmd.env("GIT_TERMINAL_PROMPT", "0")
         .env("GCM_INTERACTIVE", "never")
-        .env("GIT_CONFIG_NOSYSTEM", "1");
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        // Submodule and redirect targets inherit this: never let a repository
+        // pull in ssh/ext transports that could prompt or run commands.
+        .env("GIT_ALLOW_PROTOCOL", "https:file");
     if let Some(token) = token {
         cmd.env("GIT_CONFIG_COUNT", "2")
             .env("GIT_CONFIG_KEY_0", "credential.helper")
@@ -163,11 +206,31 @@ impl Manager {
         name: String,
         branch: String,
     ) -> Result<Project> {
-        let _guard = self.gate()?;
         let repo = parse_github_repository(repository)?;
-        validate_git_branch(&branch)?;
         let name = if name.trim().is_empty() {
             slug_from_folder(&repo.name)?
+        } else {
+            name
+        };
+        let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
+        self.import_git_project(&url, name, branch)
+    }
+
+    /// Clone any `https://` or `file://` repository into the projects folder and
+    /// register it. The GitHub token, when saved, is attached to every remote
+    /// call so private repositories work without credential prompts.
+    pub fn import_git_project(&self, url: &str, name: String, branch: String) -> Result<Project> {
+        let _guard = self.gate()?;
+        let url = validate_git_url(url)?;
+        validate_git_branch(&branch)?;
+        let name = if name.trim().is_empty() {
+            let folder = url
+                .trim_end_matches('/')
+                .trim_end_matches(".git")
+                .rsplit('/')
+                .next()
+                .unwrap_or_default();
+            slug_from_folder(folder)?
         } else {
             validate_slug(&name)?;
             name
@@ -189,15 +252,23 @@ impl Manager {
         }
         std::fs::create_dir_all(&parent).context("Proje çalışma alanı oluşturulamadı.")?;
         crate::storage::require_space(&parent, 64 * 1024 * 1024)?;
-        self.clone_github_repository(&repo, &destination, &branch)?;
+        self.clone_git_repository(&url, &destination, &branch)?;
         if !destination.join("public/index.php").is_file() {
             bail!(
                 "Depo klonlandı ama public/index.php yok. Laravel kökünü seçin; oluşan klasör korundu."
             );
         }
-        let project = self.add_project_inner(name, destination)?;
+        let mut project = self
+            .add_project_inner(name, destination.clone())
+            .with_context(|| {
+                format!(
+                    "Depo {} klasörüne klonlandı ancak proje listesine eklenemedi",
+                    destination.display()
+                )
+            })?;
         if !branch.is_empty() {
             self.set_project_release_branch(&project.id, &branch)?;
+            project.release.branch = branch;
         }
         Ok(project)
     }
@@ -264,39 +335,38 @@ impl Manager {
         Ok(user.login)
     }
 
-    fn clone_github_repository(
-        &self,
-        repo: &GithubRepository,
-        destination: &Path,
-        branch: &str,
-    ) -> Result<()> {
+    fn clone_git_repository(&self, url: &str, destination: &Path, branch: &str) -> Result<()> {
         let git = git_program()?;
-        let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
         let mut cmd = command(git);
         cmd.arg("clone").arg("--no-tags");
         if !branch.is_empty() {
             cmd.args(["--branch", branch, "--single-branch"]);
         }
-        cmd.arg(&url).arg(destination);
+        cmd.arg("--").arg(url).arg(destination);
         self.apply_github_git_auth(&mut cmd);
         self.log(format!(
-            "GitHub deposu klonlanıyor: {}/{}{}",
-            repo.owner,
-            repo.name,
+            "Git deposu klonlanıyor: {url}{}",
             if branch.is_empty() {
                 String::new()
             } else {
                 format!(" ({branch})")
             }
         ));
-        let mut child = ManagedChild::spawn(cmd, &self.home.join("logs/github.log"))?;
-        child.wait_timeout(Duration::from_secs(600)).with_context(|| {
-            if self.github_token_path().is_file() {
-                "GitHub deposu klonlanamadı. github günlüğünü kontrol edin."
-            } else {
-                "GitHub deposu klonlanamadı. Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
+        let result = ManagedChild::spawn(cmd, &self.home.join("logs/github.log"))
+            .and_then(|mut child| child.wait_timeout(Duration::from_secs(600)));
+        if let Err(error) = result {
+            // A half-written clone would block the next attempt with "folder
+            // exists"; the folder did not exist before this call, so drop it.
+            if destination.exists() {
+                let _ = std::fs::remove_dir_all(destination);
             }
-        })?;
+            let hint = if self.github_token_path().is_file() {
+                "Git deposu klonlanamadı. github günlüğünü kontrol edin."
+            } else {
+                "Git deposu klonlanamadı. Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
+            };
+            return Err(error.context(hint));
+        }
         Ok(())
     }
 
@@ -318,7 +388,30 @@ impl Manager {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_github_repository, validate_github_token};
+    use super::{parse_github_repository, validate_git_url, validate_github_token};
+
+    #[test]
+    fn git_urls_are_limited_to_https_and_file() {
+        assert!(validate_git_url("https://github.com/owner/repo.git").is_ok());
+        assert!(validate_git_url("https://gitlab.example.com:8443/group/repo").is_ok());
+        assert!(validate_git_url("file:///srv/git/repo.git").is_ok());
+        for raw in [
+            "",
+            "git@github.com:owner/repo.git",
+            "ssh://git@github.com/owner/repo",
+            "ext::sh -c id",
+            "http://github.com/owner/repo",
+            "https://",
+            "https://github.com",
+            "https://user@github.com/owner/repo",
+            "https://github.com/../repo",
+            "-c core.pager=id",
+            "file://",
+            "https://github.com/owner/repo with space",
+        ] {
+            assert!(validate_git_url(raw).is_err(), "{raw}");
+        }
+    }
 
     #[test]
     fn parses_owner_repo_and_common_urls() {

@@ -312,20 +312,18 @@ impl Manager {
             .clone();
         let mut processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
         processes.retain(|id, p| {
-            match p.child.try_wait() {
-                Ok(None) => true,
-                status => {
-                    let detail = match status {
-                        Ok(Some(exit)) => exit.to_string(),
-                        Err(error) => error.to_string(),
-                        _ => unreachable!(),
-                    };
-                    let message = format!("{id} beklenmedik şekilde kapandı ({detail}). Günlükleri kontrol edip yeniden başlatın.");
-                    self.log(&message);
-                    self.service_errors.lock().unwrap_or_else(|e| e.into_inner()).insert(id.clone(), message);
-                    false
-                }
-            }
+            let detail = match p.child.try_wait() {
+                Ok(None) => return true,
+                Ok(Some(exit)) => exit.to_string(),
+                Err(error) => error.to_string(),
+            };
+            let message = format!("{id} beklenmedik şekilde kapandı ({detail}). Günlükleri kontrol edip yeniden başlatın.");
+            self.log(&message);
+            self.service_errors
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .insert(id.clone(), message);
+            false
         });
         let packages = selected_catalog(&config.php_version)?
             .into_iter()

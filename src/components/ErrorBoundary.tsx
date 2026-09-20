@@ -1,13 +1,25 @@
-import { Component, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { APP_NAME } from "../product";
+
+type State = { failed: boolean; detail: string };
 
 export default class ErrorBoundary extends Component<
   { children: ReactNode },
-  { failed: boolean }
+  State
 > {
-  state = { failed: false };
+  state: State = { failed: false, detail: "" };
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): State {
+    return {
+      failed: true,
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    // The Rust side keeps running; keep the failure discoverable in the
+    // WebView console for support instead of dropping it silently.
+    console.error(`${APP_NAME} arayüz hatası`, error, info.componentStack);
   }
 
   render() {
@@ -19,6 +31,9 @@ export default class ErrorBoundary extends Component<
             Çalışan servisler devam edebilir. Arayüzü yeniden yükleyip
             durumlarını kontrol edin.
           </p>
+          {this.state.detail ? (
+            <pre className="error-detail">{this.state.detail}</pre>
+          ) : null}
           <button
             className="button primary"
             onClick={() => window.location.reload()}
@@ -26,8 +41,8 @@ export default class ErrorBoundary extends Component<
             Arayüzü yeniden yükle
           </button>
           <p>
-            Hata sürerse tepsi menüsündeki Çıkış komutuyla ServerBond'ı kapatıp
-            yeniden açın.
+            Hata sürerse tepsi menüsündeki Çıkış komutuyla {APP_NAME}&apos;ı
+            kapatıp yeniden açın.
           </p>
         </main>
       );

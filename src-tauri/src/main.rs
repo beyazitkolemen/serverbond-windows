@@ -518,15 +518,22 @@ async fn github(
                 )
                 .map(|_| String::new()),
             GithubAction::Forget => state.clear_github_token().map(|_| String::new()),
-            GithubAction::Import => state
-                .import_github_project(
-                    repository
-                        .as_deref()
-                        .ok_or_else(|| anyhow::anyhow!("GitHub deposu gerekli."))?,
-                    name.unwrap_or_default(),
-                    branch.unwrap_or_default(),
-                )
-                .map(|_| String::new()),
+            GithubAction::Import => {
+                let repository = repository
+                    .as_deref()
+                    .map(str::trim)
+                    .ok_or_else(|| anyhow::anyhow!("GitHub deposu gerekli."))?;
+                let name = name.unwrap_or_default();
+                let branch = branch.unwrap_or_default();
+                // Any other https:// remote (GitLab, Bitbucket, self-hosted) goes
+                // through the same clone path with the same prompt-free git setup.
+                if repository.starts_with("https://") && !repository.contains("github.com/") {
+                    state.import_git_project(repository, name, branch)
+                } else {
+                    state.import_github_project(repository, name, branch)
+                }
+                .map(|_| String::new())
+            }
         }
     })
     .await

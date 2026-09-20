@@ -632,9 +632,18 @@ impl Manager {
             let id = queue_service_id(&project.id, &worker.id, index);
             let mut cmd = self.project_php_command(project)?;
             cmd.args(queue_work_args(worker));
-            self.spawn_process(&id, cmd).with_context(|| {
-                format!("{} işçisi ({}) başlatılamadı", project.name, worker.name)
-            })?;
+            if let Err(error) = self.spawn_process(&id, cmd) {
+                // A half-started pool would report "running" while some of its
+                // processes never came up; stop the siblings so the worker is
+                // either fully running or fully stopped.
+                for started in 0..index {
+                    let _ = self.stop_service(&queue_service_id(&project.id, &worker.id, started));
+                }
+                return Err(error.context(format!(
+                    "{} işçisi ({}) başlatılamadı",
+                    project.name, worker.name
+                )));
+            }
         }
         self.service_errors
             .lock()

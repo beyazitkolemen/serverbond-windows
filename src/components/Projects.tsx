@@ -22,12 +22,13 @@ function githubSlug(raw: string): string {
     .replace(/\.git$/i, "")
     .replace(/\/+$/, "")
     .replace(/\\/g, "/");
+  // owner/repo, github.com/owner/repo, or any https://host/group/repo: the
+  // repository is always the last path segment.
   const path = cleaned
     .replace(/^git@github\.com:/i, "")
-    .replace(/^https?:\/\/github\.com\//i, "")
+    .replace(/^https?:\/\/[^/]+\//i, "")
     .replace(/^github\.com\//i, "");
-  const repo =
-    path.split("/").filter(Boolean)[1] ?? path.split("/").pop() ?? "";
+  const repo = path.split("/").filter(Boolean).pop() ?? "";
   return repo
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
@@ -369,7 +370,9 @@ function ProjectDialog({
       return;
     }
     if (fromGithub && !repository.trim()) {
-      setError("GitHub deposunu owner/repo veya URL olarak yazın.");
+      setError(
+        "Depoyu owner/repo, GitHub adresi veya https:// git adresi olarak yazın.",
+      );
       return;
     }
     if (!fromGithub && !path.trim()) {
@@ -469,10 +472,10 @@ function ProjectDialog({
         {fromGithub ? (
           <>
             <label>
-              GitHub deposu
+              Git deposu
               <input
                 name="repository"
-                placeholder="owner/repo veya https://github.com/owner/repo"
+                placeholder="owner/repo, GitHub adresi veya https://… git adresi"
                 value={repository}
                 disabled={busy}
                 onChange={(e) => {

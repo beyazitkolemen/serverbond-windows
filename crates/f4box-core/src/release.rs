@@ -158,6 +158,7 @@ pub fn composer_install_args(no_dev: bool) -> Vec<String> {
     ];
     if no_dev {
         args.push("--no-dev".into());
+        args.push("--optimize-autoloader".into());
     }
     args
 }
@@ -442,24 +443,84 @@ impl Manager {
         let timeout = remaining(deadline)?;
         match step.name.as_str() {
             "git" => {
-                if !project.release.branch.is_empty() {
-                    let mut checkout = command(git_program()?);
-                    checkout
-                        .args(["checkout", &project.release.branch])
-                        .current_dir(&project.path);
-                    self.apply_github_git_auth(&mut checkout);
-                    let checked = run_command(checkout, timeout)?;
-                    let pull = run_command(
-                        git_command(self, project, &step.args)?,
-                        remaining(deadline)?,
-                    )?;
-                    return Ok([checked, pull]
-                        .into_iter()
-                        .filter(|part| !part.is_empty())
-                        .collect::<Vec<_>>()
-                        .join("\n"));
+                let branch = project.release.branch.as_str();
+                if branch.is_empty() {
+                    return run_command(git_command(self, project, &step.args)?, timeout);
                 }
-                run_command(git_command(self, project, &step.args)?, timeout)
+                // Single-branch clones only track the branch they were created
+                // with, so fetch the requested branch explicitly before switching;
+                // `switch` never confuses a branch name with a path the way
+                // `checkout` can, and pulling with an explicit remote does not
+                // depend on upstream configuration.
+                let remote = self.git_remote(project)?;
+                let mut parts = Vec::new();
+                // A single-branch clone only fetches the branch it was created
+                // with; widen the remote so the release branch becomes a real
+                // remote-tracking branch that `--track` and future pulls accept.
+                run_command(
+                    git_command(
+                        self,
+                        project,
+                        &[
+                            "remote".into(),
+                            "set-branches".into(),
+                            "--add".into(),
+                            remote.clone(),
+                            branch.into(),
+                        ],
+                    )?,
+                    timeout,
+                )?;
+                let fetch = vec![
+                    "fetch".to_string(),
+                    "--no-tags".into(),
+                    remote.clone(),
+                    branch.into(),
+                ];
+                let output =
+                    run_command(git_command(self, project, &fetch)?, remaining(deadline)?)?;
+                if !output.is_empty() {
+                    parts.push(output);
+                }
+                let local_exists = self
+                    .git_output(
+                        project,
+                        &[
+                            "rev-parse".into(),
+                            "--verify".into(),
+                            "--quiet".into(),
+                            format!("refs/heads/{branch}"),
+                        ],
+                    )
+                    .is_ok();
+                let switch = if local_exists {
+                    vec!["switch".to_string(), branch.into()]
+                } else {
+                    vec![
+                        "switch".to_string(),
+                        "-c".into(),
+                        branch.into(),
+                        "--track".into(),
+                        format!("{remote}/{branch}"),
+                    ]
+                };
+                for args in [
+                    switch,
+                    vec![
+                        "pull".into(),
+                        "--ff-only".into(),
+                        "--no-edit".into(),
+                        remote.clone(),
+                        branch.into(),
+                    ],
+                ] {
+                    let output =
+                        run_command(git_command(self, project, &args)?, remaining(deadline)?)?;
+                    if !output.is_empty() {
+                        parts.push(output);
+                    }
+                }
+                Ok(parts.join("\n"))
             }
             "composer" => {
                 let composer = self.executable("composer")?;
@@ -470,7 +531,9 @@ impl Manager {
                 if let Some(existing) = std::env::var_os("PATH") {
                     paths.extend(std::env::split_paths(&existing));
                 }
-                cmd.env("PATH", std::env::join_paths(paths)?);
+                cmd.env("PATH", std::env::join_paths(paths)?)
+                    .env("COMPOSER_NO_INTERACTION", "1")
+                    .env("COMPOSER_MEMORY_LIMIT", "-1");
                 run_command(cmd, timeout)
             }
             "jobs" => self.restart_enabled_jobs(project),
@@ -485,6 +548,25 @@ impl Manager {
 
     fn git_output(&self, project: &Project, args: &[String]) -> Result<String> {
         run_command(git_command(self, project, args)?, Duration::from_secs(8))
+    }
+
+    /// `origin` when it exists, otherwise the first configured remote.
+    fn git_remote(&self, project: &Project) -> Result<String> {
+        let listed = self.git_output(project, &["remote".into()])?;
+        let mut remotes = listed
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty());
+        let first = remotes
+            .next()
+            .context("Depoda uzak sunucu (remote) tanımlı değil; git pull yapılamaz.")?;
+        Ok(
+            if first == "origin" || !listed.lines().any(|line| line.trim() == "origin") {
+                first.to_string()
+            } else {
+                "origin".to_string()
+            },
+        )
     }
 
     fn write_release_record(&self, id: &str, record: &ReleaseRecord) -> Result<()> {
