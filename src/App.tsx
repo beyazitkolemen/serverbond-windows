@@ -181,69 +181,72 @@ export default function App() {
         setPage("settings");
         setOpenUpdates((n) => n + 1);
       }}
-    >
-      <div className="workspace-toolbar">
-        <div className="breadcrumb">
-          <Monitor size={15} />
-          <span>Yerel ortam</span>
-          <ChevronRight size={13} />
-          <strong>
-            {
-              {
-                overview: "Genel bakış",
-                packages: "Bileşenler",
-                projects: "Projeler",
-                logs: "Günlükler",
-                settings: "Ayarlar",
-              }[page]
-            }
-          </strong>
-        </div>
-        {desktop && (
-          <div className="desktop-actions" aria-label="Masaüstü işlemleri">
-            <button
-              className="toolbar-button"
-              title="Hızlı menü"
-              onClick={() =>
-                void run("Menü açılıyor…", () =>
-                  call("desktop_action", { action: "menu" }),
-                )
-              }
-            >
-              <Ellipsis size={18} />
-              <span>Hızlı menü</span>
-            </button>
-            <button
-              className="icon-button"
-              aria-label="Tepsiye küçült"
-              title="Tepsiye küçült"
-              onClick={() =>
-                void run("Tepsiye küçültülüyor…", () =>
-                  call("desktop_action", { action: "hide" }),
-                )
-              }
-            >
-              <PanelBottomClose size={17} />
-            </button>
-            <button
-              className="icon-button"
-              aria-label="F4Box'tan çık"
-              title="F4Box'tan çık"
-              disabled={operationBusy}
-              onClick={() =>
-                void call("desktop_action", { action: "exit" }).catch((e) =>
-                  setError(String(e)),
-                )
-              }
-            >
-              <LogOut size={17} />
-            </button>
+      toolbar={
+        <div className="workspace-toolbar">
+          <div className="workspace-toolbar-inner">
+            <div className="breadcrumb">
+              <Monitor size={15} />
+              <span>Yerel ortam</span>
+              <ChevronRight size={13} />
+              <strong>
+                {
+                  {
+                    overview: "Genel bakış",
+                    packages: "Bileşenler",
+                    projects: "Projeler",
+                    logs: "Günlükler",
+                    settings: "Ayarlar",
+                  }[page]
+                }
+              </strong>
+            </div>
+            {desktop && (
+              <div className="desktop-actions" aria-label="Masaüstü işlemleri">
+                <button
+                  className="toolbar-button"
+                  title="Hızlı menü"
+                  onClick={() =>
+                    void run("Menü açılıyor…", () =>
+                      call("desktop_action", { action: "menu" }),
+                    )
+                  }
+                >
+                  <Ellipsis size={18} />
+                  <span>Hızlı menü</span>
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Tepsiye küçült"
+                  title="Tepsiye küçült"
+                  onClick={() =>
+                    void run("Tepsiye küçültülüyor…", () =>
+                      call("desktop_action", { action: "hide" }),
+                    )
+                  }
+                >
+                  <PanelBottomClose size={17} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="F4Box'tan çık"
+                  title="F4Box'tan çık"
+                  disabled={operationBusy}
+                  onClick={() =>
+                    void call("desktop_action", { action: "exit" }).catch((e) =>
+                      setError(String(e)),
+                    )
+                  }
+                >
+                  <LogOut size={17} />
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      }
+    >
       <header className="page-header">
         <div>
-          <p className="eyebrow">Yerel çalışma ortamı</p>
           <h1>{headings[page][0]}</h1>
           <p>{headings[page][1]}</p>
         </div>

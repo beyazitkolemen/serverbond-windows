@@ -26,12 +26,14 @@ export function Shell({
   page,
   onPage,
   children,
+  toolbar,
   updateAvailable = false,
   onOpenUpdates,
 }: {
   page: Page;
   onPage: (p: Page) => void;
   children: ReactNode;
+  toolbar?: ReactNode;
   updateAvailable?: boolean;
   onOpenUpdates?: () => void;
 }) {
@@ -89,6 +91,7 @@ export function Shell({
         </div>
       </aside>
       <div className="workspace">
+        {toolbar}
         <main id="main-content" tabIndex={-1}>
           {children}
         </main>
