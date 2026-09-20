@@ -11,12 +11,13 @@ fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
         .tempdir()?;
     let manager = Manager::new(home.path().into())?;
     let mut settings = manager.snapshot()?.settings;
-    let listeners = (0..3)
+    let listeners = (0..4)
         .map(|_| std::net::TcpListener::bind("127.0.0.1:0"))
         .collect::<std::io::Result<Vec<_>>>()?;
     settings.web_port = listeners[0].local_addr()?.port();
     settings.mysql_port = listeners[1].local_addr()?.port();
     settings.php_port = listeners[2].local_addr()?.port();
+    settings.web.https_port = listeners[3].local_addr()?.port();
     drop(listeners);
     manager.save_settings(settings)?;
     if let Some(cache) = std::env::var_os("F4BOX_TEST_CACHE") {

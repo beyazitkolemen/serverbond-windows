@@ -14,3 +14,16 @@ export function phpSupportsLaravel12(version: string): boolean {
 export function projectAddress(pattern: string, name: string): string {
   return pattern.replaceAll("{name}", name || "ornek-proje");
 }
+
+export function projectUrl(
+  host: string,
+  webPort: number,
+  https: boolean,
+  httpsPort: number,
+): string {
+  return https ? `https://${host}:${httpsPort}` : `http://${host}:${webPort}`;
+}
+
+export function databaseName(name: string): string {
+  return name.replaceAll("-", "_");
+}

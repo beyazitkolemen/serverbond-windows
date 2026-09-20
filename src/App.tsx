@@ -423,6 +423,8 @@ export default function App() {
               busy={disabled}
               run={run}
               webPort={state.settings.webPort}
+              https={state.settings.web.https}
+              httpsPort={state.settings.web.httpsPort}
               mysqlRunning={state.packages.some(
                 (p) => p.id === "mysql" && p.running,
               )}

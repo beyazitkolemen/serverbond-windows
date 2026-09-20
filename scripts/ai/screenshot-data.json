@@ -169,7 +169,9 @@
       "compression": true,
       "accessLog": true,
       "readSeconds": 120,
-      "connectSeconds": 3
+      "connectSeconds": 3,
+      "https": true,
+      "httpsPort": 8443
     },
     "phpmyadmin": {
       "enabled": true,

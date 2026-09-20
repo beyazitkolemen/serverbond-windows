@@ -181,14 +181,27 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub fn validate(&self) -> Result<()> {
-        let ports = [
+    pub fn reserved_ports(&self) -> [u16; 6] {
+        [
             self.web_port,
             self.mysql_port,
             self.php_port,
             self.mail.smtp_port,
             self.mail.web_port,
-        ];
+            self.web.https_port,
+        ]
+    }
+
+    pub fn site_url(&self, host: &str) -> String {
+        if self.web.https {
+            format!("https://{}:{}/", host, self.web.https_port)
+        } else {
+            format!("http://{}:{}/", host, self.web_port)
+        }
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        let ports = self.reserved_ports();
         if ports.contains(&0) {
             bail!("Portlar 1–65535 arasında olmalı.");
         }
@@ -273,6 +286,43 @@ pub fn validate_slug(name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn database_name(name: &str) -> String {
+    name.replace('-', "_")
+}
+
+/// Folder names become project slugs: lowercase, digits, hyphens.
+pub fn slug_from_folder(name: &str) -> Result<String> {
+    let mut slug = String::new();
+    for c in name.chars() {
+        let c = c.to_ascii_lowercase();
+        if c.is_ascii_lowercase() || c.is_ascii_digit() {
+            slug.push(c);
+        } else if matches!(c, '-' | '_' | ' ' | '.') && !slug.is_empty() && !slug.ends_with('-') {
+            slug.push('-');
+        }
+    }
+    let slug = slug.trim_matches('-').to_string();
+    let slug = if slug.len() > 48 {
+        let mut cut = slug[..48].to_string();
+        while cut.ends_with('-') {
+            cut.pop();
+        }
+        cut
+    } else {
+        slug
+    };
+    validate_slug(&slug)?;
+    Ok(slug)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoveredProject {
+    pub name: String,
+    pub path: PathBuf,
+    pub host: String,
+}
+
 /// Compare a `major.minor.patch` PHP version against a minimum series.
 pub fn php_meets(version: &str, major: u32, minor: u32) -> bool {
     let mut parts = version.split('.');
@@ -291,18 +341,46 @@ pub fn php_supports_laravel12(version: &str) -> bool {
     php_meets(version, 8, 2)
 }
 
+pub fn site_block(settings: &Settings, host: &str, body: &str) -> String {
+    let body = body.trim_end();
+    if settings.web.https {
+        format!(
+            "http://{host}:{} {{\n  bind 127.0.0.1\n  redir https://{host}:{}{{uri}}\n}}\nhttps://{host}:{} {{\n  bind 127.0.0.1\n  tls internal\n{body}\n}}\n",
+            settings.web_port, settings.web.https_port, settings.web.https_port
+        )
+    } else {
+        format!(
+            "http://{host}:{} {{\n  bind 127.0.0.1\n{body}\n}}\n",
+            settings.web_port
+        )
+    }
+}
+
 pub fn caddy_config(
     settings: &Settings,
     projects: &[Project],
     welcome: &std::path::Path,
     project_ports: &std::collections::HashMap<String, u16>,
 ) -> Result<String> {
-    let mut text = format!("{{\n  admin off\n  auto_https off\n}}\nhttp://localhost:{} {{\n  bind 127.0.0.1\n  root * {}\n  file_server\n}}\n", settings.web_port, quote_path(welcome));
+    let mut text = String::from("{\n  admin off\n  auto_https off\n}\n");
+    text.push_str(&site_block(
+        settings,
+        "localhost",
+        &format!("  root * {}\n  file_server\n", quote_path(welcome)),
+    ));
     for project in projects {
         let port = project_ports
             .get(&project.id)
             .ok_or_else(|| anyhow::anyhow!("{} için PHP portu hazır değil.", project.name))?;
-        text.push_str(&format!("http://{}:{} {{\n  bind 127.0.0.1\n  root * {}\n  php_fastcgi 127.0.0.1:{}\n  file_server\n  @private path /.env /.env/* /.git /.git/*\n  respond @private 404\n}}\n", project.host, settings.web_port, quote_path(&project.path.join("public")), port));
+        text.push_str(&site_block(
+            settings,
+            &project.host,
+            &format!(
+                "  root * {}\n  php_fastcgi 127.0.0.1:{}\n  file_server\n  @private path /.env /.env/* /.git /.git/*\n  respond @private 404\n",
+                quote_path(&project.path.join("public")),
+                port
+            ),
+        ));
     }
     let options = format!(
         "{}{}",

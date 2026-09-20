@@ -112,10 +112,7 @@ impl Manager {
                         .unwrap_or_else(|e| e.into_inner())
                         .values()
                         .any(|p| *p == candidate);
-                    if !reserved
-                        && ![settings.web_port, settings.php_port, settings.mysql_port]
-                            .contains(&candidate)
-                    {
+                    if !reserved && !settings.reserved_ports().contains(&candidate) {
                         break candidate;
                     }
                     reservations.push(listener);

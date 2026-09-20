@@ -32,7 +32,11 @@ $cfg['VersionCheck'] = false;
 
 pub(crate) fn caddy_route(settings: &Settings, root: &Path) -> String {
     let root = serde_json::to_string(&portable_path(root)).unwrap();
-    let route = format!("http://{HOST}:{} {{\n  bind 127.0.0.1\n  root * {root}\n  @private path_regexp (?i)^/(config[^/]*\\.php|installed\\.json|composer\\.[^/]*|package\\.json|yarn\\.lock|setup|libraries|templates|vendor|doc|sql|\\.git|\\.env)(/|$)\n  respond @private 404\n  @otherPHP {{\n    path_regexp (?i)\\.php(/|$)\n    not path /index.php /url.php /js/messages.php\n  }}\n  respond @otherPHP 404\n  php_fastcgi 127.0.0.1:{}\n  file_server\n}}\n", settings.web_port, settings.php_port);
+    let route = crate::model::site_block(
+        settings,
+        HOST,
+        &format!("  root * {root}\n  @private path_regexp (?i)^/(config[^/]*\\.php|installed\\.json|composer\\.[^/]*|package\\.json|yarn\\.lock|setup|libraries|templates|vendor|doc|sql|\\.git|\\.env)(/|$)\n  respond @private 404\n  @otherPHP {{\n    path_regexp (?i)\\.php(/|$)\n    not path /index.php /url.php /js/messages.php\n  }}\n  respond @otherPHP 404\n  php_fastcgi 127.0.0.1:{}\n  file_server\n", settings.php_port),
+    );
     let route = route.replace(
         "  file_server\n",
         &format!(
@@ -112,7 +116,7 @@ impl Manager {
         }) {
             bail!("phpMyAdmin için önce PHP, MySQL ve web sunucusunu başlatın.");
         }
-        Ok(format!("http://{HOST}:{}/", snapshot.settings.web_port))
+        Ok(snapshot.settings.site_url(HOST))
     }
 
     pub fn open_phpmyadmin(&self) -> Result<()> {
@@ -156,5 +160,16 @@ mod tests {
         assert!(route.contains("path_regexp (?i)"));
         assert!(route.contains("not path /index.php /url.php /js/messages.php"));
         assert!(route.contains("respond @private 404"));
+        assert!(!route.contains("tls internal"));
+    }
+    #[test]
+    fn https_route_redirects_and_keeps_loopback() {
+        let mut settings = Settings::default();
+        settings.web.https = true;
+        let route = caddy_route(&settings, Path::new("C:/F4Box/phpMyAdmin"));
+        assert!(route.contains("redir https://phpmyadmin.f4box.localhost:8443{uri}"));
+        assert!(route.contains("https://phpmyadmin.f4box.localhost:8443"));
+        assert!(route.contains("tls internal"));
+        assert!(route.contains("bind 127.0.0.1"));
     }
 }

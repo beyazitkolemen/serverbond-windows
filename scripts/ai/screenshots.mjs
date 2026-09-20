@@ -34,6 +34,12 @@ const shots = [
     height: 1880,
   },
   { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1500 },
+  {
+    file: "08-web-https.png",
+    nav: "Ayarlar",
+    tab: "Web sunucusu",
+    height: 1600,
+  },
 ];
 
 const types = {

@@ -128,11 +128,19 @@ impl Manager {
             .unwrap_or_else(|e| e.into_inner())
             .clone();
         let mut processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
-        for (id, label, port) in [
+        let mut ports = vec![
             ("php", "Varsayılan PHP portu", config.settings.php_port),
             ("mysql", "MySQL portu", config.settings.mysql_port),
             ("caddy", "Web sunucusu portu", config.settings.web_port),
-        ] {
+        ];
+        if config.settings.web.https {
+            ports.push((
+                "caddy-https",
+                "Yerel HTTPS portu",
+                config.settings.web.https_port,
+            ));
+        }
+        for (id, label, port) in ports {
             let owned = processes.get_mut(id).is_some_and(|p| p.alive());
             let responsive = !owned
                 || std::net::TcpStream::connect_timeout(

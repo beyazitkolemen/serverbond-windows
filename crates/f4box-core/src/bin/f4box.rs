@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  db <name> create|backup|restore <sql>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -43,6 +43,44 @@ fn main() -> Result<()> {
             };
             println!("{}", serde_json::to_string_pretty(&project)?);
         }
+        "discover" => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.discover_projects()?)?
+            )
+        }
+        "import" => {
+            let paths = if args.len() > 1 {
+                args[1..].iter().map(PathBuf::from).collect()
+            } else {
+                manager
+                    .discover_projects()?
+                    .into_iter()
+                    .map(|project| project.path)
+                    .collect()
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.import_projects(paths)?)?
+            );
+        }
+        "db" => {
+            let name = args.get(1).context("Proje adı gerekli.")?;
+            match args.get(2).map(String::as_str).unwrap_or("") {
+                "create" => manager.create_database(name)?,
+                "backup" => println!("{}", manager.backup_database(name)?),
+                "restore" => manager.restore_database(
+                    name,
+                    PathBuf::from(args.get(3).context("SQL dosyası gerekli.")?),
+                )?,
+                _ => bail!("Kullanım: db <ad> create|backup|restore <sql>"),
+            }
+        }
+        "https" => match args.get(1).map(String::as_str).unwrap_or("") {
+            "trust" => manager.trust_https()?,
+            "untrust" => manager.untrust_https()?,
+            _ => bail!("Kullanım: https trust|untrust"),
+        },
         "queue" | "schedule" => {
             let name = args.get(1).context("Proje adı gerekli.")?;
             let action = args.get(2).map(String::as_str).unwrap_or("status");

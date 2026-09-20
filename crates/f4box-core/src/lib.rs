@@ -1,3 +1,4 @@
+pub mod https;
 pub mod install;
 mod jobs;
 pub mod mail;
@@ -524,6 +525,9 @@ impl Manager {
         for port in [settings.web_port, settings.mysql_port, settings.php_port] {
             services::port_free(port)?;
         }
+        if settings.web.https {
+            services::port_free(settings.web.https_port)?;
+        }
         // The mail catcher only binds when it is started, so a busy port is worth
         // reporting here only when the environment will start it on its own.
         if settings.mail.auto_start {
@@ -596,7 +600,7 @@ impl Manager {
             .iter()
             .find(|p| p.id == id)
             .context("Proje bulunamadı.")?;
-        let url = format!("http://{}:{}", project.host, config.settings.web_port);
+        let url = config.settings.site_url(&project.host);
         drop(config);
         process::command("rundll32.exe")
             .arg("url.dll,FileProtocolHandler")

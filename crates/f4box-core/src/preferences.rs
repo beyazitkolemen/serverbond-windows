@@ -101,6 +101,9 @@ pub struct WebSettings {
     pub access_log: bool,
     pub read_seconds: u32,
     pub connect_seconds: u32,
+    /// Local HTTPS with Caddy's internal CA (Laragon Auto SSL).
+    pub https: bool,
+    pub https_port: u16,
 }
 impl Default for WebSettings {
     fn default() -> Self {
@@ -110,6 +113,8 @@ impl Default for WebSettings {
             access_log: false,
             read_seconds: 120,
             connect_seconds: 3,
+            https: false,
+            https_port: 8443,
         }
     }
 }

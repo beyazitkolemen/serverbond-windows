@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use tauri::Manager as _;
 
 use f4box_core::{
-    model::{Project, ProjectSchedule, QueueWorker, Settings, Snapshot},
+    model::{DiscoveredProject, Project, ProjectSchedule, QueueWorker, Settings, Snapshot},
     Manager,
 };
 use std::{path::PathBuf, sync::Arc};
@@ -144,6 +144,7 @@ async fn database(
     state: tauri::State<'_, State>,
     name: String,
     action: String,
+    path: Option<String>,
 ) -> Result<String, String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || match action.as_str() {
@@ -152,6 +153,39 @@ async fn database(
             Ok("Veritabanı oluşturuldu.".into())
         }
         "backup" => state.backup_database(&name),
+        "restore" => {
+            let path = path.ok_or_else(|| anyhow::anyhow!("SQL dosyası gerekli."))?;
+            state.restore_database(&name, PathBuf::from(path))?;
+            Ok("Veritabanı geri yüklendi.".into())
+        }
+        _ => Err(anyhow::anyhow!("Bilinmeyen işlem")),
+    })
+    .await
+}
+#[tauri::command]
+async fn discover_projects(
+    state: tauri::State<'_, State>,
+) -> Result<Vec<DiscoveredProject>, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.discover_projects()).await
+}
+#[tauri::command]
+async fn import_projects(
+    state: tauri::State<'_, State>,
+    paths: Vec<String>,
+) -> Result<Vec<Project>, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.import_projects(paths.into_iter().map(PathBuf::from).collect())
+    })
+    .await
+}
+#[tauri::command]
+async fn https_trust(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "trust" => state.trust_https(),
+        "untrust" => state.untrust_https(),
         _ => Err(anyhow::anyhow!("Bilinmeyen işlem")),
     })
     .await
@@ -492,6 +526,9 @@ fn main() {
             read_log,
             credentials,
             database,
+            discover_projects,
+            import_projects,
+            https_trust,
             open_project,
             open_home,
             open_phpmyadmin,

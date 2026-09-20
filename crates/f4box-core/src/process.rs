@@ -35,6 +35,19 @@ impl ManagedChild {
         Self::spawn_redirected(cmd)
     }
 
+    pub fn spawn_with_stdin(
+        mut cmd: Command,
+        log_path: &Path,
+        stdin: impl Into<Stdio>,
+    ) -> Result<Self> {
+        let log = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_path)?;
+        cmd.stdin(stdin).stdout(log.try_clone()?).stderr(log);
+        Self::spawn_redirected(cmd)
+    }
+
     fn spawn_redirected(mut cmd: Command) -> Result<Self> {
         #[allow(unused_mut)]
         let mut child = cmd

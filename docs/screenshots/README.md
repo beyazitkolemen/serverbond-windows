@@ -45,3 +45,9 @@ Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte
 PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi.
 
 ![PHP ayarları](07-php-ayarlari.png)
+
+## Web sunucusu ve yerel HTTPS
+
+Proje adres kalıbı, FastCGI süreleri, sıkıştırma ve Laragon Auto SSL karşılığı yerel HTTPS: dahili CA, HTTPS portu, HTTP yönlendirme ve Windows kullanıcı güven deposu.
+
+![Web sunucusu ve yerel HTTPS](08-web-https.png)

@@ -29,6 +29,11 @@ export interface ProjectSchedule {
   enabled: boolean;
   autoStart: boolean;
 }
+export interface DiscoveredProject {
+  name: string;
+  path: string;
+  host: string;
+}
 export interface WorkerState {
   id: string;
   running: number;
@@ -88,6 +93,8 @@ export interface Settings {
     accessLog: boolean;
     readSeconds: number;
     connectSeconds: number;
+    https: boolean;
+    httpsPort: number;
   };
   phpmyadmin: {
     enabled: boolean;

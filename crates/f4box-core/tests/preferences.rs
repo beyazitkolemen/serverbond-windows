@@ -11,6 +11,8 @@ fn old_three_port_settings_migrate_without_changing_behavior() {
     assert_eq!(s.project_host("demo"), "demo.localhost");
     assert!(s.phpmyadmin.enabled);
     assert!(!s.start_on_launch);
+    assert!(!s.web.https);
+    assert_eq!(s.web.https_port, 8443);
 }
 
 #[test]
@@ -71,12 +73,13 @@ fn settings_backup_import_and_host_change_preserve_project_files() {
     fs::write(project.join(".env"), "APP_URL=http://preserve.localhost").unwrap();
     manager.add_project("demo".into(), project.clone()).unwrap();
     let mut available = manager.snapshot().unwrap().settings;
-    let listeners: Vec<_> = (0..3)
+    let listeners: Vec<_> = (0..4)
         .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
         .collect();
     available.web_port = listeners[0].local_addr().unwrap().port();
     available.mysql_port = listeners[1].local_addr().unwrap().port();
     available.php_port = listeners[2].local_addr().unwrap().port();
+    available.web.https_port = listeners[3].local_addr().unwrap().port();
     drop(listeners);
     manager.save_settings(available).unwrap();
     let original = manager.export_settings().unwrap();

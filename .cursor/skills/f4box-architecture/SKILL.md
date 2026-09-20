@@ -28,10 +28,11 @@ bin/  cache/  config/  data/  backups/  logs/  www/  config.json
 
 ## Sabitler
 
-- Web `8088`, MySQL `13306`, PHP FastCGI `19000` (ilk açılışta boş port seçilebilir)
+- Web `8088`, MySQL `13306`, PHP FastCGI `19000`, isteğe bağlı HTTPS `8443` (ilk açılışta boş port seçilebilir)
 - Proje adresi `{name}.localhost` — hosts dosyası yok
 - phpMyAdmin `phpmyadmin.f4box.localhost`
 - Ortam loopback; dışarı açılmaz
+- HTTPS: Caddy `tls internal`; HTTP aynı hostta HTTPS portuna yönlenir
 
 ## Dokunulmaması gerekenler
 

@@ -33,7 +33,14 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 - Ad: 1–48 karakter, `[a-z0-9-]` (kenarda tire yok), Windows ayrılmış adları yok (`con`, `com0`, `lpt0`, …)
 - Yeni Laravel 12: `php_supports_laravel12` → PHP ≥ 8.2
 - `public/index.php` şart; kaldırmak klasörü/SQL’i silmez
+- MySQL çalışırken ekleme/oluşturma/tarama `CREATE DATABASE IF NOT EXISTS` yapar (tire → `_`). `.env` yazılmaz
+- `discover_projects` yalnızca `projects_dir` veya `www` altındaki bir seviye Laravel köklerini listeler; `import_projects` tek `apply_project_config` ile ekler
+- SQL geri yükleme: `.sql`, 512 MB, Unicode için geçici ASCII kopya, `mysql --one-database`
 - Terminal, projenin PHP’sini `PATH`/`php`/`composer` sarmalayıcısıyla verir; `node` kuruluysa dizini de `PATH`’e girer (`node.rs`, servis değil)
+
+## Yerel HTTPS
+
+`settings.web.https` ve `https_port`. Caddyfile `auto_https off` kalır; HTTPS siteleri `tls internal` kullanır. HTTP `redir https://{host}:{https_port}{uri}`. Sertifika `data/caddy` veya `config/Caddy` altında. `trust_https` Windows’ta `certutil -user -addstore Root` (UAC yok). Ortam başlarken denenir; başarısızlık Caddy’yi düşürmez.
 
 ## Ayarlar
 

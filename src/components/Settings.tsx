@@ -533,6 +533,28 @@ export default function Settings({
                 value={values.web.accessLog}
                 onChange={(v) => change("web", { ...values.web, accessLog: v })}
               />
+              <Toggle
+                label="Yerel HTTPS (Auto SSL)"
+                value={values.web.https}
+                onChange={(v) => change("web", { ...values.web, https: v })}
+              />
+              {values.web.https ? (
+                <NumberField
+                  label="HTTPS portu"
+                  value={values.web.httpsPort}
+                  onChange={(v) =>
+                    change("web", { ...values.web, httpsPort: v })
+                  }
+                />
+              ) : null}
+              <p className="section-note">
+                Caddy dahili bir CA ile {`{name}.localhost`} adreslerine sertifika
+                verir. HTTP istekleri HTTPS’e yönlendirilir. Sertifika bu
+                Windows kullanıcısının güven deposuna yazılır; yönetici onayı
+                gerekmez. Ortam çalışırken port değiştirilemez. Kaydettikten
+                sonra ortamı başlatın; sertifika güveni aşağıdaki düğmelerle
+                yönetilir.
+              </p>
               <p className="section-note">
                 Erişim kayıtları Günlükler → Caddy bölümünde görünür. Sunucu
                 yalnızca bu bilgisayardan bağlantı kabul eder.
@@ -603,7 +625,11 @@ export default function Settings({
                 />
               </div>
               <p className="section-note">
-                Adres: http://phpmyadmin.f4box.localhost:{values.webPort}.
+                Adres:{" "}
+                {values.web.https
+                  ? `https://phpmyadmin.f4box.localhost:${values.web.httpsPort}`
+                  : `http://phpmyadmin.f4box.localhost:${values.webPort}`}
+                .
                 Dosyalar bileşen kuruluysa sunulur. Yükleme limitleri varsayılan
                 PHP sürümünün profilinden alınır.
               </p>
@@ -765,6 +791,41 @@ export default function Settings({
             </section>
           )}
         </fieldset>
+        {section === "Web sunucusu" && (
+          <section className="settings-section">
+            <h2>Sertifika güveni</h2>
+            <p className="section-note">
+              HTTPS açıkken ortamı bir kez başlatın. Sertifika bu Windows
+              kullanıcısının deposuna yazılır; tarayıcı uyarısı kaybolur.
+            </p>
+            <div className="settings-grid">
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || !values.web.https}
+                onClick={() =>
+                  void run("Sertifika güven deposuna ekleniyor…", () =>
+                    call("https_trust", { action: "trust" }),
+                  )
+                }
+              >
+                Sertifikayı güven deposuna ekle
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy}
+                onClick={() =>
+                  void run("Sertifika güven deposundan kaldırılıyor…", () =>
+                    call("https_trust", { action: "untrust" }),
+                  )
+                }
+              >
+                Güveni kaldır
+              </button>
+            </div>
+          </section>
+        )}
         {!["Sistem", "Güncellemeler", "Tünel"].includes(section) && (
           <div className="settings-save">
             <span>

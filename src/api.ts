@@ -79,6 +79,8 @@ const preview: Snapshot = {
       accessLog: false,
       readSeconds: 120,
       connectSeconds: 3,
+      https: false,
+      httpsPort: 8443,
     },
     phpmyadmin: { enabled: true, language: "tr", rows: 25, loginSeconds: 1440 },
     tunnel: { autoStart: false },
@@ -151,6 +153,7 @@ export async function call<T = void>(
         "settings_previous",
         "settings_defaults",
         "desktop_status",
+        "discover_projects",
       ].includes(command)
     ) {
       return invoke<T>(command, args);
@@ -206,5 +209,17 @@ export async function chooseFolder(): Promise<string | null> {
     directory: true,
     multiple: false,
     title: "Proje klasörünü seçin",
+  });
+}
+
+export async function chooseSqlFile(): Promise<string | null> {
+  if (!desktop)
+    throw new Error("Dosya seçimi masaüstü uygulamasında kullanılabilir.");
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  return open({
+    directory: false,
+    multiple: false,
+    title: "SQL yedeğini seçin",
+    filters: [{ name: "SQL", extensions: ["sql"] }],
   });
 }

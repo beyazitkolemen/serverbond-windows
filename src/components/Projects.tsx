@@ -10,9 +10,14 @@ import {
   Archive,
   Terminal,
 } from "lucide-react";
-import { call, chooseFolder } from "../api";
-import type { Project, Run, PackageStatus } from "../types";
-import { phpSupportsLaravel12, projectAddress } from "../version";
+import { call, chooseFolder, chooseSqlFile } from "../api";
+import type { DiscoveredProject, Project, Run, PackageStatus } from "../types";
+import {
+  databaseName,
+  phpSupportsLaravel12,
+  projectAddress,
+  projectUrl,
+} from "../version";
 import ProjectJobs from "./ProjectJobs";
 
 export default function Projects({
@@ -20,6 +25,8 @@ export default function Projects({
   busy,
   run,
   webPort,
+  https,
+  httpsPort,
   mysqlRunning,
   home,
   serverError,
@@ -34,6 +41,8 @@ export default function Projects({
   busy: boolean;
   run: Run;
   webPort: number;
+  https: boolean;
+  httpsPort: number;
   mysqlRunning: boolean;
   home: string;
   serverError: string;
@@ -46,21 +55,43 @@ export default function Projects({
 }) {
   const [modal, setModal] = useState(false);
   const [remove, setRemove] = useState<Project | null>(null);
+  const [restore, setRestore] = useState<Project | null>(null);
+  const [discovered, setDiscovered] = useState<DiscoveredProject[] | null>(
+    null,
+  );
   return (
     <section aria-labelledby="projects-heading">
       <div className="section-heading">
         <h2 id="projects-heading">Projeler</h2>
-        <button
-          className="button primary small"
-          disabled={busy}
-          onClick={() => {
-            clearError();
-            setModal(true);
-          }}
-        >
-          <Plus size={17} />
-          Proje ekle
-        </button>
+        <div className="heading-actions">
+          <button
+            className="button secondary small"
+            disabled={busy}
+            onClick={() => {
+              clearError();
+              void run("Proje klasörleri taranıyor…", async () => {
+                const found = await call<DiscoveredProject[]>(
+                  "discover_projects",
+                );
+                setDiscovered(found);
+              });
+            }}
+          >
+            <FolderOpen size={17} />
+            Klasör tara
+          </button>
+          <button
+            className="button primary small"
+            disabled={busy}
+            onClick={() => {
+              clearError();
+              setModal(true);
+            }}
+          >
+            <Plus size={17} />
+            Proje ekle
+          </button>
+        </div>
       </div>
       {projects.length ? (
         <div className="project-list">
@@ -73,10 +104,13 @@ export default function Projects({
                 <div className="project-info">
                   <h3>{project.name}</h3>
                   <p className="project-url">
-                    http://{project.host}:{webPort}
+                    {projectUrl(project.host, webPort, https, httpsPort)}
                   </p>
                   <p className="project-path" title={project.path}>
                     {project.path.replace(/^\\\\\?\\/, "")}
+                  </p>
+                  <p className="project-path">
+                    MySQL: {databaseName(project.name)}
                   </p>
                   <ProjectPhp
                     project={project}
@@ -155,6 +189,19 @@ export default function Projects({
                     Yedek
                   </button>
                   <button
+                    className="button secondary small"
+                    disabled={busy || !mysqlRunning}
+                    title={
+                      mysqlRunning
+                        ? "SQL yedeğini geri yükle"
+                        : "Önce MySQL'i başlatın"
+                    }
+                    onClick={() => setRestore(project)}
+                  >
+                    <Archive size={15} />
+                    Geri yükle
+                  </button>
+                  <button
                     className="icon-button danger"
                     disabled={busy}
                     title="Listeden kaldır"
@@ -204,6 +251,43 @@ export default function Projects({
               )
             )
               setRemove(null);
+          }}
+        />
+      ) : null}
+      {restore ? (
+        <ConfirmRestore
+          project={restore}
+          busy={busy}
+          close={() => setRestore(null)}
+          confirm={async (path) => {
+            if (
+              await run("Veritabanı geri yükleniyor…", () =>
+                call("database", {
+                  name: restore.name,
+                  action: "restore",
+                  path,
+                }),
+              )
+            )
+              setRestore(null);
+          }}
+        />
+      ) : null}
+      {discovered ? (
+        <DiscoverDialog
+          items={discovered}
+          busy={busy}
+          serverError={serverError}
+          close={() => setDiscovered(null)}
+          importAll={async () => {
+            if (
+              await run("Bulunan projeler ekleniyor…", () =>
+                call("import_projects", {
+                  paths: discovered.map((item) => item.path),
+                }),
+              )
+            )
+              setDiscovered(null);
           }}
         />
       ) : null}
@@ -449,7 +533,9 @@ function ProjectDialog({
         <p className="field-hint">
           {create
             ? `Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
-            : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}
+            : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}{" "}
+          MySQL çalışıyorsa {databaseName(name || "ornek-proje")} veritabanı
+          oluşturulur; proje .env dosyası yazılmaz.
         </p>
         {create && !canCreate ? (
           <p className="field-error" role="status">
@@ -558,6 +644,157 @@ function ConfirmRemove({
         >
           Listeden kaldır
         </button>
+      </div>
+    </dialog>
+  );
+}
+
+function ConfirmRestore({
+  project,
+  busy,
+  close,
+  confirm,
+}: {
+  project: Project;
+  busy: boolean;
+  close: () => void;
+  confirm: (path: string) => Promise<void>;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [path, setPath] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-labelledby="restore-title"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) close();
+      }}
+    >
+      <h2 id="restore-title">SQL yedeğini geri yükle</h2>
+      <p className="dialog-copy">
+        {databaseName(project.name)} veritabanına seçilen .sql dosyası
+        uygulanır. Dosyadaki diğer veritabanı ifadeleri yok sayılır. Mevcut
+        tablolar çakışırsa içe aktarma hata verebilir.
+      </p>
+      <div className="input-with-button">
+        <input
+          value={path}
+          disabled={busy}
+          placeholder="C:\\yedekler\\proje.sql"
+          onChange={(e) => setPath(e.target.value)}
+        />
+        <button
+          type="button"
+          className="button secondary"
+          disabled={busy}
+          aria-label="SQL dosyası seç"
+          onClick={async () => {
+            try {
+              const file = await chooseSqlFile();
+              if (file) setPath(file);
+            } catch (e) {
+              setError(String(e));
+            }
+          }}
+        >
+          <FolderOpen size={19} />
+        </button>
+      </div>
+      {error ? (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="modal-actions">
+        <button className="button secondary" disabled={busy} onClick={close}>
+          Vazgeç
+        </button>
+        <button
+          className="button primary"
+          disabled={busy || !path.trim()}
+          onClick={() => void confirm(path.trim())}
+        >
+          Geri yükle
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
+function DiscoverDialog({
+  items,
+  busy,
+  serverError,
+  close,
+  importAll,
+}: {
+  items: DiscoveredProject[];
+  busy: boolean;
+  serverError: string;
+  close: () => void;
+  importAll: () => Promise<void>;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-labelledby="discover-title"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) close();
+      }}
+    >
+      <h2 id="discover-title">Klasör taraması</h2>
+      {items.length ? (
+        <>
+          <p className="dialog-copy">
+            Yeni projeler klasöründe {items.length} Laravel kökü bulundu.
+            Kayıtlı projeler atlandı. .env dosyaları değiştirilmez.
+          </p>
+          <ul className="discover-list">
+            {items.map((item) => (
+              <li key={item.path}>
+                <strong>{item.name}</strong>
+                <span>{item.host}</span>
+                <span>{item.path.replace(/^\\\\\?\\/, "")}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="dialog-copy">
+          Yeni projeler klasöründe henüz kayıtlı olmayan Laravel kökü yok.
+          public/index.php içeren alt klasörler taranır.
+        </p>
+      )}
+      {serverError ? (
+        <p className="field-error" role="alert">
+          {serverError}
+        </p>
+      ) : null}
+      <div className="modal-actions">
+        <button className="button secondary" disabled={busy} onClick={close}>
+          Kapat
+        </button>
+        {items.length ? (
+          <button
+            className="button primary"
+            disabled={busy}
+            onClick={() => void importAll()}
+          >
+            Hepsini ekle
+          </button>
+        ) : null}
       </div>
     </dialog>
   );

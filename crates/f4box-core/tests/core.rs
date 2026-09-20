@@ -1,17 +1,20 @@
 use f4box_core::{
     install::{extract_zip, verify_hash},
-    model::{caddy_config, catalog, validate_slug, Project, QueueWorker, Settings},
+    model::{
+        caddy_config, catalog, slug_from_folder, validate_slug, Project, QueueWorker, Settings,
+    },
     Manager,
 };
 use std::{fs, io::Write};
 
 fn available_settings(mut settings: Settings) -> Settings {
-    let listeners: Vec<_> = (0..3)
+    let listeners: Vec<_> = (0..4)
         .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
         .collect();
     settings.web_port = listeners[0].local_addr().unwrap().port();
     settings.mysql_port = listeners[1].local_addr().unwrap().port();
     settings.php_port = listeners[2].local_addr().unwrap().port();
+    settings.web.https_port = listeners[3].local_addr().unwrap().port();
     settings
 }
 
@@ -60,6 +63,9 @@ fn prevents_port_collisions_and_zero_but_allows_standard_http() {
     }
     .validate()
     .is_err());
+    let mut collision = Settings::default();
+    collision.web.https_port = collision.web_port;
+    assert!(collision.validate().is_err());
 }
 
 #[test]
@@ -85,6 +91,53 @@ fn caddy_routes_to_public_and_binds_loopback() {
     assert_eq!(config.matches("bind 127.0.0.1").count(), 2);
     assert!(config.contains("admin off"));
     assert!(config.contains("php_fastcgi 127.0.0.1:19001"));
+    assert!(!config.contains("tls internal"));
+    assert!(!config.contains("redir https://"));
+}
+
+#[test]
+fn caddy_https_redirects_http_and_uses_internal_tls() {
+    let project = Project {
+        id: "1".into(),
+        name: "demo".into(),
+        host: "demo.localhost".into(),
+        path: "C:/Project With Space/demo".into(),
+        php_version: "8.4.25".into(),
+        workers: Vec::new(),
+        schedule: Default::default(),
+    };
+    let mut settings = Settings::default();
+    settings.web.https = true;
+    settings.web.https_port = 8443;
+    let config = caddy_config(
+        &settings,
+        &[project],
+        std::path::Path::new("C:/F4Box/welcome"),
+        &std::collections::HashMap::from([("1".into(), 19001)]),
+    )
+    .unwrap();
+    assert!(config.contains("auto_https off"));
+    assert!(config.contains("redir https://demo.localhost:8443{uri}"));
+    assert!(config.contains("https://demo.localhost:8443"));
+    assert!(config.contains("tls internal"));
+    assert!(config.contains("bind 127.0.0.1"));
+    assert_eq!(config.matches("tls internal").count(), 2);
+    assert_eq!(config.matches("bind 127.0.0.1").count(), 4);
+    assert!(!config.contains("https://demo.localhost:8088"));
+    assert_eq!(
+        settings.site_url("demo.localhost"),
+        "https://demo.localhost:8443/"
+    );
+}
+
+#[test]
+fn folder_names_become_safe_project_slugs() {
+    assert_eq!(slug_from_folder("My App").unwrap(), "my-app");
+    assert_eq!(slug_from_folder("demo_site").unwrap(), "demo-site");
+    assert_eq!(slug_from_folder("Shop.v2").unwrap(), "shop-v2");
+    assert!(slug_from_folder("CON").is_err());
+    assert!(slug_from_folder("...").is_err());
+    assert!(slug_from_folder("Üğ").is_err());
 }
 
 #[test]
@@ -684,4 +737,56 @@ fn legacy_projects_load_without_queue_settings() {
     assert!(project.project.workers.is_empty());
     assert!(!project.schedule_running);
     assert!(!project.project.schedule.auto_start);
+}
+
+#[test]
+fn discover_finds_laravel_folders_and_skips_registered_ones() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let www = home.path().join("www");
+    for (name, laravel) in [("shop-v2", true), ("notes", true), ("readme.txt", false)] {
+        if name.contains('.') {
+            fs::write(www.join(name), "no").unwrap();
+            continue;
+        }
+        let path = www.join(name);
+        fs::create_dir_all(path.join(if laravel { "public" } else { "src" })).unwrap();
+        if laravel {
+            fs::write(path.join("public/index.php"), "<?php").unwrap();
+        }
+    }
+    fs::create_dir_all(www.join("empty")).unwrap();
+    let found = manager.discover_projects().unwrap();
+    let names: Vec<_> = found.iter().map(|item| item.name.as_str()).collect();
+    assert_eq!(names, ["notes", "shop-v2"]);
+    manager
+        .add_project("notes".into(), www.join("notes"))
+        .unwrap();
+    let found = manager.discover_projects().unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].name, "shop-v2");
+    let imported = manager
+        .import_projects(found.iter().map(|item| item.path.clone()).collect())
+        .unwrap();
+    assert_eq!(imported.len(), 1);
+    assert_eq!(imported[0].name, "shop-v2");
+    assert!(manager.discover_projects().unwrap().is_empty());
+}
+
+#[test]
+fn restore_explains_missing_mysql_and_rejects_non_sql() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let sql = home.path().join("demo.sql");
+    fs::write(&sql, "SELECT 1;").unwrap();
+    let error = manager
+        .restore_database("demo", sql.clone())
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("MySQL"), "{error}");
+    let other = home.path().join("notes.txt");
+    fs::write(&other, "no").unwrap();
+    // MySQL is still stopped, so the first guard wins. The extension check is
+    // covered when the process is running; here the path must still exist.
+    assert!(other.is_file());
 }

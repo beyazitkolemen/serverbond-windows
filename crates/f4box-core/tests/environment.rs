@@ -12,12 +12,13 @@ fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
         .tempdir()?;
     let manager = Manager::new(home.path().into())?;
     let mut settings = manager.snapshot()?.settings;
-    let listeners = (0..3)
+    let listeners = (0..4)
         .map(|_| std::net::TcpListener::bind("127.0.0.1:0"))
         .collect::<std::io::Result<Vec<_>>>()?;
     settings.web_port = listeners[0].local_addr()?.port();
     settings.mysql_port = listeners[1].local_addr()?.port();
     settings.php_port = listeners[2].local_addr()?.port();
+    settings.web.https_port = listeners[3].local_addr()?.port();
     drop(listeners);
     manager.save_settings(settings)?;
     // Optional verified download cache speeds up local runs, never shares database data.

@@ -9,7 +9,7 @@ description: Tauri IPC, sistem tepsisi, Windows başlangıç ve masaüstü terci
 
 ## IPC
 
-Komutlar `src-tauri/src/main.rs` içinde. Arayüz `src/api.ts` → `call()`. Okuma (`snapshot`, `read_log`, …) 10 sn UI zaman aşımına girebilir; yazma/kurulum zaman aşımıyla yeniden başlatılmaz.
+Komutlar `src-tauri/src/main.rs` içinde. Arayüz `src/api.ts` → `call()`. Okuma (`snapshot`, `read_log`, `discover_projects`, …) 10 sn UI zaman aşımına girebilir; yazma/kurulum zaman aşımıyla yeniden başlatılmaz. `database` `create|backup|restore`; `https_trust` `trust|untrust`; `import_projects` yolları alır.
 
 İzinler: `capabilities/default.json` — `core:default`, `dialog:allow-open`, `updater:default`, `process:allow-restart`. Yeni dosya erişimi için yetki genişletmeden önce gerekçeyi yaz.
 

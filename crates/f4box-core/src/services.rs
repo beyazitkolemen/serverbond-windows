@@ -9,6 +9,7 @@ use std::{
     fs,
     io::Write,
     net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream},
+    path::PathBuf,
     process::Command,
     time::{Duration, Instant},
 };
@@ -401,7 +402,11 @@ impl Manager {
         cmd.args(["run", "--config"])
             .arg(path)
             .args(["--adapter", "caddyfile"]);
-        self.spawn_service("caddy", cmd, config.settings.web_port)
+        self.spawn_service("caddy", cmd, config.settings.web_port)?;
+        if config.settings.web.https {
+            self.try_trust_https();
+        }
+        Ok(())
     }
 
     fn start_mysql(&self) -> Result<()> {
@@ -646,18 +651,20 @@ impl Manager {
         Ok(String::from_utf8_lossy(&output.stdout).trim().into())
     }
 
-    pub fn create_database(&self, name: &str) -> Result<()> {
-        let _guard = self.gate()?;
+    fn mysql_is_running(&self) -> bool {
+        self.processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut("mysql")
+            .is_some_and(|child| child.alive())
+    }
+
+    pub(crate) fn create_database_inner(&self, name: &str) -> Result<()> {
         crate::model::validate_slug(name)?;
-        if !self
-            .snapshot()?
-            .packages
-            .iter()
-            .any(|p| p.package.id == "mysql" && p.running)
-        {
+        if !self.mysql_is_running() {
             bail!("Önce MySQL'i başlatın.");
         }
-        let db = name.replace('-', "_");
+        let db = crate::model::database_name(name);
         let collation = self
             .config
             .lock()
@@ -671,6 +678,23 @@ impl Manager {
         ))?;
         self.log(format!("Veritabanı hazır: {db}"));
         Ok(())
+    }
+
+    pub(crate) fn maybe_create_project_database(&self, name: &str) {
+        if !self.mysql_is_running() {
+            self.log(format!(
+                "MySQL kapalı; {name} için veritabanını sonra oluşturabilirsiniz."
+            ));
+            return;
+        }
+        if let Err(error) = self.create_database_inner(name) {
+            self.log(format!("{name} veritabanı oluşturulamadı: {error:#}"));
+        }
+    }
+
+    pub fn create_database(&self, name: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        self.create_database_inner(name)
     }
 
     pub fn backup_database(&self, name: &str) -> Result<String> {
@@ -725,5 +749,47 @@ impl Manager {
         final_file.persist_noclobber(&path)?;
         self.log(format!("{database} yedeği alındı."));
         Ok(portable_path(&path))
+    }
+
+    pub fn restore_database(&self, name: &str, path: PathBuf) -> Result<()> {
+        let _guard = self.gate()?;
+        crate::model::validate_slug(name)?;
+        if !self.mysql_is_running() {
+            bail!("Geri yüklemeden önce MySQL'i başlatın.");
+        }
+        let source = dunce::canonicalize(&path).context("SQL dosyası bulunamadı.")?;
+        if !source.is_file() {
+            bail!("SQL yedeği bir dosya olmalı.");
+        }
+        let extension = source
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("");
+        if !extension.eq_ignore_ascii_case("sql") {
+            bail!("Yalnızca .sql dosyaları geri yüklenebilir.");
+        }
+        let size = source.metadata()?.len();
+        if size == 0 {
+            bail!("SQL dosyası boş.");
+        }
+        if size > 512 * 1024 * 1024 {
+            bail!("SQL dosyası 512 MB sınırını aşıyor.");
+        }
+        self.create_database_inner(name)?;
+        let database = crate::model::database_name(name);
+        let mut temporary = tempfile::NamedTempFile::new_in(self.home.join("backups"))?;
+        std::io::copy(&mut std::fs::File::open(&source)?, temporary.as_file_mut())?;
+        temporary.as_file().sync_all()?;
+        let (mut cmd, _credentials) = self.mysql_command("mysql.exe")?;
+        cmd.arg("--one-database").arg(&database);
+        let stdin = std::fs::File::open(temporary.path())?;
+        let mut child =
+            ManagedChild::spawn_with_stdin(cmd, &self.home.join("logs/mysql.log"), stdin)?;
+        child.wait_timeout(Duration::from_secs(300))?;
+        self.log(format!(
+            "{database} veritabanı geri yüklendi: {}",
+            portable_path(&source)
+        ));
+        Ok(())
     }
 }
