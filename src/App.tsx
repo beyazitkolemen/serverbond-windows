@@ -22,14 +22,14 @@ import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<Page, [string, string]> = {
-  overview: ["Ortamınız.", "Servisleri başlatın, projenize geçin."],
-  packages: ["Bileşenler.", "PHP, MySQL ve web sunucusunu kurun veya onarın."],
+  overview: ["Genel bakış", "Servisleri başlatın, projenize geçin."],
+  packages: ["Bileşenler", "PHP, MySQL ve web sunucusunu kurun veya onarın."],
   projects: [
-    "Projeler.",
+    "Projeler",
     "Laravel ekleyin; PHP, kuyruk ve zamanlamayı karttan yönetin.",
   ],
-  logs: ["Günlükler.", "Kurulum, proje ve servis kayıtları."],
-  settings: ["Ayarlar.", "Portlar, PHP, Windows tercihleri ve güncellemeler."],
+  logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
+  settings: ["Ayarlar", "Portlar, PHP, Windows tercihleri ve güncellemeler."],
 };
 
 export default function App() {
@@ -243,11 +243,7 @@ export default function App() {
       </div>
       <header className="page-header">
         <div>
-          <p className="eyebrow">
-            {page === "overview"
-              ? "KODUNUZ İÇİN HAZIR"
-              : "F4BOX / ÇALIŞMA ALANI"}
-          </p>
+          <p className="eyebrow">Yerel çalışma ortamı</p>
           <h1>{headings[page][0]}</h1>
           <p>{headings[page][1]}</p>
         </div>

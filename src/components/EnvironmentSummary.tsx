@@ -11,10 +11,10 @@ export default function EnvironmentSummary({ state }: { state: Snapshot }) {
   const status = issue
     ? "Ortamı kontrol edin"
     : ready
-      ? "Ortamınız çalışıyor"
+      ? "Ortam çalışıyor"
       : active
         ? "Servisler kısmen açık"
-        : "Yeni bir başlangıca hazır";
+        : "Servisler kapalı";
   return (
     <section
       className={`environment-summary ${ready && !issue ? "is-running" : ""}`}
@@ -32,7 +32,7 @@ export default function EnvironmentSummary({ state }: { state: Snapshot }) {
               ? "Bileşenlerdeki uyarıları inceleyin."
               : ready
                 ? "PHP, MySQL ve web sunucusu bağlantıya hazır."
-                : "İhtiyacınız olan servisleri tek bir yerden yönetin."}
+                : "PHP, MySQL ve Caddy henüz çalışmıyor."}
           </p>
         </div>
       </div>

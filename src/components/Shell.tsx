@@ -47,7 +47,7 @@ export function Shell({
           </div>
           <div className="brand-copy">
             <span>F4Box</span>
-            <p>Yerel geliştirme alanınız</p>
+            <p>Yerel Laravel ortamı</p>
           </div>
         </div>
         <p className="nav-caption">ÇALIŞMA ALANI</p>
