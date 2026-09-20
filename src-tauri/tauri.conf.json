@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "F4Box",
+  "productName": "ServerBond",
   "version": "1.1.0",
   "identifier": "com.f4box.laravel",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "F4Box · Windows Laravel üretimi",
+        "title": "ServerBond · Windows Laravel üretimi",
         "visible": false,
         "width": 1360,
         "height": 950,

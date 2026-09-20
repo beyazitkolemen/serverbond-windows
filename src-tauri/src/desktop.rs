@@ -101,7 +101,7 @@ impl Desktop {
             .try_lock()
             .map_err(|_| anyhow::anyhow!("Masaüstü ayarları güncelleniyor. Tekrar deneyin."))?;
         if self.quitting.load(Ordering::Acquire) {
-            bail!("F4Box kapanıyor.");
+            bail!("ServerBond kapanıyor.");
         }
         let parent = self.path.parent().context("Ayar klasörü bulunamadı.")?;
         let mut staged = tempfile::NamedTempFile::new_in(parent)?;

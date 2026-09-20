@@ -32,7 +32,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 `postgres.rs`: servis `postgres`, isteğe bağlı paket `tools.json` içinde. Port `settings.postgres` (varsayılan 15432); `Settings::validate` diğer bileşen portlarıyla tekilleştirir. Veri dizini `data/postgresql-17`; parola `config/postgres-password.dpapi` (DPAPI). İlk açılışta `initdb` + `postgres.exe -D -p -h 127.0.0.1` (`pg_ctl` başlatılmaz; süreç hemen çıkar). Kapatırken `pg_ctl stop -m fast`. `start("all")` sonunda `autoStart` açıksa denenir; hata ortamı düşürmez. `.env` yazılmaz. PHP `pgsql` / `pdo_pgsql` uzantıları Ayarlar → PHP’den açılır.
 
-`permissions.rs`: açılışta `ensure_permissions` bir kez UAC açar (reddedilirse `declined` yazılır, bir daha sorulmaz). Betik netsh, `icacls`, isteğe bağlı Defender ve `F4Box Permissions` zamanlanmış görevini kurar (`RunLevel Highest`). Sonraki paket kurulumları `refresh_permissions_quietly` ile görevi çalıştırır; yeni UAC yoktur. Betik metni saf fonksiyonla üretilir ve testlidir. Uygulamanın kendisi `requireAdministrator` değildir.
+`permissions.rs`: açılışta `ensure_permissions` bir kez UAC açar (reddedilirse `declined` yazılır, bir daha sorulmaz). Betik netsh, `icacls`, isteğe bağlı Defender ve `ServerBond Permissions` zamanlanmış görevini kurar (`RunLevel Highest`). Sonraki paket kurulumları `refresh_permissions_quietly` ile görevi çalıştırır; yeni UAC yoktur. Betik metni saf fonksiyonla üretilir ve testlidir. Uygulamanın kendisi `requireAdministrator` değildir.
 
 ## Projeler
 
@@ -56,7 +56,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 ## phpMyAdmin
 
-Cookie auth, parola yapıya yazılmaz. Kök `http://phpmyadmin.f4box.localhost:<web>/`. `config`/`vendor` HTTP’den 404.
+Cookie auth, parola yapıya yazılmaz. Kök `http://phpmyadmin.serverbond.localhost:<web>/`. `config`/`vendor` HTTP’den 404.
 
 ## Güvenlik alışkanlıkları
 

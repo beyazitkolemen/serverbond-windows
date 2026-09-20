@@ -29,12 +29,12 @@ Cloudflared, Mailpit ve PostgreSQL yayımlanmış bir özet dosyası sunmadığ�
 1. Paketin resmî kaynağını ve Windows x64 desteğini doğrulayın.
 2. Tam sürümü, URL'yi ve güvenilir kaynaktaki SHA-256'yı kataloğa birlikte işleyin. `latest` gibi hareketli URL kullanmayın.
 3. Arşiv kökü ve çalıştırılabilir dosya yolunu doğrulayın.
-4. Ayrı `F4BOX_HOME` altında bütünleşme testini çalıştırın.
+4. Ayrı `SERVERBOND_HOME` altında bütünleşme testini çalıştırın.
 5. MySQL için veri yükseltme akışını ayrıca tasarlamadan mevcut veri dizininde sürüm değiştirmeyin.
 
 PHP güncellemelerinde `cargo test -p f4box-core --test php_matrix -- --ignored --nocapture` çalıştırın. PHP varsayılanı değiştirilirse `catalog.json` girdisi de PHP kataloğundaki aynı paketle eşleşmelidir. Önceki kayıtlı sürümleri katalogdan çıkarmayın; uygulama mevcut kullanıcının seçimini çözerken bu girdilere ihtiyaç duyar.
 
-Paketlerin lisansları kendilerine aittir. F4Box internetten resmî paketleri indirir; paketleri kaynak deposunda yeniden dağıtmaz.
+Paketlerin lisansları kendilerine aittir. ServerBond internetten resmî paketleri indirir; paketleri kaynak deposunda yeniden dağıtmaz.
 
 ## Kaynaklar
 

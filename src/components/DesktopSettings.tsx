@@ -117,7 +117,7 @@ export default function DesktopSettings({
       >
         {(
           [
-            ["autostart", "Windows oturumu açıldığında F4Box'ı çalıştır"],
+            ["autostart", "Windows oturumu açıldığında ServerBond'ı çalıştır"],
             [
               "startMinimized",
               "Windows başlangıcında pencereyi açmadan tepside çalıştır",

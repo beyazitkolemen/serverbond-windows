@@ -1,28 +1,31 @@
-use crate::{model::Settings, portable_path, secrets, Manager};
+use crate::{model::Settings, portable_path, product, secrets, Manager};
 use anyhow::{bail, Result};
 use std::{fs, io::Write, path::Path};
 
-const HOST: &str = "phpmyadmin.f4box.localhost";
+const HOST: &str = product::PMA_HOST;
 
 fn configuration(settings: &Settings, secret: &str) -> String {
     format!(
         r#"<?php
-// Managed by F4Box. MySQL credentials are entered on the login page.
+// Managed by {name}. MySQL credentials are entered on the login page.
 $cfg['blowfish_secret'] = hex2bin('{secret}');
 $cfg['Servers'][1]['auth_type'] = 'cookie';
-$cfg['Servers'][1]['verbose'] = 'F4Box MySQL';
+$cfg['Servers'][1]['verbose'] = '{name} MySQL';
 $cfg['Servers'][1]['host'] = '127.0.0.1';
 $cfg['Servers'][1]['port'] = '{port}';
 $cfg['Servers'][1]['AllowNoPassword'] = false;
 $cfg['AllowArbitraryServer'] = false;
-$cfg['TempDir'] = getenv('F4BOX_PMA_TMP');
-$cfg['SessionSavePath'] = getenv('F4BOX_PMA_SESSIONS');
+$cfg['TempDir'] = getenv('{tmp}');
+$cfg['SessionSavePath'] = getenv('{sessions}');
 $cfg['DefaultLang'] = '{language}';
 $cfg['MaxRows'] = {rows};
 $cfg['LoginCookieValidity'] = {login};
 ini_set('session.gc_maxlifetime', '{login}');
 $cfg['VersionCheck'] = false;
 "#,
+        name = product::NAME,
+        tmp = product::PMA_TMP_ENV,
+        sessions = product::PMA_SESSIONS_ENV,
         port = settings.mysql_port,
         language = settings.phpmyadmin.language,
         rows = settings.phpmyadmin.rows,
@@ -145,18 +148,18 @@ mod tests {
         assert!(config.contains("['AllowNoPassword'] = false"));
         assert!(!config.contains("['password']"));
         assert!(!config.contains("['user']"));
-        assert!(config.contains("getenv('F4BOX_PMA_SESSIONS')"));
+        assert!(config.contains(&format!("getenv('{}')", product::PMA_SESSIONS_ENV)));
     }
     #[test]
     fn route_is_loopback_only_and_protects_config_and_internal_files() {
         let route = caddy_route(
             &Settings::default(),
-            Path::new("C:/Türkçe F4Box/phpMyAdmin"),
+            Path::new("C:/Türkçe ServerBond/phpMyAdmin"),
         );
-        assert!(route.contains("http://phpmyadmin.f4box.localhost:8088"));
+        assert!(route.contains(&format!("http://{}:8088", product::PMA_HOST)));
         assert!(route.contains("bind 127.0.0.1"));
         assert!(route.contains("php_fastcgi 127.0.0.1:19000"));
-        assert!(route.contains("root * \"C:/Türkçe F4Box/phpMyAdmin\""));
+        assert!(route.contains("root * \"C:/Türkçe ServerBond/phpMyAdmin\""));
         assert!(route.contains("path_regexp (?i)"));
         assert!(route.contains("not path /index.php /url.php /js/messages.php"));
         assert!(route.contains("respond @private 404"));
@@ -166,9 +169,9 @@ mod tests {
     fn https_route_redirects_and_keeps_loopback() {
         let mut settings = Settings::default();
         settings.web.https = true;
-        let route = caddy_route(&settings, Path::new("C:/F4Box/phpMyAdmin"));
-        assert!(route.contains("redir https://phpmyadmin.f4box.localhost:8443{uri}"));
-        assert!(route.contains("https://phpmyadmin.f4box.localhost:8443"));
+        let route = caddy_route(&settings, Path::new("C:/ServerBond/phpMyAdmin"));
+        assert!(route.contains(&format!("redir https://{}:8443{{uri}}", product::PMA_HOST)));
+        assert!(route.contains(&format!("https://{}:8443", product::PMA_HOST)));
         assert!(route.contains("tls internal"));
         assert!(route.contains("bind 127.0.0.1"));
     }

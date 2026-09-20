@@ -367,9 +367,12 @@ impl Manager {
             .arg("-b")
             .arg(format!("127.0.0.1:{}", settings.php_port));
         cmd.env("PHP_FCGI_MAX_REQUESTS", "0")
-            .env("F4BOX_PMA_TMP", self.home.join("data/phpmyadmin/tmp"))
             .env(
-                "F4BOX_PMA_SESSIONS",
+                crate::product::PMA_TMP_ENV,
+                self.home.join("data/phpmyadmin/tmp"),
+            )
+            .env(
+                crate::product::PMA_SESSIONS_ENV,
                 self.home.join("data/phpmyadmin/sessions"),
             )
             .env("F4BOX_PHP_EXT", self.package_dir("php")?.join("ext"))

@@ -45,7 +45,7 @@ pub fn normalize_token(raw: &str) -> Result<String> {
         .bytes()
         .all(|b| b.is_ascii_alphanumeric() || b"=-_+./".contains(&b))
     {
-        bail!("Tünel jetonu yalnızca harf, rakam ve = - _ + . / karakterlerini içerebilir. Komut satırının tamamını yapıştırsanız da olur; F4Box jetonu ayıklar.");
+        bail!("Tünel jetonu yalnızca harf, rakam ve = - _ + . / karakterlerini içerebilir. Komut satırının tamamını yapıştırsanız da olur; ServerBond jetonu ayıklar.");
     }
     Ok(token)
 }

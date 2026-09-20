@@ -793,7 +793,7 @@ fn main() {
     let app = match app {
         Ok(app) => app,
         Err(error) => {
-            show_startup_error(&format!("F4Box penceresi açılamadı: {error}"));
+            show_startup_error(&format!("ServerBond penceresi açılamadı: {error}"));
             return;
         }
     };
@@ -816,7 +816,7 @@ fn show_startup_error(error: &str) {
     #[cfg(windows)]
     {
         let message: Vec<u16> = error.encode_utf16().chain(Some(0)).collect();
-        let title: Vec<u16> = "F4Box".encode_utf16().chain(Some(0)).collect();
+        let title: Vec<u16> = "ServerBond".encode_utf16().chain(Some(0)).collect();
         unsafe {
             windows_sys::Win32::UI::WindowsAndMessaging::MessageBoxW(
                 std::ptr::null_mut(),

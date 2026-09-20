@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 #[cfg(windows)]
 use std::time::{Duration, Instant};
 
-pub const TASK: &str = "F4Box Permissions";
+pub const TASK: &str = crate::product::PERMISSIONS_TASK;
 
 /// Everything the elevated helper is allowed to change, in the order the script
 /// applies it. The list is fixed in code so an elevated run can never be widened
@@ -93,7 +93,11 @@ fn native(path: &Path) -> String {
 
 #[cfg(any(test, windows))]
 fn rule_name(program: &str) -> String {
-    format!("F4Box: {}", program.rsplit('\\').next().unwrap_or(program))
+    format!(
+        "{}: {}",
+        crate::product::NAME,
+        program.rsplit('\\').next().unwrap_or(program)
+    )
 }
 
 #[cfg(any(test, windows))]
@@ -106,7 +110,7 @@ pub(crate) fn script(
     helper_script: Option<&Path>,
 ) -> String {
     let mut text = String::from(
-        "# F4Box tarafından üretilir. Yükseltilmiş yetkiyle çalışır.\n$ErrorActionPreference = 'Stop'\n$applied = New-Object System.Collections.ArrayList\n$failed = New-Object System.Collections.ArrayList\ntry {\n",
+        "# ServerBond tarafından üretilir. Yükseltilmiş yetkiyle çalışır.\n$ErrorActionPreference = 'Stop'\n$applied = New-Object System.Collections.ArrayList\n$failed = New-Object System.Collections.ArrayList\ntry {\n",
     );
     for program in programs {
         let path = native(program);
@@ -136,7 +140,7 @@ pub(crate) fn script(
         let shell = native(&crate::terminal::powershell_path());
         let script = native(helper);
         text.push_str(&format!(
-            "  try {{\n    $action = New-ScheduledTaskAction -Execute {shell} -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' + {script})\n    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest\n    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew\n    Register-ScheduledTask -TaskName {task} -Action $action -Principal $principal -Settings $settings -Description 'F4Box güvenlik duvarı ve klasör izinlerini yeniler.' -Force | Out-Null\n    $null = icacls {script} /inheritance:r /grant:r 'SYSTEM:(F)' /grant:r ($env:USERNAME + ':(F)') 2>&1\n    $null = $applied.Add('Zamanlanmış görev: ' + {task})\n  }} catch {{\n    $null = $failed.Add('Zamanlanmış görev: ' + $_.Exception.Message)\n  }}\n",
+            "  try {{\n    $action = New-ScheduledTaskAction -Execute {shell} -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' + {script})\n    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest\n    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew\n    Register-ScheduledTask -TaskName {task} -Action $action -Principal $principal -Settings $settings -Description 'ServerBond güvenlik duvarı ve klasör izinlerini yeniler.' -Force | Out-Null\n    $null = icacls {script} /inheritance:r /grant:r 'SYSTEM:(F)' /grant:r ($env:USERNAME + ':(F)') 2>&1\n    $null = $applied.Add('Zamanlanmış görev: ' + {task})\n  }} catch {{\n    $null = $failed.Add('Zamanlanmış görev: ' + $_.Exception.Message)\n  }}\n",
             shell = quote(&shell),
             script = quote(&script),
             task = quote(TASK),
@@ -275,7 +279,7 @@ impl Manager {
         let mut state = self.stored_permissions();
         state.declined = true;
         self.save_permission_state(&state)?;
-        self.log("Windows yetki isteği onaylanmadı. F4Box bir daha kendiliğinden sormaz; Ayarlar → Sistem ekranından yeniden isteyebilirsiniz.");
+        self.log("Windows yetki isteği onaylanmadı. ServerBond bir daha kendiliğinden sormaz; Ayarlar → Sistem ekranından yeniden isteyebilirsiniz.");
         Ok(self.permission_state())
     }
 
@@ -511,7 +515,7 @@ mod tests {
 
     #[test]
     fn script_quotes_paths_registers_the_helper_and_covers_every_change() {
-        let home = PathBuf::from(r"C:\Users\O'Brien\F4Box");
+        let home = PathBuf::from(r"C:\Users\O'Brien\ServerBond");
         let programs = vec![home.join(r"bin\php\8.4.25\php-cgi.exe")];
         let helper = home.join(r"config\permissions-apply.ps1");
         let text = script(
@@ -522,12 +526,14 @@ mod tests {
             &home.join("config/result.json"),
             Some(&helper),
         );
-        assert!(text.contains("'C:\\Users\\O''Brien\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe'"));
-        assert!(text.contains("name='F4Box: php-cgi.exe' dir=in action=allow"));
+        assert!(text.contains("'C:\\Users\\O''Brien\\ServerBond\\bin\\php\\8.4.25\\php-cgi.exe'"));
+        assert!(text.contains("name='ServerBond: php-cgi.exe' dir=in action=allow"));
         assert!(text.contains("dir=out action=allow"));
-        assert!(text.contains("icacls 'C:\\Users\\O''Brien\\F4Box' /grant 'HOST\\dev:(OI)(CI)F'"));
-        assert!(text.contains("Add-MpPreference -ExclusionPath 'C:\\Users\\O''Brien\\F4Box'"));
-        assert!(text.contains("Register-ScheduledTask -TaskName 'F4Box Permissions'"));
+        assert!(
+            text.contains("icacls 'C:\\Users\\O''Brien\\ServerBond' /grant 'HOST\\dev:(OI)(CI)F'")
+        );
+        assert!(text.contains("Add-MpPreference -ExclusionPath 'C:\\Users\\O''Brien\\ServerBond'"));
+        assert!(text.contains("Register-ScheduledTask -TaskName 'ServerBond Permissions'"));
         assert!(text.contains("-RunLevel Highest"));
         assert!(text.contains("permissions-apply.ps1"));
         assert!(text.contains("finally"));
@@ -539,7 +545,7 @@ mod tests {
 
     #[test]
     fn script_leaves_out_changes_that_were_not_requested() {
-        let home = PathBuf::from(r"C:\F4Box");
+        let home = PathBuf::from(r"C:\ServerBond");
         let text = script(&home, &[], None, false, &home.join("result.json"), None);
         assert!(!text.contains("netsh"));
         assert!(!text.contains("icacls"));

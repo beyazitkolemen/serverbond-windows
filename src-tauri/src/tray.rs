@@ -26,7 +26,7 @@ pub struct TrayMenu {
 
 pub fn setup(app: &AppHandle) -> Result<()> {
     let item = |id: &str, text: &str| MenuItem::with_id(app, id, text, true, None::<&str>);
-    let open = item("open", "F4Box'ı aç")?;
+    let open = item("open", "ServerBond'ı aç")?;
     let status = item("status", "Ortam denetleniyor…")?;
     status.set_enabled(false)?;
     let start = item("start", "Tümünü başlat")?;
@@ -103,7 +103,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
         .clone();
     TrayIconBuilder::with_id("f4box-tray")
         .icon(icon)
-        .tooltip("F4Box · Windows Laravel üretimi")
+        .tooltip("ServerBond · Windows Laravel üretimi")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| dispatch(app, event.id.as_ref()))
@@ -166,9 +166,9 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
     });
     let running = snapshot.packages.iter().filter(|p| p.running).count();
     let status = if desktop.quitting {
-        "F4Box kapanıyor…".into()
+        "ServerBond kapanıyor…".into()
     } else if !healthy {
-        "Kurtarma gerekiyor — F4Box'ı açın".into()
+        "Kurtarma gerekiyor — ServerBond'ı açın".into()
     } else if busy {
         "İşlem devam ediyor…".into()
     } else if running == 3 {
@@ -180,7 +180,7 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
     };
     menu.status.set_text(&status)?;
     if let Some(tray) = app.tray_by_id("f4box-tray") {
-        tray.set_tooltip(Some(format!("F4Box · {status}")))?;
+        tray.set_tooltip(Some(format!("ServerBond · {status}")))?;
     }
     menu.start
         .set_enabled(!busy && healthy && ready && running < 3)?;

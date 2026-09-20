@@ -88,7 +88,7 @@ export default function GithubSettings({
             GitHub → Settings → Developer settings → Personal access tokens.
             Klasik jeton için <code>repo</code> yetkisi; ince ayarlı jeton için
             Contents okuma yeterlidir. Genel depolar jeton olmadan da klonlanır.
-            Komut: <code>f4box github token|forget|import</code>.
+            Komut: <code>serverbond github token|forget|import</code>.
           </p>
         </>
       ) : null}

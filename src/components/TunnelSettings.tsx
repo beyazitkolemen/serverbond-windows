@@ -47,7 +47,7 @@ export default function TunnelSettings({
         </p>
       ) : (
         <p className="section-note">
-          Jetonu buraya yapıştırın. F4Box jetonu ayıklar ve Windows DPAPI ile
+          Jetonu buraya yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI ile
           şifreler; günlüklere yazılmaz.
         </p>
       )}
@@ -121,7 +121,7 @@ export default function TunnelSettings({
             Cloudflare Zero Trust → Networks → Tunnels → tüneli oluşturun →
             Install and run a connector. Jetonu veya tüm{" "}
             <code>cloudflared.exe service install …</code> satırını buraya
-            yapıştırın. F4Box jetonu ayıklar; günlüklere ve komut satırına
+            yapıştırın. ServerBond jetonu ayıklar; günlüklere ve komut satırına
             yazmaz.
           </p>
           <div className="settings-actions">

@@ -108,7 +108,7 @@ export function Shell({
             <Box size={22} strokeWidth={1.7} />
           </div>
           <div className="brand-copy">
-            <span>F4Box</span>
+            <span>ServerBond</span>
             <p>Windows Laravel üretimi</p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export function Shell({
         <footer>
           <div className="content-rail">
             {desktop
-              ? `F4Box v${APP_VERSION}`
+              ? `ServerBond v${APP_VERSION}`
               : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
           </div>
         </footer>

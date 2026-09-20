@@ -290,7 +290,7 @@ function DatabasePane({
   return (
     <div className="project-pane">
       <p className="section-note">
-        Veritabanı adı proje adından türetilir. F4Box proje <code>.env</code>{" "}
+        Veritabanı adı proje adından türetilir. ServerBond proje <code>.env</code>{" "}
         dosyasına kendiliğinden yazmaz. Ortam sekmesinden düzenleyebilirsiniz.
       </p>
       <dl className="project-facts">

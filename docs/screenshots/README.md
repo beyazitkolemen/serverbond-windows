@@ -1,6 +1,6 @@
 # Uygulama ekran görüntüleri
 
-F4Box 1.1.0 arayüzünden 1440 piksel genişlikte tam sayfa olarak alındı. Windows pencere çerçevesi ve görev çubuğu görüntülere dahil değildir.
+ServerBond 1.1.0 arayüzünden 1440 piksel genişlikte tam sayfa olarak alındı. Windows pencere çerçevesi ve görev çubuğu görüntülere dahil değildir.
 
 Görüntüler `npm run build && node scripts/ai/screenshots.mjs` komutuyla üretilir. Komut, üretim derlemesini başsız tarayıcıda açar ve salt okunur tarayıcı önizlemesine `scripts/ai/screenshot-data.json` örnek verisini yükler: gösterilen proje adları, portlar ve süreç kimlikleri bu örnek veriden gelir, gerçek bir kurulumdan ölçülmez.
 
@@ -36,7 +36,7 @@ Forge benzeri üretim sürümü aynı Windows makinesinde: git pull, Composer, `
 
 ## Proje .env
 
-Proje detayındaki Ortam sekmesi kök `.env` dosyasını gösterir ve yalnızca Kaydet ile yazar. F4Box başka işlemlerde `.env` değiştirmez.
+Proje detayındaki Ortam sekmesi kök `.env` dosyasını gösterir ve yalnızca Kaydet ile yazar. ServerBond başka işlemlerde `.env` değiştirmez.
 
 ![Proje .env editörü](14-proje-env.png)
 

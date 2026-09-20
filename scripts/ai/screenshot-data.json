@@ -197,7 +197,7 @@
     {
       "id": "6f1b6d1c-2f7c-4f0a-9d3e-2b7c4f0a9d3e",
       "name": "magaza",
-      "path": "C:\\Users\\dev\\F4Box\\projects\\magaza",
+      "path": "C:\\Users\\dev\\ServerBond\\projects\\magaza",
       "host": "magaza.localhost",
       "phpVersion": "8.4.25",
       "running": true,
@@ -334,29 +334,29 @@
     "version": "24.21.0",
     "installed": true,
     "repairable": true,
-    "directory": "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0",
+    "directory": "C:\\Users\\dev\\ServerBond\\bin\\node\\24.21.0",
     "issue": null
   },
   "permissions": {
     "granted": true,
     "appliedAt": "2026-09-20 21:15",
     "applied": [
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\postgres\\17.11\\bin\\postgres.exe",
-      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe",
-      "Klasör yetkisi: C:\\Users\\dev\\F4Box",
-      "Zamanlanmış görev: F4Box Permissions"
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\php\\8.4.25\\php-cgi.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\caddy\\2.11.4\\caddy.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\mailpit\\1.31.2\\mailpit.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\postgres\\17.11\\bin\\postgres.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\ServerBond\\bin\\node\\24.21.0\\node.exe",
+      "Klasör yetkisi: C:\\Users\\dev\\ServerBond",
+      "Zamanlanmış görev: ServerBond Permissions"
     ],
     "failed": [],
     "programs": [
-      "C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe"
+      "C:\\Users\\dev\\ServerBond\\bin\\php\\8.4.25\\php-cgi.exe",
+      "C:\\Users\\dev\\ServerBond\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
+      "C:\\Users\\dev\\ServerBond\\bin\\caddy\\2.11.4\\caddy.exe",
+      "C:\\Users\\dev\\ServerBond\\bin\\mailpit\\1.31.2\\mailpit.exe",
+      "C:\\Users\\dev\\ServerBond\\bin\\node\\24.21.0\\node.exe"
     ],
     "defenderExclusion": false,
     "pending": [],
@@ -374,7 +374,7 @@
     "[21:15:08] Mailpit çalışıyor. SMTP 127.0.0.1:1025 · arayüz http://127.0.0.1:8025",
     "[21:15:09] Cloudflare tüneli çalışıyor. Genel adres Cloudflare panelindeki tünel yapılandırmasına bağlıdır."
   ],
-  "home": "C:\\Users\\dev\\AppData\\Local\\F4Box",
+  "home": "C:\\Users\\dev\\AppData\\Local\\ServerBond",
   "busy": false,
   "anyRunning": true,
   "recoveryIssue": null,

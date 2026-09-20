@@ -38,7 +38,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: F4Box v__VERSION__
+          releaseName: ServerBond v__VERSION__
           releaseBody: |
             Windows x64 kurulum paketi ve otomatik güncelleme bildirimi (`latest.json`).
 
@@ -52,14 +52,14 @@ jobs:
           $version = (Get-Content package.json | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force artifacts | Out-Null
           $exe = Get-ChildItem target/release/f4box-desktop.exe | Select-Object -First 1
-          Copy-Item $exe.FullName "artifacts/F4Box_${version}_x64.exe"
+          Copy-Item $exe.FullName "artifacts/ServerBond_${version}_x64.exe"
           $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          Copy-Item $setup.FullName "artifacts/F4Box_${version}_x64-setup.exe"
+          Copy-Item $setup.FullName "artifacts/ServerBond_${version}_x64-setup.exe"
           Get-ChildItem artifacts/*.exe | ForEach-Object {
             "$(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()  $($_.Name)"
           } | Set-Content -Encoding ascii artifacts/SHA256SUMS.txt
           Get-Content artifacts/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: F4Box-Windows-x64-release
+          name: ServerBond-Windows-x64-release
           path: artifacts/*

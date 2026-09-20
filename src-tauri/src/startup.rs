@@ -4,7 +4,8 @@ use winreg::{enums::*, RegKey, RegValue};
 
 const RUN: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const APPROVED: &str = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
-const NAME: &str = "F4Box";
+const NAME: &str = "ServerBond";
+const LEGACY_NAME: &str = "F4Box";
 
 pub struct Registration {
     run_key: String,
@@ -13,10 +14,10 @@ pub struct Registration {
     approved: Option<RegValue>,
 }
 
-fn read(path: &str) -> Result<Option<RegValue>> {
+fn read_named(path: &str, name: &str) -> Result<Option<RegValue>> {
     match RegKey::predef(HKEY_CURRENT_USER)
         .open_subkey(path)
-        .and_then(|key| key.get_raw_value(NAME))
+        .and_then(|key| key.get_raw_value(name))
     {
         Ok(value) => Ok(Some(value)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -24,16 +25,27 @@ fn read(path: &str) -> Result<Option<RegValue>> {
     }
 }
 
-fn write(path: &str, value: Option<&RegValue>) -> Result<()> {
+fn read(path: &str) -> Result<Option<RegValue>> {
+    match read_named(path, NAME)? {
+        Some(value) => Ok(Some(value)),
+        None => read_named(path, LEGACY_NAME),
+    }
+}
+
+fn write_named(path: &str, name: &str, value: Option<&RegValue>) -> Result<()> {
     let (key, _) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(path)?;
     if let Some(value) = value {
-        key.set_raw_value(NAME, value)?;
-    } else if let Err(error) = key.delete_value(NAME) {
+        key.set_raw_value(name, value)?;
+    } else if let Err(error) = key.delete_value(name) {
         if error.kind() != std::io::ErrorKind::NotFound {
             return Err(error.into());
         }
     }
     Ok(())
+}
+
+fn write(path: &str, value: Option<&RegValue>) -> Result<()> {
+    write_named(path, NAME, value)
 }
 
 impl Registration {
@@ -78,7 +90,7 @@ impl Registration {
         let result = (|| {
             if enabled {
                 if command.encode_utf16().count() > 260 {
-                    bail!("Windows başlangıç komutu çok uzun. F4Box ve veri klasörünü daha kısa bir konumda kullanın.");
+                    bail!("Windows başlangıç komutu çok uzun. ServerBond ve veri klasörünü daha kısa bir konumda kullanın.");
                 }
                 let (key, _) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(&self.run_key)?;
                 key.set_value(NAME, &command)?;
@@ -95,6 +107,8 @@ impl Registration {
                 write(&self.run_key, None)?;
                 write(&self.approved_key, None)?;
             }
+            let _ = write_named(&self.run_key, LEGACY_NAME, None);
+            let _ = write_named(&self.approved_key, LEGACY_NAME, None);
             Ok(())
         })();
         if result.is_err() {
@@ -140,7 +154,7 @@ mod tests {
     fn registration_enable_disable_and_exact_rollback_in_non_startup_test_keys() {
         // No Windows startup keys are changed: these are inert, disposable HKCU test keys.
         let name = format!(
-            r"Software\F4BoxTests\registration-{}-{}",
+            r"Software\ServerBondTests\registration-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -153,7 +167,7 @@ mod tests {
         assert!(!old.enabled());
         assert!(!old.needs_change(false, "unused"));
         let command = command(
-            Path::new(r"C:\Program Files\F4Box\F4Box.exe"),
+            Path::new(r"C:\Program Files\ServerBond\ServerBond.exe"),
             Path::new(r"C:\Türkçe Test"),
         );
         old.apply(true, &command).unwrap();
@@ -180,7 +194,7 @@ mod tests {
     #[test]
     fn startup_command_roundtrips_spaces_unicode_and_drive_root() {
         for home in [r"C:\Türkçe O'Brien\F4 Box", r"C:\"] {
-            let exe = r"C:\Program Files\F4Box\F4Box.exe";
+            let exe = r"C:\Program Files\ServerBond\ServerBond.exe";
             let text = command(Path::new(exe), Path::new(home));
             let wide: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
             unsafe {

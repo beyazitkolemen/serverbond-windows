@@ -84,7 +84,7 @@ fn caddy_routes_to_public_and_binds_loopback() {
     let config = caddy_config(
         &Settings::default(),
         &[project],
-        std::path::Path::new("C:/F4Box/welcome"),
+        std::path::Path::new("C:/ServerBond/welcome"),
         &std::collections::HashMap::from([("1".into(), 19001)]),
     )
     .unwrap();
@@ -115,7 +115,7 @@ fn caddy_https_redirects_http_and_uses_internal_tls() {
     let config = caddy_config(
         &settings,
         &[project],
-        std::path::Path::new("C:/F4Box/welcome"),
+        std::path::Path::new("C:/ServerBond/welcome"),
         &std::collections::HashMap::from([("1".into(), 19001)]),
     )
     .unwrap();

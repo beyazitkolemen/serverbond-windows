@@ -19,7 +19,7 @@ Git kuralı: yalnızca `main`. **PR oluşturma yok** (`gh pr create`, ManagePull
 | `npm run check` | Windows geliştirme | Arayüz + tüm workspace clippy (Tauri masaüstü dahil) |
 | `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS + EXE (`createUpdaterArtifacts` kapalı) |
 | `.github/workflows/release.yml` | GitHub tag `v*` | İmzalı kurulum, `latest.json`, otomatik güncelleme |
-| `npm run test:integration` | Windows, F4Box kapalı | Gerçek PHP/MySQL/Caddy duman testi |
+| `npm run test:integration` | Windows, ServerBond kapalı | Gerçek PHP/MySQL/Caddy duman testi |
 | `cargo test -p f4box-core --tests -- --ignored` | Windows | İndirme ve servis bütünleşme testleri |
 
 Yeni çekirdek davranışı için `crates/f4box-core/tests` altına test ekleyin. Masaüstü IPC veya tepsi davranışı Windows CI / `npm run desktop` ile doğrulanır.
@@ -28,4 +28,4 @@ Yeni çekirdek davranışı için `crates/f4box-core/tests` altına test ekleyin
 
 - `src-tauri` ve NSIS paketleri Windows x64 ister.
 - Paket indirme, MySQL ilk kurulum ve phpMyAdmin tarayıcı akışları yok sayılmış (`ignored`) testlerdir; Cloud Agent bunları çalıştırmaz.
-- `F4BOX_HOME` veri dizinini taşır; testler geçici dizin kullanır.
+- `SERVERBOND_HOME` veri dizinini taşır; testler geçici dizin kullanır.

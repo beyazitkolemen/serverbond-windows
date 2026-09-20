@@ -34,7 +34,7 @@ Kaynak: `crates/f4box-core/catalog.json`, `crates/f4box-core/php-versions.json`,
 
 ## Doğrulama
 
-Windows, ayrı `F4BOX_HOME`:
+Windows, ayrı `SERVERBOND_HOME`:
 
 ```powershell
 cargo test -p f4box-core --test php_matrix -- --ignored --nocapture

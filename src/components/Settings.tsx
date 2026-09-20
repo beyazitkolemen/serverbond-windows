@@ -270,7 +270,7 @@ export default function Settings({
                 eski www klasörü de taranır. Kayıtlı projeler taşınmaz.
               </p>
               <Toggle
-                label="F4Box açıldığında ortamı otomatik başlat"
+                label="ServerBond açıldığında ortamı otomatik başlat"
                 value={values.startOnLaunch}
                 onChange={(v) => change("startOnLaunch", v)}
               />
@@ -477,7 +477,7 @@ export default function Settings({
               </label>
               <p className="section-note">
                 anahtar=değer biçimi kullanın. Form değerlerini burada
-                tekrarlamayın. Uzantı yolu ve FastCGI bağlantı ayarları F4Box
+                tekrarlamayın. Uzantı yolu ve FastCGI bağlantı ayarları ServerBond
                 tarafından yönetilir.
               </p>
             </section>
@@ -659,7 +659,7 @@ export default function Settings({
                     );
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = "f4box-settings.json";
+                    a.download = "serverbond-settings.json";
                     a.click();
                     setTimeout(() => URL.revokeObjectURL(url), 30000);
                   }}
@@ -920,7 +920,7 @@ export default function Settings({
             </div>
           </section>
           <section className="settings-section">
-            <h2>F4Box veri klasörü</h2>
+            <h2>ServerBond veri klasörü</h2>
             <p className="data-path">{home}</p>
             <button
               type="button"

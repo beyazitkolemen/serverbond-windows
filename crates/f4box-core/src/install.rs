@@ -14,7 +14,7 @@ pub(crate) const DOWNLOAD_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const DOWNLOAD_TOTAL_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 pub(crate) fn download_user_agent() -> String {
-    format!("F4Box/{}", env!("CARGO_PKG_VERSION"))
+    format!("{}/{}", crate::product::NAME, env!("CARGO_PKG_VERSION"))
 }
 
 pub(crate) fn download_client() -> Result<reqwest::blocking::Client> {
@@ -366,9 +366,9 @@ mod tests {
         assert_eq!(DOWNLOAD_TOTAL_TIMEOUT, Duration::from_secs(30 * 60));
         assert_eq!(
             download_user_agent(),
-            format!("F4Box/{}", env!("CARGO_PKG_VERSION"))
+            format!("{}/{}", crate::product::NAME, env!("CARGO_PKG_VERSION"))
         );
-        assert!(download_user_agent().starts_with("F4Box/1."));
+        assert!(download_user_agent().starts_with(&format!("{}/1.", crate::product::NAME)));
         download_client().unwrap();
     }
 }

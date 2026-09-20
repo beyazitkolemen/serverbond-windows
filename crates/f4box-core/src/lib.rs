@@ -12,6 +12,7 @@ mod phpmyadmin;
 mod postgres;
 pub mod preferences;
 mod process;
+pub mod product;
 mod project_runtime;
 mod projects;
 mod redis;
@@ -27,6 +28,7 @@ pub mod tunnel;
 
 pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
 pub use envfile::ProjectEnv;
+pub use product::NAME;
 pub use release::{ProjectGitStatus, ReleaseRecord};
 pub use repository::DataDir;
 
@@ -58,12 +60,7 @@ pub struct Manager {
 
 impl Manager {
     pub fn default_home() -> PathBuf {
-        std::env::var_os("F4BOX_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_else(|| ".".into()))
-                    .join("F4Box")
-            })
+        product::default_home()
     }
 
     pub fn new(home: PathBuf) -> Result<Self> {
@@ -83,8 +80,10 @@ impl Manager {
             .read(true)
             .write(true)
             .open(home.join("manager.lock"))?;
-        lock.try_lock_exclusive()
-            .context("Bu veri klasörü başka bir F4Box penceresinde kullanılıyor.")?;
+        lock.try_lock_exclusive().context(format!(
+            "Bu veri klasörü başka bir {} penceresinde kullanılıyor.",
+            product::NAME
+        ))?;
         for dir in [
             "bin", "cache", "config", "data", "logs", "www", "projects", "welcome", "backups",
         ] {
@@ -133,7 +132,13 @@ impl Manager {
             config.settings.validate()?;
             config
         };
-        fs::write(home.join("welcome/index.html"), "<!doctype html><html lang=\"tr\"><meta charset=\"utf-8\"><title>F4Box</title><style>body{font:20px system-ui;max-width:640px;margin:12vh auto;padding:24px;color:#20282f}strong{color:#008653}</style><h1><strong>F4Box</strong> çalışıyor.</h1><p>Bu Windows makinesinde Laravel üretimi hazır. Uygulamadan projenizi ekleyin.</p></html>")?;
+        fs::write(
+            home.join("welcome/index.html"),
+            format!(
+                "<!doctype html><html lang=\"tr\"><meta charset=\"utf-8\"><title>{name}</title><style>body{{font:20px system-ui;max-width:640px;margin:12vh auto;padding:24px;color:#20282f}}strong{{color:#008653}}</style><h1><strong>{name}</strong> çalışıyor.</h1><p>Bu Windows makinesinde Laravel üretimi hazır. Uygulamadan projenizi ekleyin.</p></html>",
+                name = product::NAME
+            ),
+        )?;
         let manager = Self {
             home,
             config: Mutex::new(config),
@@ -149,8 +154,9 @@ impl Manager {
         };
         manager.log(if manager.recovery_issue().is_some() {
             "Yapılandırma kurtarma gerekiyor. Mevcut dosyalar korundu; yeni işlemler engellendi."
+                .to_string()
         } else {
-            "F4Box hazır. Kurulum başlatılabilir."
+            format!("{} hazır. Kurulum başlatılabilir.", product::NAME)
         });
         if manager.recovery_issue().is_none() {
             if first_run || migrated {
@@ -176,7 +182,7 @@ impl Manager {
             .shutting_down
             .load(std::sync::atomic::Ordering::Acquire)
         {
-            bail!("F4Box kapanıyor; yeni işlem başlatılamaz.");
+            bail!("{} kapanıyor; yeni işlem başlatılamaz.", product::NAME);
         }
         if let Some(issue) = self.recovery_issue() {
             bail!(issue);
@@ -197,18 +203,16 @@ impl Manager {
                 logs.pop_front();
             }
         }
-        let log_path = self.home.join("logs/f4box.log");
+        let log_path = self.home.join(format!("logs/{}.log", product::LOG_ID));
         if log_path.metadata().is_ok_and(|m| m.len() > 4 * 1024 * 1024) {
-            let previous = self.home.join("logs/f4box.previous.log");
+            let previous = self
+                .home
+                .join(format!("logs/{}.previous.log", product::LOG_ID));
             if !previous.exists() || fs::remove_file(&previous).is_ok() {
                 let _ = fs::rename(&log_path, previous);
             }
         }
-        if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(self.home.join("logs/f4box.log"))
-        {
+        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
             let _ = writeln!(file, "{line}");
         }
     }
@@ -585,7 +589,7 @@ impl Manager {
         self.validate_installed_preferences(&settings)?;
         for project in &mut config.projects {
             project.host = settings.project_host(&project.name);
-            if project.host == "phpmyadmin.f4box.localhost" {
+            if product::is_phpmyadmin_host(&project.host) {
                 bail!("Proje adresi phpMyAdmin adresiyle çakışıyor.");
             }
         }

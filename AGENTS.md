@@ -1,4 +1,4 @@
-# F4Box — asistan notları
+# ServerBond — asistan notları
 
 Windows x64 üzerinde Laravel üretim ortamını (Forge hissi, uzak VPS yok) yöneten Tauri + Rust uygulaması. Cloud Agent Linux üzerindedir; masaüstü EXE burada üretilmez.
 

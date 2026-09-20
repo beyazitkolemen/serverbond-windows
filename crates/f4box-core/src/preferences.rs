@@ -301,7 +301,7 @@ impl PhpSettings {
     pub(crate) fn render(&self, ext: &Path, mail: Option<&MailSettings>) -> Result<String> {
         self.validate()?;
         let on = |b| if b { "On" } else { "Off" };
-        let mut text = format!("; F4Box tarafından üretilir. Kalıcı değişiklikleri Ayarlar ekranından yapın.\n[PHP]\nextension_dir=\"${{F4BOX_PHP_EXT}}\"\ndate.timezone={}\nmemory_limit={}\nupload_max_filesize={}M\npost_max_size={}M\nmax_execution_time={}\nmax_input_time={}\nmax_input_vars={}\ndisplay_errors={}\nlog_errors={}\nvariables_order=EGPCS\nerror_reporting=E_ALL\ncgi.fix_pathinfo=1\nfastcgi.impersonate=0\nexpose_php=Off\n", self.timezone, if self.memory_mb == -1 { "-1".into() } else { format!("{}M", self.memory_mb) }, self.upload_mb, self.post_mb, self.execution_seconds, self.input_seconds, self.input_vars, on(self.display_errors), on(self.log_errors));
+        let mut text = format!("; ServerBond tarafından üretilir. Kalıcı değişiklikleri Ayarlar ekranından yapın.\n[PHP]\nextension_dir=\"${{F4BOX_PHP_EXT}}\"\ndate.timezone={}\nmemory_limit={}\nupload_max_filesize={}M\npost_max_size={}M\nmax_execution_time={}\nmax_input_time={}\nmax_input_vars={}\ndisplay_errors={}\nlog_errors={}\nvariables_order=EGPCS\nerror_reporting=E_ALL\ncgi.fix_pathinfo=1\nfastcgi.impersonate=0\nexpose_php=Off\n", self.timezone, if self.memory_mb == -1 { "-1".into() } else { format!("{}M", self.memory_mb) }, self.upload_mb, self.post_mb, self.execution_seconds, self.input_seconds, self.input_vars, on(self.display_errors), on(self.log_errors));
         for extension in &self.extensions {
             if ext.join(format!("php_{extension}.dll")).is_file() {
                 text.push_str(&format!("extension={extension}\n"));

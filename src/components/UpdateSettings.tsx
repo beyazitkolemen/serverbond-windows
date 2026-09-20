@@ -45,8 +45,8 @@ export default function UpdateSettings({
       onAvailable(update);
       setStatus(
         update
-          ? `F4Box ${update.version} yayımlanmış.`
-          : "F4Box güncel. Yeni bir GitHub sürümü yok.",
+          ? `ServerBond ${update.version} yayımlanmış.`
+          : "ServerBond güncel. Yeni bir GitHub sürümü yok.",
       );
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -71,9 +71,9 @@ export default function UpdateSettings({
     <section className="settings-section">
       <h2>Uygulama güncellemesi</h2>
       <p className="section-note">
-        F4Box, yayımlanmış GitHub sürümlerindeki imzalı kurulum paketini
+        ServerBond, yayımlanmış GitHub sürümlerindeki imzalı kurulum paketini
         denetler. Güncelleme sessiz kurulmaz; siz onayladıktan sonra indirilir
-        ve F4Box yeniden açılır.
+        ve ServerBond yeniden açılır.
       </p>
       <p>
         Kurulu sürüm <strong>v{APP_VERSION}</strong>
@@ -96,10 +96,10 @@ export default function UpdateSettings({
       )}
       {available && (
         <div className="update-notes">
-          <h3>F4Box {available.version}</h3>
+          <h3>ServerBond {available.version}</h3>
           <p className="section-note">
             Şu an v{available.currentVersion} kullanıyorsunuz. Kurulum çalışan
-            PHP, MySQL ve web sunucusunu durdurur; ardından F4Box yeniden
+            PHP, MySQL ve web sunucusunu durdurur; ardından ServerBond yeniden
             açılır.
           </p>
           {available.notes ? <pre>{available.notes}</pre> : null}
@@ -147,7 +147,7 @@ export default function UpdateSettings({
                   await call("service", { id: "all", action: "stop" });
                 }
                 await installAppUpdate(setProgress);
-                return "Güncelleme kuruldu. F4Box yeniden açılıyor.";
+                return "Güncelleme kuruldu. ServerBond yeniden açılıyor.";
               })
             }
           >

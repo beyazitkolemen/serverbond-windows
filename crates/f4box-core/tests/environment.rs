@@ -8,7 +8,7 @@ use std::{fs, time::Duration};
 #[ignore = "installs real packages and initializes a disposable MySQL instance"]
 fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
     let home = tempfile::Builder::new()
-        .prefix("F4Box Türkçe integration ")
+        .prefix("ServerBond Türkçe integration ")
         .tempdir()?;
     let manager = Manager::new(home.path().into())?;
     let mut settings = manager.snapshot()?.settings;
@@ -63,7 +63,7 @@ fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
         .json()?;
     assert_eq!(response["uri"], "/nested?check=1");
     assert_eq!(response["php"], "8.4.25");
-    let pma_host = format!("phpmyadmin.f4box.localhost:{port}");
+    let pma_host = format!("phpmyadmin.serverbond.localhost:{port}");
     let login = client
         .get(format!("http://127.0.0.1:{port}/"))
         .header("Host", &pma_host)

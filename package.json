@@ -13,7 +13,7 @@
     "desktop:build:unsigned": "tauri build --config .github/tauri-unsigned.json",
     "test:core": "cargo test -p f4box-core",
     "test:ai": "bash scripts/ai/test.sh",
-    "test:integration": "cargo run -p f4box-core --bin f4box -- smoke",
+    "test:integration": "cargo run -p f4box-core --bin serverbond -- smoke",
     "check": "npm run build && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
   },
   "dependencies": {

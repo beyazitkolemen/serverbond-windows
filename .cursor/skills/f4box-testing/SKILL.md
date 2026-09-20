@@ -1,6 +1,6 @@
 ---
 name: f4box-testing
-description: F4Box test matrisi ve asistanların hangi komutu nerede çalıştıracağı. Test, CI, clippy veya doğrulama sorulduğunda kullan.
+description: ServerBond test matrisi ve asistanların hangi komutu nerede çalıştıracağı. Test, CI, clippy veya doğrulama sorulduğunda kullan.
 ---
 
 # Testler

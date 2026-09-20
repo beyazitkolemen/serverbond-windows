@@ -7,7 +7,7 @@ use std::{fs, time::Duration};
 #[ignore = "starts real PHP, MySQL and Caddy in a disposable Unicode environment"]
 fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
     let home = tempfile::Builder::new()
-        .prefix("F4Box ayar Türkçe ")
+        .prefix("ServerBond ayar Türkçe ")
         .tempdir()?;
     let manager = Manager::new(home.path().into())?;
     let mut settings = manager.snapshot()?.settings;
@@ -77,7 +77,7 @@ fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
     invalid.php.extra_ini = "unknown_f4box_directive=1".into();
     assert!(manager.save_settings(invalid).is_err());
     let mut invalid = settings.clone();
-    invalid.php.timezone = "Mars/F4Box".into();
+    invalid.php.timezone = "Mars/ServerBond".into();
     assert!(manager.save_settings(invalid).is_err());
     let mut invalid = settings.clone();
     invalid.php.extra_ini = "precision=\"unterminated".into();
@@ -146,7 +146,7 @@ fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
     assert!(manager.phpmyadmin_url().is_err());
     let pma = client
         .get(format!("http://127.0.0.1:{}/", settings.web_port))
-        .header("Host", "phpmyadmin.f4box.localhost")
+        .header("Host", "phpmyadmin.serverbond.localhost")
         .send()?
         .text()?;
     assert!(!pma.contains("pma_username"));

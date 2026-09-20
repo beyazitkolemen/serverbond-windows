@@ -1,4 +1,4 @@
-# F4Box Laravel
+# ServerBond
 
 Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rust + Tauri masaüstü uygulaması. Laravel Forge’un uzak VPS katmanı yoktur; PHP, MySQL, Caddy, kuyruk, zamanlayıcı ve yapılandırılmış sürüm aynı makinede yönetilir. Herd veya Laragon geliştirme kopyası değildir.
 
@@ -6,10 +6,10 @@ PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdm
 
 ## İndir — v1.1
 
-Uygulama sürümü **1.1.0**. Windows x64 paketleri CI tarafından `F4Box_1.1.0_x64-setup.exe`, `F4Box_1.1.0_x64.exe` ve `SHA256SUMS.txt` olarak üretilir.
+Uygulama sürümü **1.1.0**. Windows x64 paketleri CI tarafından `ServerBond_1.1.0_x64-setup.exe`, `ServerBond_1.1.0_x64.exe` ve `SHA256SUMS.txt` olarak üretilir.
 
-- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/F4Box_1.1.0_x64-setup.exe): F4Box'ı kurar ve WebView2 gereksinimini yönetir.
-- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/F4Box_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\F4Box` altında saklar.
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/ServerBond_1.1.0_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/ServerBond_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
 - [v1.1 sürüm notları](docs/releases/v1.1.md)
 
 v1.1 ikili paketi henüz yayımlanmadıysa son yayımlanan [v1.0](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0) kullanılabilir.
@@ -18,7 +18,7 @@ Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşen
 
 Kurulu masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsünden GitHub’daki son sürümü denetler. Yeni paket siz onaylamadan kurulmaz. Bu kanalın çalışması için deponun herkese açık olması ve imzalı bir GitHub Release (`latest.json`) yayımlanmış olması gerekir. Ayrıntı: [docs/updates.md](docs/updates.md).
 
-![F4Box genel bakış: PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
+![ServerBond genel bakış: PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
 
 ## Ekran görüntüleri
 
@@ -44,11 +44,11 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 
 ## Kullanım
 
-Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paketleri hazırlayın; **Ortamı başlat** ile MySQL, PHP FastCGI ve Caddy'yi çalıştırın. **Proje ekle** ekranında mevcut Laravel kök klasörünü seçin, **GitHub** sekmesinden depo klonlayın veya **Yeni Laravel projesi** sekmesinden Laravel 12 oluşturun.
+Derlenmiş `ServerBond` uygulamasını açın. **Bileşenleri kur** ile gerekli paketleri hazırlayın; **Ortamı başlat** ile MySQL, PHP FastCGI ve Caddy'yi çalıştırın. **Proje ekle** ekranında mevcut Laravel kök klasörünü seçin, **GitHub** sekmesinden depo klonlayın veya **Yeni Laravel projesi** sekmesinden Laravel 12 oluşturun.
 
-Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa F4Box o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
+Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa ServerBond o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
 
-**Hizmetler → GitHub → Ayarlar** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
+**Hizmetler → GitHub → Ayarlar** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `serverbond github token <jeton>|forget|import <depo> [ad] [dal]`.
 
 **Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 
@@ -84,25 +84,25 @@ Proje kartındaki **Terminal**, o proje klasöründe Windows PowerShell açar. `
 
 Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıcı vardır. İşçi `php artisan queue:work` sürecidir: bağlantı, kuyruk adı, süreç sayısı, zaman aşımı, bellek, azami iş (`--max-jobs`) ve azami süre (`--max-time`) ayarlanır. Sıfır değer bayrağı eklemez. Birden fazla işçi (örneğin `default` ve `emails`) eklenebilir. **Ortamla başlat** açıkken **Ortamı başlat** bu süreçleri de açar; ayrı **Başlat / Durdur / Yeniden başlat** ile tek tek yönetilir. Ortam çalışırken kaydedilen yeni veya yeni etkinleştirilen `Ortamla başlat` işçileri de açılır.
 
-**Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
+**Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; ServerBond `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
 
-Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis kuyruğu için **Hizmetler → Redis** ile isteğe bağlı sunucu kurulur; `database` veya `sync` bağlantısı yerel MySQL ile de kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `f4box schedule <ad> start|stop|restart|list|log` ve `f4box logs <ad> [php|schedule|işçi]`.
+Windows Görev Zamanlayıcısı kullanılmaz; süreçler ServerBond kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis kuyruğu için **Hizmetler → Redis** ile isteğe bağlı sunucu kurulur; `database` veya `sync` bağlantısı yerel MySQL ile de kullanılabilir. Komut satırı: `serverbond queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `serverbond schedule <ad> start|stop|restart|list|log` ve `serverbond logs <ad> [php|schedule|işçi]`.
 
 ### Yerel sürüm
 
-Proje detayındaki **Sürüm** sekmesi Laravel Forge Deployments’ın bu Windows makinesindeki karşılığıdır. Uzak VPS, SSH ve serbest kabuk scripti yoktur. Tarif işaret kutularıdır: `git pull` (isteğe bağlı dal), `composer install --prefer-dist` (isteğe bağlı `--no-dev`), `php artisan migrate --force`, `optimize:clear`, ek Artisan satırları (`a-z0-9:_-` + `--bayrak`) ve kayıtlı kuyruk/zamanlayıcı süreçlerinin yeniden başlatılması. `.env` yazılmaz. Çıktı birleştirilir (`--- git ---`); tavan 10 dakikadır; son 20 kayıt `logs/release-{proje}.jsonl` dosyasına yazılır. `git` PATH’te yoksa işlem Türkçe hata ile durur. Komut satırı: `f4box project release <ad>`. Karşılaştırma: [docs/herd-forge-karsilastirma.md](docs/herd-forge-karsilastirma.md).
+Proje detayındaki **Sürüm** sekmesi Laravel Forge Deployments’ın bu Windows makinesindeki karşılığıdır. Uzak VPS, SSH ve serbest kabuk scripti yoktur. Tarif işaret kutularıdır: `git pull` (isteğe bağlı dal), `composer install --prefer-dist` (isteğe bağlı `--no-dev`), `php artisan migrate --force`, `optimize:clear`, ek Artisan satırları (`a-z0-9:_-` + `--bayrak`) ve kayıtlı kuyruk/zamanlayıcı süreçlerinin yeniden başlatılması. `.env` yazılmaz. Çıktı birleştirilir (`--- git ---`); tavan 10 dakikadır; son 20 kayıt `logs/release-{proje}.jsonl` dosyasına yazılır. `git` PATH’te yoksa işlem Türkçe hata ile durur. Komut satırı: `serverbond project release <ad>`. Karşılaştırma: [docs/herd-forge-karsilastirma.md](docs/herd-forge-karsilastirma.md).
 
 ### Proje .env
 
-Proje detayındaki **Ortam** sekmesi kök `.env` dosyasını açar. F4Box kurulum, proje ekleme, sürüm veya veritabanı işlemlerinde `.env` yazmaz; yalnızca bu sekmede **Kaydet** yazdırır. 256 KB ve UTF-8 sınırı vardır. `.env.example` varsa **Örnekten doldur** taslağı doldurur. İçerik günlüğe yazılmaz. PHP veya kuyruk açıksa kayıttan sonra süreçleri yeniden başlatın. Komut: `f4box env <ad>`.
+Proje detayındaki **Ortam** sekmesi kök `.env` dosyasını açar. ServerBond kurulum, proje ekleme, sürüm veya veritabanı işlemlerinde `.env` yazmaz; yalnızca bu sekmede **Kaydet** yazdırır. 256 KB ve UTF-8 sınırı vardır. `.env.example` varsa **Örnekten doldur** taslağı doldurur. İçerik günlüğe yazılmaz. PHP veya kuyruk açıksa kayıttan sonra süreçleri yeniden başlatın. Komut: `serverbond env <ad>`.
 
 ### Proje günlükleri
 
-Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi süreç kayıtlarını aynı görüntüleyicide açar. Kaynak sekmeleri, metin araması, satır numarası, hata/uyarı vurgusu, kopyalama ve açıkken otomatik yenileme vardır. **Günlükler** sayfası aynı görüntüleyiciyi F4Box, PHP, MySQL, Caddy, Composer ve PostgreSQL için kullanır.
+Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi süreç kayıtlarını aynı görüntüleyicide açar. Kaynak sekmeleri, metin araması, satır numarası, hata/uyarı vurgusu, kopyalama ve açıkken otomatik yenileme vardır. **Günlükler** sayfası aynı görüntüleyiciyi ServerBond, PHP, MySQL, Caddy, Composer ve PostgreSQL için kullanır.
 
 ### Node.js, npm ve npx
 
-**Ayarlar → Sistem → Node.js** sabit Node.js LTS paketini kurar. Özet resmî `SHASUMS256.txt` dosyasından alınır. Kurulumdan sonra proje kartındaki **Terminal** penceresinde `node`, `npm` ve `npx` projenin PHP sürümüyle birlikte hazır olur; `npm install` ve `npm run dev` doğrudan çalışır. Sistem PATH'i değiştirilmez, bu yüzden bilgisayarınızdaki başka bir Node kurulumu etkilenmez. Açık terminalleri kurulumdan sonra kapatıp yeniden açın. Komut satırından: `f4box node install|repair|status`.
+**Ayarlar → Sistem → Node.js** sabit Node.js LTS paketini kurar. Özet resmî `SHASUMS256.txt` dosyasından alınır. Kurulumdan sonra proje kartındaki **Terminal** penceresinde `node`, `npm` ve `npx` projenin PHP sürümüyle birlikte hazır olur; `npm install` ve `npm run dev` doğrudan çalışır. Sistem PATH'i değiştirilmez, bu yüzden bilgisayarınızdaki başka bir Node kurulumu etkilenmez. Açık terminalleri kurulumdan sonra kapatıp yeniden açın. Komut satırından: `serverbond node install|repair|status`.
 
 ### Hizmet onarımı
 
@@ -112,62 +112,62 @@ Hizmet kartındaki **Onarım** program dosyalarını SHA-256 doğrulanmış pake
 
 **Hizmetler → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.
 
-SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en fazla e-posta sayısı ayarlanabilir; portlar diğer bileşenlerin portlarından farklı olmak zorundadır. Laravel tarafında `.env` dosyasına `MAIL_MAILER=smtp`, `MAIL_HOST=127.0.0.1` ve `MAIL_PORT=1025` yazın; kullanıcı adı ve parola gerekmez. F4Box `.env` dosyanızı değiştirmez.
+SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en fazla e-posta sayısı ayarlanabilir; portlar diğer bileşenlerin portlarından farklı olmak zorundadır. Laravel tarafında `.env` dosyasına `MAIL_MAILER=smtp`, `MAIL_HOST=127.0.0.1` ve `MAIL_PORT=1025` yazın; kullanıcı adı ve parola gerekmez. ServerBond `.env` dosyanızı değiştirmez.
 
 **PHP mail() çağrılarını Mailpit'e yönlendir** açıkken üretilen `php.ini` dosyasına `SMTP` ve `smtp_port` anahtarları yazılır, böylece Laravel dışındaki kodun `mail()` çağrıları da yakalanır. Bu anahtarlar bu formdan yönetildiği için PHP sekmesindeki ek ayarlar alanına yazılamaz; değişiklik PHP yeniden başladığında geçerli olur.
 
-**Ortam başlatıldığında Mailpit'i de başlat** açıkken **Ortamı başlat** gelen kutusunu da açar. Mailpit başlatılamazsa ortam çalışmaya devam eder; hata e-posta kartında ve **Günlükler → mailpit** bölümünde görünür. Yakalanan e-postalar veri klasöründeki `data/mailpit/mailpit.db` dosyasında tutulur. Tepsi menüsündeki **Gelen kutusunu aç** ve komut satırındaki `f4box mail install|start|stop|open|status` aynı işi yapar.
+**Ortam başlatıldığında Mailpit'i de başlat** açıkken **Ortamı başlat** gelen kutusunu da açar. Mailpit başlatılamazsa ortam çalışmaya devam eder; hata e-posta kartında ve **Günlükler → mailpit** bölümünde görünür. Yakalanan e-postalar veri klasöründeki `data/mailpit/mailpit.db` dosyasında tutulur. Tepsi menüsündeki **Gelen kutusunu aç** ve komut satırındaki `serverbond mail install|start|stop|open|status` aynı işi yapar.
 
 ### İsteğe bağlı PostgreSQL
 
 **Hizmetler → PostgreSQL** bölümü resmi EDB Windows x64 arşivinden PostgreSQL 17 kurar. MySQL varsayılan kalır; PostgreSQL ortamın çalışması için gerekli değildir. Port varsayılanı 15432’dir (sistem 5432 ile çakışmaz). İlk başlatmada veri dizini `data/postgresql-17` oluşturulur; `postgres` kullanıcısının parolası Windows DPAPI ile saklanır. Sunucu `postgres.exe` ile 127.0.0.1’e bağlanır; kapatırken `pg_ctl stop` kullanılır.
 
-Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`, `DB_PORT=15432`, `DB_USERNAME=postgres` ve F4Box’ın gösterdiği parolayı yazın. F4Box `.env` dosyanızı değiştirmez. PHP `pgsql` ve `pdo_pgsql` uzantıları Ayarlar → PHP’den açılır.
+Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`, `DB_PORT=15432`, `DB_USERNAME=postgres` ve ServerBond’ın gösterdiği parolayı yazın. ServerBond `.env` dosyanızı değiştirmez. PHP `pgsql` ve `pdo_pgsql` uzantıları Ayarlar → PHP’den açılır.
 
-**Ortam başlatıldığında PostgreSQL'i de başlat** açıkken **Ortamı başlat** PostgreSQL’i de açar. PostgreSQL başlatılamazsa ortam çalışmaya devam eder; hata PostgreSQL kartında ve **Günlükler → postgres** bölümünde görünür. Tepsi menüsü → Servisler → PostgreSQL ve komut satırı `f4box postgres install|start|stop|repair|password [parola]|status` aynı işi yapar.
+**Ortam başlatıldığında PostgreSQL'i de başlat** açıkken **Ortamı başlat** PostgreSQL’i de açar. PostgreSQL başlatılamazsa ortam çalışmaya devam eder; hata PostgreSQL kartında ve **Günlükler → postgres** bölümünde görünür. Tepsi menüsü → Servisler → PostgreSQL ve komut satırı `serverbond postgres install|start|stop|repair|password [parola]|status` aynı işi yapar.
 
 ### İsteğe bağlı Redis
 
-**Hizmetler → Redis** Laravel kuyruk, önbellek ve oturum için Redis 8 kurar. Ortamın çalışması için gerekli değildir. Port varsayılanı 16379’dur (sistem 6379 ile çakışmaz). Sunucu `redis-server` ile 127.0.0.1’e bağlanır; parola yoktur. Veri dizini `data/redis`. F4Box `.env` yazmaz.
+**Hizmetler → Redis** Laravel kuyruk, önbellek ve oturum için Redis 8 kurar. Ortamın çalışması için gerekli değildir. Port varsayılanı 16379’dur (sistem 6379 ile çakışmaz). Sunucu `redis-server` ile 127.0.0.1’e bağlanır; parola yoktur. Veri dizini `data/redis`. ServerBond `.env` yazmaz.
 
 Laravel tarafında `.env` dosyasına `REDIS_CLIENT=predis`, `REDIS_HOST=127.0.0.1`, `REDIS_PORT=16379` ve isteğe bağlı `CACHE_STORE=redis` / `QUEUE_CONNECTION=redis` yazın. Resmî PHP NTS paketinde `redis` uzantısı yoktur; `predis/predis` kullanın.
 
-**Ortam başlatıldığında Redis'i de başlat** açıkken **Ortamı başlat** Redis’i de açar. Redis başlatılamazsa ortam çalışmaya devam eder; hata Redis kartında ve **Günlükler → redis** bölümünde görünür. Tepsi menüsü → Servisler → Redis ve komut satırı `f4box redis install|start|stop|repair|status` aynı işi yapar.
+**Ortam başlatıldığında Redis'i de başlat** açıkken **Ortamı başlat** Redis’i de açar. Redis başlatılamazsa ortam çalışmaya devam eder; hata Redis kartında ve **Günlükler → redis** bölümünde görünür. Tepsi menüsü → Servisler → Redis ve komut satırı `serverbond redis install|start|stop|repair|status` aynı işi yapar.
 
 ### Cloudflare tüneli
 
-**Hizmetler → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
+**Hizmetler → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi ServerBond klasörüne kurulur ve ortamın çalışması için gerekli değildir.
 
 1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun. **Install and run a connector** adımındaki jetonu veya tüm `cloudflared.exe service install …` satırını kopyalayın.
-2. **Hizmetler → Tünel** alanına yapıştırın. F4Box jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
+2. **Hizmetler → Tünel** alanına yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
 3. **Kaydet ve tüneli başlat** Cloudflared’ı yoksa kurar, jetonu kaydeder ve bağlayıcıyı çalıştırır. Hangi genel adresin hangi porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler.
 
-Kurulum, onarım, başlat/durdur ve **Ortam başlatıldığında tüneli de başlat** aynı karttan yönetilir. Tepsi menüsü → Servisler → Cloudflare tüneli aynı başlat/durdur işini yapar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Komut satırından: `f4box tunnel install|token <jeton>|apply <jeton>|start|stop|status`.
+Kurulum, onarım, başlat/durdur ve **Ortam başlatıldığında tüneli de başlat** aynı karttan yönetilir. Tepsi menüsü → Servisler → Cloudflare tüneli aynı başlat/durdur işini yapar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Komut satırından: `serverbond tunnel install|token <jeton>|apply <jeton>|start|stop|status`.
 
 ### Windows izinleri
 
-F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. Uygulama açılırken Windows’tan **bir kez** tam yetki ister. Onay şunları uygular:
+ServerBond gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. Uygulama açılırken Windows’tan **bir kez** tam yetki ister. Onay şunları uygular:
 
-- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit`, `redis-server` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
+- ServerBond'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit`, `redis-server` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
 - Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
 - Microsoft Defender'da veri klasörü istisnası (açılıştaki istek bunu da ister; Ayarlar’dan kapatılabilir).
-- Sonraki kurulumlarda yeniden sormamak için `F4Box Permissions` zamanlanmış görevi (en yüksek yetki).
+- Sonraki kurulumlarda yeniden sormamak için `ServerBond Permissions` zamanlanmış görevi (en yüksek yetki).
 
-Yükseltilmiş yetkiyle yalnızca F4Box'ın ürettiği bu betik çalışır; uygulamanın kendisi her açılışta yükseltilmez. Onay bir kez verildikten sonra yeni PHP sürümü veya Mailpit kurulumu güvenlik duvarına sessizce eklenir. İstek reddedilirse F4Box bir daha kendiliğinden sormaz; **Ayarlar → Sistem** ekranından yeniden istenebilir. Komut satırından: `f4box permissions ensure|grant [defender]`.
+Yükseltilmiş yetkiyle yalnızca ServerBond'ın ürettiği bu betik çalışır; uygulamanın kendisi her açılışta yükseltilmez. Onay bir kez verildikten sonra yeni PHP sürümü veya Mailpit kurulumu güvenlik duvarına sessizce eklenir. İstek reddedilirse ServerBond bir daha kendiliğinden sormaz; **Ayarlar → Sistem** ekranından yeniden istenebilir. Komut satırından: `serverbond permissions ensure|grant [defender]`.
 
-**Ayarlar → Kurulum gereksinimleri**, Windows x64, Visual C++ x64 çalışma zamanı, Windows PowerShell, veri klasörüne yazma, disk alanı ve portları denetler. F4Box'a ait açık portlar kullanılabilir kabul edilir; başka uygulamanın portu hata olarak gösterilir. Visual C++ eksikse Microsoft indirme bağlantısı sunulur. Paket indirmeden önce platform, çalışma zamanı ve yazma erişimi denetlenir; düşük disk alanı uyarı olarak gösterilir. WebView2 kurulumu Tauri kurulum paketi tarafından yönetilir.
+**Ayarlar → Kurulum gereksinimleri**, Windows x64, Visual C++ x64 çalışma zamanı, Windows PowerShell, veri klasörüne yazma, disk alanı ve portları denetler. ServerBond'a ait açık portlar kullanılabilir kabul edilir; başka uygulamanın portu hata olarak gösterilir. Visual C++ eksikse Microsoft indirme bağlantısı sunulur. Paket indirmeden önce platform, çalışma zamanı ve yazma erişimi denetlenir; düşük disk alanı uyarı olarak gösterilir. WebView2 kurulumu Tauri kurulum paketi tarafından yönetilir.
 
-Her sürüm `bin/php/<sürüm>/` altında, üretilen PHP ayarları `config/php/<sürüm>/php.ini` altında tutulur. Uzantı dizini kullanılan PHP paketine aittir; eski kurulumların ortak `config/php.ini` dosyası artık kullanılmaz. F4Box bu ayar dosyalarını başlangıçta yeniden üretir. Windows genel PATH ayarı değiştirilmez.
+Her sürüm `bin/php/<sürüm>/` altında, üretilen PHP ayarları `config/php/<sürüm>/php.ini` altında tutulur. Uzantı dizini kullanılan PHP paketine aittir; eski kurulumların ortak `config/php.ini` dosyası artık kullanılmaz. ServerBond bu ayar dosyalarını başlangıçta yeniden üretir. Windows genel PATH ayarı değiştirilmez.
 
-PHP CLI ve FastCGI uzantıları sürüm geçişinden önce ayrı ayrı doğrulanır. Türkçe karakterli veri yolları için F4Box uzantı yolunu süreç argümanı ve `F4BOX_PHP_EXT` ortam değişkeniyle geçirir; Composer alt süreçleri aynı ayarı devralır. Üretilen `php.ini` başka bir terminalde kullanılacaksa bu ortam değişkeni de seçilen sürümün `ext` klasörünü göstermelidir.
+PHP CLI ve FastCGI uzantıları sürüm geçişinden önce ayrı ayrı doğrulanır. Türkçe karakterli veri yolları için ServerBond uzantı yolunu süreç argümanı ve `F4BOX_PHP_EXT` ortam değişkeniyle geçirir; Composer alt süreçleri aynı ayarı devralır. Üretilen `php.ini` başka bir terminalde kullanılacaksa bu ortam değişkeni de seçilen sürümün `ext` klasörünü göstermelidir.
 
 **Yeni Laravel projesi** Laravel 12 oluşturduğu için PHP 8.2 veya üzeri gerektirir. Daha eski PHP seçiliyken işlem dosya oluşturmadan açıklama gösterir; mevcut projeler eklenebilir.
 
 ### MySQL
 
-**phpMyAdmin:** Bileşenler ekranından phpMyAdmin'i indirin veya **Bileşenleri kur** ile tümünü kurun. PHP, MySQL ve Caddy çalışırken phpMyAdmin satırındaki **Aç** düğmesini kullanın. Adres `http://phpmyadmin.f4box.localhost:<web-portu>/` biçimindedir. Ayrı bir phpMyAdmin servisi gerekmez; varsayılan PHP sürümü kullanılır. Mevcut projelerin PHP seçimleri değişmez.
+**phpMyAdmin:** Bileşenler ekranından phpMyAdmin'i indirin veya **Bileşenleri kur** ile tümünü kurun. PHP, MySQL ve Caddy çalışırken phpMyAdmin satırındaki **Aç** düğmesini kullanın. Adres `http://phpmyadmin.serverbond.localhost:<web-portu>/` biçimindedir. Ayrı bir phpMyAdmin servisi gerekmez; varsayılan PHP sürümü kullanılır. Mevcut projelerin PHP seçimleri değişmez.
 
-Kullanıcı `root`; parola **Ayarlar → Sistem → MySQL bağlantısı → Parolayı göster** bölümündedir. MySQL portu her web sunucusu başlangıcında F4Box ayarlarından alınır. Giriş cookie kimlik doğrulaması kullanır; MySQL parolası phpMyAdmin yapılandırmasına yazılmaz. Oturum ve geçici dosyalar `data/phpmyadmin/` altında, web kökünün dışında saklanır. Yalnızca yerel bilgisayardan erişilir; yapılandırma ve kurulum dizinleri HTTP üzerinden açılmaz. `config.inc.php` F4Box tarafından üretilir. Onarım MySQL verilerini değiştirmez.
+Kullanıcı `root`; parola **Ayarlar → Sistem → MySQL bağlantısı → Parolayı göster** bölümündedir. MySQL portu her web sunucusu başlangıcında ServerBond ayarlarından alınır. Giriş cookie kimlik doğrulaması kullanır; MySQL parolası phpMyAdmin yapılandırmasına yazılmaz. Oturum ve geçici dosyalar `data/phpmyadmin/` altında, web kökünün dışında saklanır. Yalnızca yerel bilgisayardan erişilir; yapılandırma ve kurulum dizinleri HTTP üzerinden açılmaz. `config.inc.php` ServerBond tarafından üretilir. Onarım MySQL verilerini değiştirmez.
 
 phpMyAdmin'in isteğe bağlı yapılandırma depolaması tabloları otomatik oluşturulmaz. Bu nedenle gelişmiş özelliklerle ilgili bir bildirim görülebilir; veritabanlarını görüntüleme ve SQL çalıştırma kullanılabilir.
 
@@ -189,10 +189,10 @@ DB_USERNAME=root
 
 ### Dosyalar
 
-Varsayılan veri dizini `%LOCALAPPDATA%\F4Box`; geliştirme/test için `F4BOX_HOME` ile değiştirilebilir.
+Varsayılan veri dizini `%LOCALAPPDATA%\ServerBond`; geliştirme/test için `SERVERBOND_HOME` ile değiştirilebilir.
 
 ```text
-F4Box/
+ServerBond/
   bin/       # sürüme göre ayrılmış programlar
   cache/     # SHA-256 doğrulanan indirme önbelleği
   config/    # PHP, Caddy, MySQL ayarları ve şifreli parola
@@ -204,7 +204,7 @@ F4Box/
   config.json
 ```
 
-Uygulama kapanırken servisler durur. Windows Job Objects beklenmeyen kapanışta alt süreçlerin açık kalmasını önler. MySQL normal kapanışta `mysqladmin shutdown` kullanır. Aynı veri klasörünü ikinci bir F4Box süreci açamaz. Projeyi listeden kaldırmak proje klasörünü veya veritabanını silmez.
+Uygulama kapanırken servisler durur. Windows Job Objects beklenmeyen kapanışta alt süreçlerin açık kalmasını önler. MySQL normal kapanışta `mysqladmin shutdown` kullanır. Aynı veri klasörünü ikinci bir ServerBond süreci açamaz. Projeyi listeden kaldırmak proje klasörünü veya veritabanını silmez.
 
 ### Sorun giderme ve onarım
 
@@ -232,7 +232,7 @@ npm run desktop
 npm run desktop:build
 ```
 
-Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Yerel veya CI imzasız paketi `npm run desktop:build:unsigned` ile üretilir. İmzalı güncelleme paketi ve `latest.json` için `TAURI_SIGNING_PRIVATE_KEY` ile `npm run desktop:build` veya `.github/workflows/release.yml` kullanılır. Windows CI imzasız `F4Box_<sürüm>_x64.exe`, `F4Box_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
+Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Yerel veya CI imzasız paketi `npm run desktop:build:unsigned` ile üretilir. İmzalı güncelleme paketi ve `latest.json` için `TAURI_SIGNING_PRIVATE_KEY` ile `npm run desktop:build` veya `.github/workflows/release.yml` kullanılır. Windows CI imzasız `ServerBond_<sürüm>_x64.exe`, `ServerBond_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
 
 ### Doğrulama
 
@@ -252,7 +252,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 Gerçek paketleri indirip MySQL/PHP/Caddy ile bütünleşme testi:
 
 ```powershell
-# Masaüstü uygulaması kapalı olmalı. Ayrı veri klasörü istenirse F4BOX_HOME ayarlayın.
+# Masaüstü uygulaması kapalı olmalı. Ayrı veri klasörü istenirse SERVERBOND_HOME ayarlayın.
 npm run test:integration
 ```
 
@@ -261,16 +261,16 @@ Bu test boş portlar seçer; geçici projeyle PHP FastCGI yönlendirmesini, PDO 
 CLI de aynı çekirdeği kullanır:
 
 ```powershell
-cargo run -p f4box-core --bin f4box -- status
-cargo run -p f4box-core --bin f4box -- install all
-cargo run -p f4box-core --bin f4box -- php
-cargo run -p f4box-core --bin f4box -- php 7.4.33
-cargo run -p f4box-core --bin f4box -- serve
-cargo run -p f4box-core --bin f4box -- add benim-projem C:\Projeler\benim-projem
-cargo run -p f4box-core --bin f4box -- queue benim-projem start default
-cargo run -p f4box-core --bin f4box -- queue benim-projem failed
-cargo run -p f4box-core --bin f4box -- schedule benim-projem list
-cargo run -p f4box-core --bin f4box -- logs benim-projem php
+cargo run -p f4box-core --bin serverbond -- status
+cargo run -p f4box-core --bin serverbond -- install all
+cargo run -p f4box-core --bin serverbond -- php
+cargo run -p f4box-core --bin serverbond -- php 7.4.33
+cargo run -p f4box-core --bin serverbond -- serve
+cargo run -p f4box-core --bin serverbond -- add benim-projem C:\Projeler\benim-projem
+cargo run -p f4box-core --bin serverbond -- queue benim-projem start default
+cargo run -p f4box-core --bin serverbond -- queue benim-projem failed
+cargo run -p f4box-core --bin serverbond -- schedule benim-projem list
+cargo run -p f4box-core --bin serverbond -- logs benim-projem php
 ```
 
 Tüm PHP paketlerini indirerek FastCGI, uzantılar, Composer, çalışan ortamda sürüm geçişi, başarısız geçişten geri dönüş ve seçim kalıcılığı testi (ayrı geçici veri dizini kullanır):
@@ -300,7 +300,7 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 - Ayarlar, üretilen PHP/MySQL/Caddy dosyaları ve şifrelenmiş parolalar geçici dosyaya yazılıp diske aktarılır, ardından hedef dosya değiştirilir. İzin, disk veya dosya kilidi hatasında eski dosya korunur. Yapılandırmanın önceki geçerli sürümü ayrı tutulur.
 - Daha önce hazırlanmış MySQL'in veri klasörü kayıpsa boş veritabanı oluşturulmaz. Mevcut veri ile parola dosyası tutarsızsa başlatma durur. Sistem denetimi bu sorunları ve açık süreçlerin yanıt vermeyen portlarını gösterir.
 - Yapılandırma 2 MB, kurulum kaydı 256 KB, şifrelenmiş anahtar 64 KB ile sınırlıdır. Arşivlerde dosya sayısı, toplam açılmış boyut, gerçek dosya uzunluğu ve boş disk alanı denetlenir. Yakalanan komut çıktısı işlem sürerken izlenir; 8 MB sınırı veya süre sınırı aşılırsa ilgili alt süreç kapatılır.
-- Günlük görüntüleme son 64 KB ile sınırlıdır. F4Box'ın kendi günlüğü 4 MB üzerinde döndürülür; bir önceki dosya saklanır. PHP/MySQL/Caddy'nin sürekli yazdığı servis günlükleri bu döndürme kapsamına girmez.
+- Günlük görüntüleme son 64 KB ile sınırlıdır. ServerBond'ın kendi günlüğü 4 MB üzerinde döndürülür; bir önceki dosya saklanır. PHP/MySQL/Caddy'nin sürekli yazdığı servis günlükleri bu döndürme kapsamına girmez.
 - Beklenmedik servis kapanmaları görünür hata oluşturur; otomatik yeniden başlatma döngüsü yoktur. Başlangıç başarısızlığında yalnızca o işlemde başlatılan süreçler geri alınır. Kapatmada sahip olunan tüm servislere durdurma uygulanır.
 - Arayüz çizim hatalarında yeniden yükleme ekranı gösterilir. Durum okuması yanıt vermediğinde işlemler devre dışı kalır; aynı bekleyen okuma tekrar gönderilmez. Uzun süren yazma/kurulum işlemleri arayüz zaman aşımıyla yeniden başlatılmaz.
 
@@ -330,15 +330,15 @@ cargo test -p f4box-core --test preferences_runtime -- --ignored --nocapture
 
 ## Windows masaüstü ve sistem tepsisi
 
-Saat yanındaki F4Box simgesine sol tıklamak pencereyi açar; sağ tıklamak hızlı menüyü açar. Simge Windows'un gizli simgeler bölümünde olabilir. Menüde tüm servisleri başlat/durdur/yeniden başlat, ayrı PHP/MySQL/web servisleri, phpMyAdmin, Ayarlar / Özellikler, **Güncellemeleri denetle**, günlükler, veri klasörü ve Çıkış bulunur. Menü durumu pencere gizliyken de güncellenir. Ana penceredeki **Hızlı menü** aynı Windows menüsünü açar.
+Saat yanındaki ServerBond simgesine sol tıklamak pencereyi açar; sağ tıklamak hızlı menüyü açar. Simge Windows'un gizli simgeler bölümünde olabilir. Menüde tüm servisleri başlat/durdur/yeniden başlat, ayrı PHP/MySQL/web servisleri, phpMyAdmin, Ayarlar / Özellikler, **Güncellemeleri denetle**, günlükler, veri klasörü ve Çıkış bulunur. Menü durumu pencere gizliyken de güncellenir. Ana penceredeki **Hızlı menü** aynı Windows menüsünü açar.
 
 **Ayarlar → Genel → Windows ve sistem tepsisi** altında üç tercih vardır:
 
-- Windows oturumu açıldığında F4Box'ı çalıştır: yalnızca mevcut Windows kullanıcısının başlangıç kaydını yönetir. İlk kurulumda kapalıdır; yönetici yetkisi istemez.
+- Windows oturumu açıldığında ServerBond'ı çalıştır: yalnızca mevcut Windows kullanıcısının başlangıç kaydını yönetir. İlk kurulumda kapalıdır; yönetici yetkisi istemez.
 - Windows başlangıcında tepside çalıştır: otomatik açılışta pencereyi gizler. Normal kısayolla açılış her zaman pencereyi gösterir; tepsi veya yapılandırma hatasında pencere gizlenmez.
-- Pencereyi kapatınca tepsiye küçült: varsayılan olarak açıktır; X düğmesi servisleri çalışır bırakır. Bu seçenek kapalıysa X düğmesi servisleri durdurup çıkar. Menüdeki **Çıkış — servisleri durdur** ve penceredeki **F4Box'tan çık** her zaman tam çıkış içindir.
+- Pencereyi kapatınca tepsiye küçült: varsayılan olarak açıktır; X düğmesi servisleri çalışır bırakır. Bu seçenek kapalıysa X düğmesi servisleri durdurup çıkar. Menüdeki **Çıkış — servisleri durdur** ve penceredeki **ServerBond'tan çık** her zaman tam çıkış içindir.
 
-Bu tercihler servisler çalışırken de kaydedilebilir. PHP/MySQL/Caddy'nin F4Box açıldığında başlaması, ayrı **F4Box açıldığında ortamı otomatik başlat** seçeneğine bağlıdır. Tam otomatik ortam için hem Windows başlangıcını hem ortam başlangıcını açın. Kısayola ikinci kez tıklamak mevcut pencereyi öne getirir; ikinci bir servis grubu başlatmaz.
+Bu tercihler servisler çalışırken de kaydedilebilir. PHP/MySQL/Caddy'nin ServerBond açıldığında başlaması, ayrı **ServerBond açıldığında ortamı otomatik başlat** seçeneğine bağlıdır. Tam otomatik ortam için hem Windows başlangıcını hem ortam başlangıcını açın. Kısayola ikinci kez tıklamak mevcut pencereyi öne getirir; ikinci bir servis grubu başlatmaz.
 
 Masaüstü tercihleri `config/desktop.json` içinde, önceki dosya `config/desktop.previous.json` içinde tutulur. Windows başlangıç kaydı işletim sisteminden okunur; uygulama açılırken kullanıcı izni olmadan yeniden etkinleştirilmez. Bu cihaz tercihleri PHP/sunucu ayarlarının JSON aktarımına dahil değildir. Boşluklu/Türkçe yollar tırnaklanır; Windows başlangıç komutunun 260 karakter sınırı denetlenir. Programın konumunu değiştirdiğinizde başlangıç seçeneğini kapatıp yeniden açın; kaldırmadan önce otomatik başlangıcı kapatın.
 

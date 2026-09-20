@@ -1,12 +1,12 @@
-# Herd, Laragon, Forge ve F4Box
+# Herd, Laragon, Forge ve ServerBond
 
-İnceleme tarihi: 20 Eylül 2026. Kapsam: Laravel Herd, Laragon ve Laravel Forge’un kamuya açık belgelerindeki roller ile F4Box’ın Windows üzerindeki konumu. Üç ürünün arayüzü bu incelemede tek tek tıklanarak doğrulanmamıştır; belgelerde yazılmayan davranış varsayılmamıştır. Laragon satırları için ayrıntı: [laragon-incelemesi.md](laragon-incelemesi.md).
+İnceleme tarihi: 20 Eylül 2026. Kapsam: Laravel Herd, Laragon ve Laravel Forge’un kamuya açık belgelerindeki roller ile ServerBond’ın Windows üzerindeki konumu. Üç ürünün arayüzü bu incelemede tek tek tıklanarak doğrulanmamıştır; belgelerde yazılmayan davranış varsayılmamıştır. Laragon satırları için ayrıntı: [laragon-incelemesi.md](laragon-incelemesi.md).
 
-F4Box bir yerel geliştirme kopyası (Herd / Laragon) değildir. Amaç, Windows x64 sunucuda Laravel uygulamasını **üretim olarak** çalıştırmaktır: sabit PHP/MySQL/Caddy, proje PHP’si, kuyruk, zamanlayıcı ve yapılandırılmış sürüm (git + Composer + Artisan). Laravel Forge’un uzak Linux VPS, SSH ve push-to-deploy katmanı yoktur; üretim bu Windows makinesindedir.
+ServerBond bir yerel geliştirme kopyası (Herd / Laragon) değildir. Amaç, Windows x64 sunucuda Laravel uygulamasını **üretim olarak** çalıştırmaktır: sabit PHP/MySQL/Caddy, proje PHP’si, kuyruk, zamanlayıcı ve yapılandırılmış sürüm (git + Composer + Artisan). Laravel Forge’un uzak Linux VPS, SSH ve push-to-deploy katmanı yoktur; üretim bu Windows makinesindedir.
 
 ## Ürün rolleri
 
-| Ürün | Rol | F4Box karşılığı |
+| Ürün | Rol | ServerBond karşılığı |
 | --- | --- | --- |
 | **Laravel Herd** | macOS/Windows **geliştirme**: yerel PHP/nginx, site isolate, Pro’da dump / Xdebug / günlük, Expose | PHP 7.4–8.5, proje PHP, Caddy, HTTPS, Mailpit, Cloudflare tüneli. Dump, Xdebug ve Expose yok; bunlar geliştirme aracıdır. |
 | **Laragon** | Taşınabilir **geliştirme** WAMP; Quick-add, Quick-app, Mailpit, Auto SSL, Procfile | Caddy + MySQL 8.4, isteğe bağlı PostgreSQL 17 ve Redis 8, Mailpit, HTTPS, kuyruk/zamanlayıcı. Apache ve serbest Procfile yok. |
@@ -19,20 +19,20 @@ flowchart LR
     Laragon
   end
   subgraph windows [Windows üretimi]
-    F4Box
+    ServerBond
   end
   subgraph remote [Uzak Linux VPS]
     Forge
   end
-  F4Box -->|"Sürüm"| Recipe[git_composer_artisan]
+  ServerBond -->|"Sürüm"| Recipe[git_composer_artisan]
   Recipe --> Restart[kuyruk_ve_zamanlama]
 ```
 
 ## Forge Deployments’ın yerel karşılığı
 
-Forge’da sürüm uzak sunucuda çalışır: depo çekilir, isteğe bağlı script çalışır, kuyruk işçileri Supervisor üzerinden yenilenir. F4Box aynı sırayı **proje klasöründe** uygular; kabuk scripti yoktur.
+Forge’da sürüm uzak sunucuda çalışır: depo çekilir, isteğe bağlı script çalışır, kuyruk işçileri Supervisor üzerinden yenilenir. ServerBond aynı sırayı **proje klasöründe** uygular; kabuk scripti yoktur.
 
-| Forge (uzak) | F4Box (yerel, bu makine) |
+| Forge (uzak) | ServerBond (yerel, bu makine) |
 | --- | --- |
 | Git pull / seçilen dal | `git pull`; isteğe bağlı dal. `git` PATH’te yoksa Türkçe hata. |
 | `composer install --no-dev` (üretim) | Katalogdaki Composer + projenin PHP’si; isteğe bağlı `--no-dev`. |
@@ -49,8 +49,8 @@ Forge’da sürüm uzak sunucuda çalışır: depo çekilir, isteğe bağlı scr
 
 Ürün kuralı ve önceki kapsam: Apache/Nginx seçimi, Horizon, uzak SSH, Expose/ngrok, dump penceresi, Xdebug uzantısı, serbest PowerShell scripti, zero-downtime symlink sürümü ve genel sertifika otoritesi. PostgreSQL ve Redis isteğe bağlı araçlardır; MySQL varsayılan kalır.
 
-Herd’in site isolate ve paylaşım katmanı Cloudflare tüneli ile kısmen karşılanır; genel adres eşlemesi Cloudflare panelindedir. Laragon Quick-add paketleri F4Box katalog doğrulamasıyla sınırlıdır.
+Herd’in site isolate ve paylaşım katmanı Cloudflare tüneli ile kısmen karşılanır; genel adres eşlemesi Cloudflare panelindedir. Laragon Quick-add paketleri ServerBond katalog doğrulamasıyla sınırlıdır.
 
 ## Doğrulama
 
-Sürüm tarifinin enjeksiyon reddi, adım sırası, `git` yokken hata, `migrate --force --no-ansi` ve eski `config.json` yüklemesi çekirdek testlerindedir. Yeni kurulumda `display_errors` kapalıdır; hatalar günlüğe yazılır. Arayüz: proje detayı → **Sürüm**. CLI: `f4box project release <ad>`.
+Sürüm tarifinin enjeksiyon reddi, adım sırası, `git` yokken hata, `migrate --force --no-ansi` ve eski `config.json` yüklemesi çekirdek testlerindedir. Yeni kurulumda `display_errors` kapalıdır; hatalar günlüğe yazılır. Arayüz: proje detayı → **Sürüm**. CLI: `serverbond project release <ad>`.

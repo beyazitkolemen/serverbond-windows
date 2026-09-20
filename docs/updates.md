@@ -1,12 +1,12 @@
 # GitHub üzerinden otomatik güncelleme
 
-F4Box, yayımlanmış GitHub sürümlerindeki imzalı NSIS paketini `latest.json` ile denetler. Kullanıcı onayı olmadan indirmez veya kurmaz.
+ServerBond, yayımlanmış GitHub sürümlerindeki imzalı NSIS paketini `latest.json` ile denetler. Kullanıcı onayı olmadan indirmez veya kurmaz.
 
 ## Kullanıcı
 
 1. Masaüstü uygulamasını açın. Yeni sürüm varsa genel bakışta bir bildirim görünür.
 2. **Ayarlar → Güncellemeler** veya tepsi menüsündeki **Güncellemeleri denetle** ile GitHub’ı sorun.
-3. Sürüm notlarını okuyup **kur ve yeniden başlat** deyin. Çalışan PHP/MySQL/Caddy durur; kurulum bitince F4Box yeniden açılır.
+3. Sürüm notlarını okuyup **kur ve yeniden başlat** deyin. Çalışan PHP/MySQL/Caddy durur; kurulum bitince ServerBond yeniden açılır.
 
 Kaynak: `https://github.com/beyazitkolemen/f4box-laravel/releases/latest/download/latest.json`
 
@@ -59,4 +59,4 @@ npm run desktop:build:unsigned
 
 - İndirilen paket minisign ile `pubkey` karşısında doğrulanır.
 - CSP, güncelleyicinin `github.com`, `objects.githubusercontent.com` ve `release-assets.githubusercontent.com` adreslerine bağlanmasına izin verir.
-- `relaunch` mevcut F4Box sürecini kapatır; `Manager` düşerken servisler durur.
+- `relaunch` mevcut ServerBond sürecini kapatır; `Manager` düşerken servisler durur.

@@ -193,7 +193,7 @@ impl Manager {
             schedule: Default::default(),
             release: Default::default(),
         };
-        if project.host == "phpmyadmin.f4box.localhost" {
+        if crate::product::is_phpmyadmin_host(&project.host) {
             bail!("Bu adres phpMyAdmin için ayrılmış.");
         }
         let mut config = original.clone();
@@ -237,7 +237,7 @@ impl Manager {
                 continue;
             };
             let host = config.settings.project_host(&name);
-            if host == "phpmyadmin.f4box.localhost" {
+            if crate::product::is_phpmyadmin_host(&host) {
                 continue;
             }
             used.insert(name.clone());
@@ -294,7 +294,7 @@ impl Manager {
                 schedule: Default::default(),
                 release: Default::default(),
             };
-            if project.host == "phpmyadmin.f4box.localhost" {
+            if crate::product::is_phpmyadmin_host(&project.host) {
                 bail!("Bu adres phpMyAdmin için ayrılmış.");
             }
             config.projects.push(project.clone());

@@ -1,4 +1,4 @@
-# F4Box tasarım sistemi
+# ServerBond tasarım sistemi
 
 Türkçe Windows Laravel üretim paneli. React ve mevcut CSS altyapısı korunur; tüm durumlar Rust çekirdeğinden gelir.
 

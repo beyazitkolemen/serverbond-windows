@@ -168,10 +168,10 @@ export default function PostgresSettings({
         PostgreSQL isteğe bağlıdır ve ortamı bloke etmez. Laravel{" "}
         <code>DB_CONNECTION=pgsql</code>, <code>DB_HOST=127.0.0.1</code>,{" "}
         <code>DB_PORT={postgres.port}</code>, <code>DB_USERNAME=postgres</code>{" "}
-        değerlerini kendi <code>.env</code> dosyanızda tanımlarsınız; F4Box
+        değerlerini kendi <code>.env</code> dosyanızda tanımlarsınız; ServerBond
         yazmaz. PHP <code>pgsql</code> / <code>pdo_pgsql</code> uzantılarını PHP
         sekmesinden açın. Komut:{" "}
-        <code>f4box postgres install|start|stop|repair</code>.
+        <code>serverbond postgres install|start|stop|repair</code>.
       </p>
     </section>
   );

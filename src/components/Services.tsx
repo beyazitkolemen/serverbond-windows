@@ -6,6 +6,7 @@ import {
   ToolCommand,
   WorkspaceService,
 } from "../domain";
+import { PMA_HOST } from "../product";
 import type {
   ToolCommand as ToolCommandName,
   WorkspaceService as ServiceId,
@@ -300,8 +301,8 @@ export default function Services({
       case WorkspaceService.PhpMyAdmin: {
         const enabled = settings.phpmyadmin.enabled;
         const url = settings.web.https
-          ? `https://phpmyadmin.f4box.localhost:${settings.web.httpsPort}`
-          : `http://phpmyadmin.f4box.localhost:${settings.webPort}`;
+          ? `https://${PMA_HOST}:${settings.web.httpsPort}`
+          : `http://${PMA_HOST}:${settings.webPort}`;
         return {
           kind: (enabled
             ? running

@@ -35,7 +35,7 @@ export default function ProjectEnv({
   return (
     <div className="project-pane env-editor">
       <p className="section-note">
-        Yalnızca bu projenin kökündeki <code>.env</code> dosyası. F4Box
+        Yalnızca bu projenin kökündeki <code>.env</code> dosyası. ServerBond
         kendiliğinden yazmaz; Kaydet sizin onayınızdır. PHP, kuyruk ve
         zamanlayıcı açıkken değişiklik için süreçleri yeniden başlatın.
       </p>

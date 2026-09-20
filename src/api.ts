@@ -28,8 +28,8 @@ const preview: Snapshot = {
     issue: null,
   })),
   projects: [],
-  logs: ["F4Box hazır. Kurulum başlatılabilir."],
-  home: "%LOCALAPPDATA%\\F4Box",
+  logs: ["ServerBond hazır. Kurulum başlatılabilir."],
+  home: "%LOCALAPPDATA%\\ServerBond",
   settings: {
     webPort: 8088,
     mysqlPort: 13306,
@@ -229,8 +229,8 @@ export async function call<T = void>(
   }
   if (command === "snapshot") {
     // scripts/ai/screenshots.mjs renders the interface with sample data.
-    const sample = (globalThis as { __F4BOX_PREVIEW__?: Snapshot })
-      .__F4BOX_PREVIEW__;
+    const sample = (globalThis as { __SERVERBOND_PREVIEW__?: Snapshot })
+      .__SERVERBOND_PREVIEW__;
     return structuredClone(sample ?? preview) as T;
   }
   if (command === "read_project_log") {
@@ -316,7 +316,7 @@ export async function call<T = void>(
       },
     ] as T;
   throw new Error(
-    "Bu işlem için F4Box masaüstü uygulamasını açın. Tarayıcı görünümü yalnızca önizlemedir.",
+    "Bu işlem için ServerBond masaüstü uygulamasını açın. Tarayıcı görünümü yalnızca önizlemedir.",
   );
 }
 

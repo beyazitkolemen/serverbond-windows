@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn ca_candidates_stay_under_the_data_directory() {
-        let home = Path::new("C:/F4Box Home");
+        let home = Path::new("C:/ServerBond Home");
         let paths = local_ca_candidates(home);
         assert!(paths.iter().all(|path| path.starts_with(home)));
         assert!(paths.iter().all(|path| path.ends_with("root.crt")));
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn user_store_trust_does_not_touch_the_machine_root() {
         let args = user_trust_args(Path::new(
-            "C:/F4Box/data/caddy/pki/authorities/local/root.crt",
+            "C:/ServerBond/data/caddy/pki/authorities/local/root.crt",
         ));
         assert_eq!(args[0], "-user");
         assert!(args.contains(&"Root".into()));

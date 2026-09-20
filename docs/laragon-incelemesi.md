@@ -1,13 +1,13 @@
-# Laragon incelemesi ve F4Box ayarları
+# Laragon incelemesi ve ServerBond ayarları
 
 İnceleme tarihi: 20 Eylül 2026. Kapsam: Laragon'un resmî belgeleri ile bu depodaki Rust/Tauri uygulamasının karşılaştırılması. Laragon'un Windows arayüzünü kurup bütün menülerini test ettiğimiz anlamına gelmez. Belgelerde açıklanmayan davranışlar varsayılmamıştır.
 
 ## Bulgular ve karşılaştırma
 
-| Alan | Laragon'da belgelenen davranış | F4Box'taki karşılık / açık kalan iş |
+| Alan | Laragon'da belgelenen davranış | ServerBond'taki karşılık / açık kalan iş |
 | --- | --- | --- |
 | Kullanıcı ayarları | `usr` kullanıcı tercihlerini, `usr/tpl` kalıcı şablonları tutar. Güncellemede korunur. [Dizin yapısı](https://laragon.org/docs/directory-structure), [Flexible](https://laragon.org/docs/flexible) | Tercihler `config.json` içinde. PHP, MySQL, Caddy ve phpMyAdmin dosyaları buradan üretilir. Ayarlar onarımda korunur. Önceki tercihler ayrıca yedeklenir. Serbest Caddy/MySQL şablon editörü yok. |
-| Proje / veri klasörleri | Document Root ve veritabanı veri dizini Preferences üzerinden değiştirilebilir. [Dizin yapısı](https://laragon.org/docs/directory-structure) | Yeni proje ve SQL yedek klasörü seçilebilir. Kayıtlı projeler kendi yolunda kalır. Mevcut MySQL veri dizinini taşıma sihirbazı yok; ana konum başlangıçta `F4BOX_HOME` ile belirlenebilir. |
+| Proje / veri klasörleri | Document Root ve veritabanı veri dizini Preferences üzerinden değiştirilebilir. [Dizin yapısı](https://laragon.org/docs/directory-structure) | Yeni proje ve SQL yedek klasörü seçilebilir. Kayıtlı projeler kendi yolunda kalır. Mevcut MySQL veri dizinini taşıma sihirbazı yok; ana konum başlangıçta `SERVERBOND_HOME` ile belirlenebilir. |
 | Otomatik adresler | Document Root altındaki proje klasörleri Reload sonrası sanal sunucuya dönüşür; `{name}.test` kalıbı değiştirilebilir. Özel vhost dosyaları korunabilir. [Pretty URLs](https://laragon.org/docs/pretty-urls) | Eklenen projelerin `{name}.localhost` kalıbı değiştirilebilir; örneğin `{name}.dev.localhost`. Tüm kayıtlı adresler birlikte güncellenir. **Klasör tara** yeni projeler klasöründeki `public/index.php` köklerini listeler ve toplu ekler. `.test` için hosts yönetimi yok. |
 | Web sunucusu | Apache / Nginx sürümleri ve yapılandırmaları yönetilebilir. [Multi-Version](https://laragon.org/docs/multi-version), [CLI](https://laragon.org/docs/cli) | Caddy kullanılır. Port, FastCGI bağlantı/yanıt süreleri, sıkıştırma ve erişim günlüğü kullanıcı ayarıdır. Apache/Nginx seçimi ve `.htaccess` desteği yok. Laravel'in `public` kökü kullanılır. |
 | PHP sürümleri | PHP paketlerini ekleme ve menüden sürüm değiştirme belgelenir. [Multi-Version](https://laragon.org/docs/multi-version), [Operations](https://laragon.org/docs/operations) | PHP 7.4–8.5 kataloğu, varsayılan sürüm ve proje bazlı bağımsız PHP süreçleri mevcut. Ortak profil ve sürüme özel profil eklenmiştir. Aynı PHP sürümünü kullanan projeler aynı ini profilini paylaşır. |
@@ -17,10 +17,10 @@
 | Hızlı proje oluşturma | `sites.conf` ile proje tarifleri, otomatik veritabanı oluşturma ve paket önbelleği yönetilir. [Quick-app](https://laragon.org/docs/quick-app) | Laravel 12 Composer kurulumu ve mevcut Laravel projesi ekleme var. MySQL çalışıyorsa proje adıyla (tire → alt çizgi) veritabanı `CREATE DATABASE IF NOT EXISTS` ile açılır. `.env` yazılmaz. WordPress/Symfony tarifleri ve kullanıcı tanımlı komut kataloğu yok. |
 | Paket ekleme | `packages.conf` içindeki indirme adresleri değiştirilebilir; toplu ekleme vardır. [Quick-add](https://laragon.org/docs/quick-add) | Sabit sürüm + SHA-256 doğrulamalı beş bileşen, PHP sürüm kataloğu, toplu kurulum ve onarım. Kullanıcının keyfî indirme adresi eklemesi desteklenmez. |
 | Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer, kuruluysa Node.js ve PostgreSQL `bin` dizini ile PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
-| Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri (`--max-jobs`/`--max-time`, yeniden başlatma, günlük, `queue:failed`) ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
-| E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Hizmetler → E-posta bölümünde sabit `mailpit` paketi: SMTP ve arayüz portu, saklama sınırı, ortamla otomatik başlatma, tepsiden gelen kutusu ve isteğe bağlı PHP `mail()` yönlendirmesi. Laravel `.env` dosyası F4Box tarafından yazılmaz; değerler kartta gösterilir. |
+| Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında ServerBond, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri (`--max-jobs`/`--max-time`, yeniden başlatma, günlük, `queue:failed`) ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
+| E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Hizmetler → E-posta bölümünde sabit `mailpit` paketi: SMTP ve arayüz portu, saklama sınırı, ortamla otomatik başlatma, tepsiden gelen kutusu ve isteğe bağlı PHP `mail()` yönlendirmesi. Laravel `.env` dosyası ServerBond tarafından yazılmaz; değerler kartta gösterilir. |
 | Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Hizmetler → Tünel bölümünde Cloudflare Tunnel: sabit `cloudflared` paketi, DPAPI ile şifrelenen jeton, başlat/durdur ve ortamla otomatik başlatma. Ngrok ve bölge seçimi yok; genel adres eşlemesi Cloudflare panelinde yapılır. |
-| Taşınabilirlik | Laragon klasörünün başka sürücü/bilgisayara taşınması belgelenir. [Portable](https://laragon.org/docs/portable) | Programlar özel klasörde tutulur. F4Box parolaları Windows DPAPI ile mevcut hesaba bağlıdır; farklı bilgisayara klasör kopyalamak tam taşınabilirlik sağlamaz. Taşıma/export için ayrı tasarım gerekir. |
+| Taşınabilirlik | Laragon klasörünün başka sürücü/bilgisayara taşınması belgelenir. [Portable](https://laragon.org/docs/portable) | Programlar özel klasörde tutulur. ServerBond parolaları Windows DPAPI ile mevcut hesaba bağlıdır; farklı bilgisayara klasör kopyalamak tam taşınabilirlik sağlamaz. Taşıma/export için ayrı tasarım gerekir. |
 | Hızlı erişim | Sistem tepsisi menüsü servis, günlük ve terminal işlemlerini toplar. [Context Menu](https://laragon.org/docs/context-menu) | Windows tepsisinde başlat/durdur/yeniden başlat, servis alt menüleri, phpMyAdmin, ayarlar, günlükler, veri klasörü ve çıkış var. Tepsiye küçültme ve ikinci açılışta mevcut pencereyi gösterme desteklenir. Proje/terminal işlemleri ana pencerede. |
 
 ## Bu değişiklikte kullanılabilir ayarlar
@@ -39,7 +39,7 @@
 
 **PostgreSQL:** isteğe bağlı 17.11 sunucusu, port (varsayılan 15432), ortamla otomatik başlatma, kur/başlat/durdur/onar, parola göster/kopyala/değiştir. Veri dizini `data/postgresql-17`; parola DPAPI. Laravel `.env` yazılmaz; PHP `pgsql` / `pdo_pgsql` uzantıları PHP sekmesinden açılır.
 
-**Yedek ve aktarım:** yeni SQL yedekleri için mevcut klasör seçimi; proje kartından `.sql` geri yükleme (`mysql --one-database`); tercihlerin JSON olarak dışa/içe aktarımı; önceki tercihler ve varsayılanları taslağa alma. Aktarım F4Box tarafından saklanan MySQL yönetici parolasını, proje listesini, SQL verilerini ve paketleri kapsamaz.
+**Yedek ve aktarım:** yeni SQL yedekleri için mevcut klasör seçimi; proje kartından `.sql` geri yükleme (`mysql --one-database`); tercihlerin JSON olarak dışa/içe aktarımı; önceki tercihler ve varsayılanları taslağa alma. Aktarım ServerBond tarafından saklanan MySQL yönetici parolasını, proje listesini, SQL verilerini ve paketleri kapsamaz.
 
 ## Uygulama ve doğrulama kuralları
 
@@ -66,4 +66,4 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 - Tepsi menüsü ve kullanıcı tercihiyle Windows açılışında başlama.
 - Otomatik proje keşfi ve özel vhost/web kökü yönetimi (v1.1: `projects` / `www` ve isteğe bağlı çalışma alanı; iki seviye müşteri/uygulama taraması; özel vhost yok).
 
-Bunlar tamamlanmış özellikler değildir. Mevcut ayar ekranı, bugün F4Box tarafından yönetilen PHP/MySQL/Caddy/phpMyAdmin bileşenlerinin günlük geliştirme seçeneklerini kapsar.
+Bunlar tamamlanmış özellikler değildir. Mevcut ayar ekranı, bugün ServerBond tarafından yönetilen PHP/MySQL/Caddy/phpMyAdmin bileşenlerinin günlük geliştirme seçeneklerini kapsar.

@@ -93,7 +93,7 @@ impl Manager {
         let writable = tempfile::NamedTempFile::new_in(&self.home)
             .map(|mut file| {
                 use std::io::Write;
-                file.write_all(b"F4Box write check")?;
+                file.write_all(b"ServerBond write check")?;
                 file.as_file().sync_all()
             })
             .and_then(|r| r);
@@ -159,7 +159,7 @@ impl Manager {
                     if owned && !responsive {
                         "süreç açık ancak port yanıt vermiyor; günlükleri kontrol edin"
                     } else if owned {
-                        "F4Box tarafından kullanılıyor"
+                        "ServerBond tarafından kullanılıyor"
                     } else if free {
                         "kullanılabilir"
                     } else {

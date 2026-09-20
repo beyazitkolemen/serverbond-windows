@@ -546,19 +546,19 @@ impl Manager {
     }
 
     pub(crate) fn is_managed_log(id: &str) -> bool {
-        if [
-            "f4box",
-            "php",
-            "mysql",
-            "caddy",
-            "composer",
-            crate::tunnel::ID,
-            crate::mail::ID,
-            crate::postgres::ID,
-            crate::redis::ID,
-            "github",
-        ]
-        .contains(&id)
+        if crate::product::is_app_log(id)
+            || [
+                "php",
+                "mysql",
+                "caddy",
+                "composer",
+                crate::tunnel::ID,
+                crate::mail::ID,
+                crate::postgres::ID,
+                crate::redis::ID,
+                "github",
+            ]
+            .contains(&id)
         {
             return true;
         }

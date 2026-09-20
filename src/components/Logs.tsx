@@ -1,8 +1,9 @@
 import { call } from "../api";
+import { APP_NAME, LOG_ID } from "../product";
 import LogViewer from "./LogViewer";
 
 const sources = [
-  { id: "f4box", label: "F4Box" },
+  { id: LOG_ID, label: APP_NAME },
   { id: "php", label: "PHP" },
   { id: "mysql", label: "MySQL" },
   { id: "caddy", label: "Caddy" },

@@ -9,7 +9,7 @@ use std::{
     sync::{atomic::Ordering, MutexGuard, TryLockError},
 };
 
-const RESTART: &str = "Beklenmeyen iç hata algılandı. Yeni işlemler durduruldu; F4Box'tan Çıkış yapıp uygulamayı yeniden açın.";
+const RESTART: &str = "Beklenmeyen iç hata algılandı. Yeni işlemler durduruldu; ServerBond'tan Çıkış yapıp uygulamayı yeniden açın.";
 
 pub(crate) fn load_config(path: &Path) -> Result<(Config, bool)> {
     let mut config: Config = serde_json::from_slice(&storage::read_limited(path, 2 * 1024 * 1024)?)
@@ -39,7 +39,7 @@ pub(crate) fn load_config(path: &Path) -> Result<(Config, bool)> {
         crate::jobs::validate_project_jobs(&project.workers, &project.schedule)?;
         crate::release::validate_project_release(&project.release)?;
         if project.host != config.settings.project_host(&project.name)
-            || project.host == "phpmyadmin.f4box.localhost"
+            || crate::product::is_phpmyadmin_host(&project.host)
         {
             bail!("Geçersiz veya ayrılmış proje alan adı.");
         }

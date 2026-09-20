@@ -18,7 +18,7 @@ export default function NodeSettings({
       <p className="section-note">
         Laravel ön yüzü için <code>npm</code> ve <code>npx</code> gerekir. Sabit
         Node.js {node.version} LTS paketi resmî <code>SHASUMS256.txt</code>{" "}
-        özetiyle doğrulanarak F4Box klasörüne kurulur. Sistem PATH'i
+        özetiyle doğrulanarak ServerBond klasörüne kurulur. Sistem PATH'i
         değiştirilmez; sürüm yalnızca proje terminallerinde görünür.
       </p>
       <div className="tunnel-status">
@@ -75,7 +75,7 @@ export default function NodeSettings({
         Kurduktan sonra proje kartındaki <strong>Terminal</strong> düğmesiyle
         açılan pencerede <code>npm install</code> ve <code>npm run dev</code>{" "}
         çalışır. Açık terminalleri kapatıp yeniden açın. Komut satırından:{" "}
-        <code>f4box node install|repair|status</code>.
+        <code>serverbond node install|repair|status</code>.
       </p>
     </section>
   );

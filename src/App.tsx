@@ -248,8 +248,8 @@ export default function App() {
                 </button>
                 <button
                   className="icon-button"
-                  aria-label="F4Box'tan çık"
-                  title="F4Box'tan çık"
+                  aria-label="ServerBond'tan çık"
+                  title="ServerBond'tan çık"
                   disabled={operationBusy}
                   onClick={() => {
                     if (running) {
@@ -364,7 +364,7 @@ export default function App() {
                 <RefreshCw size={16} />
               </div>
               <div>
-                <h2>F4Box {appUpdate.version} yayımlandı</h2>
+                <h2>ServerBond {appUpdate.version} yayımlandı</h2>
                 <p>
                   Kurulu sürüm v{appUpdate.currentVersion}. Güncelleme GitHub
                   üzerinden indirilir; onayınız olmadan kurulmaz.
@@ -549,7 +549,7 @@ function LeaveDialog({
       aria-labelledby="leave-title"
     >
       <div className="modal-header">
-        <h2 id="leave-title">F4Box kapatılsın mı?</h2>
+        <h2 id="leave-title">ServerBond kapatılsın mı?</h2>
       </div>
       <p className="dialog-copy">
         Ortam çalışıyor. Çıkış PHP, MySQL ve web sunucusunu durdurur.

@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("ServerBond CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/ServerBond (SERVERBOND_HOME veya F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -326,7 +326,7 @@ fn smoke(manager: &Manager) -> Result<()> {
     manager.save_settings(settings.clone())?;
     let dir = tempfile::tempdir_in(manager.home.join("www"))?;
     std::fs::create_dir(dir.path().join("public"))?;
-    std::fs::write(dir.path().join("public/index.php"), "<?php header('Content-Type: application/json'); echo json_encode(['app'=>'F4Box', 'php'=>PHP_VERSION, 'pdo'=>extension_loaded('pdo_mysql'), 'uri'=>$_SERVER['REQUEST_URI']]);")?;
+    std::fs::write(dir.path().join("public/index.php"), "<?php header('Content-Type: application/json'); echo json_encode(['app'=>'ServerBond', 'php'=>PHP_VERSION, 'pdo'=>extension_loaded('pdo_mysql'), 'uri'=>$_SERVER['REQUEST_URI']]);")?;
     let name = format!("smoke-{}", &uuid::Uuid::new_v4().simple().to_string()[..8]);
     let project = manager.add_project(name.clone(), dir.path().into())?;
     let result = (|| -> Result<()> {
@@ -358,7 +358,7 @@ fn smoke(manager: &Manager) -> Result<()> {
             .send()?
             .error_for_status()?
             .json()?;
-        if response["app"] != "F4Box"
+        if response["app"] != "ServerBond"
             || response["pdo"] != true
             || response["uri"] != "/nested/route?check=1"
         {

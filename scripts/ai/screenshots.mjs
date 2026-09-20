@@ -113,7 +113,7 @@ const types = {
 
 function harness(html, sample, shot) {
   const script = `<script>
-globalThis.__F4BOX_PREVIEW__ = ${JSON.stringify(sample)};
+globalThis.__SERVERBOND_PREVIEW__ = ${JSON.stringify(sample)};
 addEventListener("DOMContentLoaded", () => {
   const click = (selector, text) => {
     const nodes = [...document.querySelectorAll(selector)];

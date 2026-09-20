@@ -33,10 +33,10 @@ export default function RedisActions({
         <code>.env</code> dosyasına <code>REDIS_CLIENT=predis</code>,{" "}
         <code>REDIS_HOST=127.0.0.1</code>, <code>REDIS_PORT={redis.port}</code>{" "}
         ve isteğe bağlı <code>CACHE_STORE=redis</code> /{" "}
-        <code>QUEUE_CONNECTION=redis</code> yazın. F4Box <code>.env</code>{" "}
+        <code>QUEUE_CONNECTION=redis</code> yazın. ServerBond <code>.env</code>{" "}
         yazmaz. Resmî PHP paketinde <code>redis</code> uzantısı yoktur;{" "}
         <code>predis/predis</code> kullanın. Komut:{" "}
-        <code>f4box redis install|start|stop|repair</code>.
+        <code>serverbond redis install|start|stop|repair</code>.
       </p>
     </section>
   );

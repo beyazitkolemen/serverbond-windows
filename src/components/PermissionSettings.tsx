@@ -20,7 +20,7 @@ export default function PermissionSettings({
     <section className="settings-section permission-section">
       <h2>Windows izinleri</h2>
       <p className="section-note">
-        F4Box açılırken Windows’tan bir kez tam yetki ister. Onay, güvenlik
+        ServerBond açılırken Windows’tan bir kez tam yetki ister. Onay, güvenlik
         duvarı kurallarını, veri klasörü erişimini ve isteğe bağlı Defender
         istisnasını uygular; ardından bir zamanlanmış görev kurulur. Uygulamanın
         kendisi yükseltilmiş yetkiyle çalışmaz. Sonraki açılışlarda ve yeni
@@ -28,13 +28,13 @@ export default function PermissionSettings({
       </p>
       <ul className="permission-list">
         <li>
-          Güvenlik duvarında F4Box’ın çalıştırdığı programlar için özel ve etki
+          Güvenlik duvarında ServerBond’ın çalıştırdığı programlar için özel ve etki
           alanı profillerinde izin kuralı
         </li>
         <li>Veri klasöründe Windows kullanıcınıza tam erişim</li>
         <li>İsteğe bağlı: Microsoft Defender’da veri klasörü istisnası</li>
         <li>
-          Tekrar sormamak için “F4Box Permissions” zamanlanmış görevi (en yüksek
+          Tekrar sormamak için “ServerBond Permissions” zamanlanmış görevi (en yüksek
           yetki)
         </li>
       </ul>
@@ -48,7 +48,7 @@ export default function PermissionSettings({
           </>
         ) : permissions.declined ? (
           <>
-            Açılıştaki yetki isteği onaylanmadı. F4Box bir daha kendiliğinden
+            Açılıştaki yetki isteği onaylanmadı. ServerBond bir daha kendiliğinden
             sormaz; aşağıdaki düğmeyle yeniden isteyebilirsiniz.
           </>
         ) : (

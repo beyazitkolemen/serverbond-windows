@@ -26,7 +26,7 @@ export default class ErrorBoundary extends Component<
             Arayüzü yeniden yükle
           </button>
           <p>
-            Hata sürerse tepsi menüsündeki Çıkış komutuyla F4Box'ı kapatıp
+            Hata sürerse tepsi menüsündeki Çıkış komutuyla ServerBond'ı kapatıp
             yeniden açın.
           </p>
         </main>

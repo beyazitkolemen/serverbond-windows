@@ -1,9 +1,9 @@
 ---
-description: F4Box genel asistan kuralları
+description: ServerBond genel asistan kuralları
 alwaysApply: true
 ---
 
-# F4Box
+# ServerBond
 
 Windows x64 üzerinde Laravel üretim ortamı yöneticisidir (Forge hissi, uzak VPS yok). Herd/Laragon geliştirme kopyası değildir. Cloud Agent Linux üzerindedir; masaüstü EXE, NSIS, tepsi ve gerçek PHP/MySQL/Caddy burada çalışmaz.
 
