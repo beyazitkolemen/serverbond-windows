@@ -67,7 +67,7 @@ impl Default for PhpSettings {
             input_vars: 1000,
             display_errors: false,
             log_errors: true,
-            opcache: false,
+            opcache: true,
             opcache_mb: 128,
             extensions: EXTENSIONS[..11].iter().map(|s| (*s).into()).collect(),
             extra_ini: String::new(),

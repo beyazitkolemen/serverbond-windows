@@ -44,7 +44,7 @@ const preview: Snapshot = {
       inputVars: 1000,
       displayErrors: false,
       logErrors: true,
-      opcache: false,
+      opcache: true,
       opcacheMb: 128,
       extensions: [
         "curl",
