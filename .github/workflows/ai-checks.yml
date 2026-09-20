@@ -1,0 +1,23 @@
+name: AI checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Native TLS libraries
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config libssl-dev
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Cloud Agent checks
+        run: npm run test:ai

@@ -119,7 +119,7 @@ Uygulama kapanırken servisler durur. Windows Job Objects beklenmeyen kapanışt
 
 ## Geliştirme
 
-Gereksinimler: Windows x64, Node.js 22.12+ veya 24, Rust stable MSVC, Microsoft C++ Build Tools (Desktop development with C++) ve WebView2. `rust-toolchain.toml` bu proje için MSVC seçer; sisteminizin varsayılan Rust zincirini değiştirmez.
+Gereksinimler: Windows x64, Node.js 22.12+ veya 24, Rust stable MSVC, Microsoft C++ Build Tools (Desktop development with C++) ve WebView2. `rust-toolchain.toml` `stable` kullanır; Windows masaüstü derlemesi için rustup varsayılanı `x86_64-pc-windows-msvc` olmalıdır. Cloud Agent kurulumu ve hızlı testler: [docs/ai-environment.md](docs/ai-environment.md).
 
 ```powershell
 npm ci
@@ -137,6 +137,12 @@ npm run desktop:build
 Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Windows CI aynı adımlarla `artifacts/F4Box_<sürüm>_x64.exe`, `F4Box_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
 
 ### Doğrulama
+
+```powershell
+npm run test:ai
+```
+
+Linux Cloud Agent ve çekirdek denetimleri `npm run test:ai` ile çalışır. Tam workspace clippy ve Tauri derlemesi Windows’ta:
 
 ```powershell
 npm run build

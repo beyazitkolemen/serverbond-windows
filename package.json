@@ -11,6 +11,7 @@
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
     "test:core": "cargo test -p f4box-core",
+    "test:ai": "bash scripts/ai/test.sh",
     "test:integration": "cargo run -p f4box-core --bin f4box -- smoke",
     "check": "npm run build && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
   },
