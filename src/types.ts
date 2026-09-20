@@ -143,6 +143,7 @@ export interface Settings {
   };
   mail: MailSettings;
   postgres: PostgresSettings;
+  redis: RedisSettings;
   projectsDir: string;
   backupsDir: string;
   startOnLaunch: boolean;
@@ -158,6 +159,10 @@ export interface PostgresSettings {
   port: number;
   autoStart: boolean;
 }
+export interface RedisSettings {
+  port: number;
+  autoStart: boolean;
+}
 export interface GithubState {
   tokenSaved: boolean;
   login: string | null;
@@ -170,6 +175,15 @@ export interface PostgresState {
   port: number;
   autoStart: boolean;
   passwordSaved: boolean;
+  issue: string | null;
+}
+export interface RedisState {
+  version: string;
+  installed: boolean;
+  running: boolean;
+  pid: number | null;
+  port: number;
+  autoStart: boolean;
   issue: string | null;
 }
 export interface MailState {
@@ -215,6 +229,7 @@ export interface Snapshot {
   tunnel: TunnelState;
   mail: MailState;
   postgres: PostgresState;
+  redis: RedisState;
   github: GithubState;
   node: NodeState;
   permissions: PermissionState;

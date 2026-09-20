@@ -140,6 +140,7 @@ pub fn required_files(package: &Package) -> Vec<&str> {
             "bin/psql.exe",
             "bin/pg_isready.exe",
         ],
+        "redis" => vec!["redis-server.exe", "redis-cli.exe", "msys-2.0.dll"],
         _ => vec![&package.executable],
     }
 }

@@ -13,6 +13,7 @@ pub mod preferences;
 mod process;
 mod project_runtime;
 mod projects;
+mod redis;
 mod release;
 pub mod requirements;
 mod resilience;
@@ -324,6 +325,7 @@ impl Manager {
         let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
         let mail = self.mail_state_with(&processes, &config.settings.mail);
         let postgres = self.postgres_state_with(&processes, &config.settings.postgres);
+        let redis = self.redis_state_with(&processes, &config.settings.redis);
         let github = self.github_state();
         let node = self.node_state();
         Ok(Snapshot {
@@ -416,6 +418,7 @@ impl Manager {
             tunnel,
             mail,
             postgres,
+            redis,
             github,
             node,
             permissions: self.permission_state(),
@@ -560,6 +563,9 @@ impl Manager {
             }
             if settings.postgres.auto_start {
                 services::port_free(settings.postgres.port)?;
+            }
+            if settings.redis.auto_start {
+                services::port_free(settings.redis.port)?;
             }
         }
         let mut config = self

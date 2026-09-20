@@ -30,5 +30,13 @@
     "sha256": "6eabdf00d2893713b75db4336a23c3fdf505f056e217ec6e2e95d901750cfea3",
     "archive": true, "prefix": "pgsql", "executable": "bin/postgres.exe",
     "license": "PostgreSQL", "source": "https://www.enterprisedb.com/download-postgresql-binaries"
+  },
+  {
+    "id": "redis", "name": "Redis", "version": "8.10.2",
+    "description": "İsteğe bağlı Redis · Laravel kuyruk, önbellek ve oturum.",
+    "url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.2/Redis-8.10.2-Windows-x64-msys2.zip",
+    "sha256": "7c8cebd50347eaa1d9e784da842ed47a4f33394637835531d6614777b950ee85",
+    "archive": true, "prefix": "Redis-8.10.2-Windows-x64-msys2", "executable": "redis-server.exe",
+    "license": "RSALv2 / SSPLv1", "source": "https://github.com/redis-windows/redis-windows/releases"
   }
 ]

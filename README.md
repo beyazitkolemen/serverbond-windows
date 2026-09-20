@@ -35,8 +35,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png) |
 | GitHub hesabı | GitHub’dan proje |
 | ![GitHub hesabı](docs/screenshots/12-github.png) | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png) |
-| Proje .env |  |
-| ![Proje .env editörü](docs/screenshots/14-proje-env.png) |  |
+| Proje .env | İsteğe bağlı Redis |
+| ![Proje .env editörü](docs/screenshots/14-proje-env.png) | ![İsteğe bağlı Redis](docs/screenshots/15-redis.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -84,7 +84,7 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 
 **Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
 
-Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `f4box schedule <ad> start|stop|restart|list|log` ve `f4box logs <ad> [php|schedule|işçi]`.
+Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis kuyruğu için **Hizmetler → Redis** ile isteğe bağlı sunucu kurulur; `database` veya `sync` bağlantısı yerel MySQL ile de kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `f4box schedule <ad> start|stop|restart|list|log` ve `f4box logs <ad> [php|schedule|işçi]`.
 
 ### Yerel sürüm
 
@@ -120,6 +120,14 @@ Laravel tarafında `.env` dosyasına `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`,
 
 **Ortam başlatıldığında PostgreSQL'i de başlat** açıkken **Ortamı başlat** PostgreSQL’i de açar. PostgreSQL başlatılamazsa ortam çalışmaya devam eder; hata PostgreSQL kartında ve **Günlükler → postgres** bölümünde görünür. Tepsi menüsü → Servisler → PostgreSQL ve komut satırı `f4box postgres install|start|stop|repair|password [parola]|status` aynı işi yapar.
 
+### İsteğe bağlı Redis
+
+**Hizmetler → Redis** Laravel kuyruk, önbellek ve oturum için Redis 8 kurar. Ortamın çalışması için gerekli değildir. Port varsayılanı 16379’dur (sistem 6379 ile çakışmaz). Sunucu `redis-server` ile 127.0.0.1’e bağlanır; parola yoktur. Veri dizini `data/redis`. F4Box `.env` yazmaz.
+
+Laravel tarafında `.env` dosyasına `REDIS_CLIENT=predis`, `REDIS_HOST=127.0.0.1`, `REDIS_PORT=16379` ve isteğe bağlı `CACHE_STORE=redis` / `QUEUE_CONNECTION=redis` yazın. Resmî PHP NTS paketinde `redis` uzantısı yoktur; `predis/predis` kullanın.
+
+**Ortam başlatıldığında Redis'i de başlat** açıkken **Ortamı başlat** Redis’i de açar. Redis başlatılamazsa ortam çalışmaya devam eder; hata Redis kartında ve **Günlükler → redis** bölümünde görünür. Tepsi menüsü → Servisler → Redis ve komut satırı `f4box redis install|start|stop|repair|status` aynı işi yapar.
+
 ### Cloudflare tüneli
 
 **Hizmetler → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
@@ -134,7 +142,7 @@ Kurulum, onarım, başlat/durdur ve **Ortam başlatıldığında tüneli de baş
 
 F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. Uygulama açılırken Windows’tan **bir kez** tam yetki ister. Onay şunları uygular:
 
-- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
+- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit`, `redis-server` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
 - Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
 - Microsoft Defender'da veri klasörü istisnası (açılıştaki istek bunu da ister; Ayarlar’dan kapatılabilir).
 - Sonraki kurulumlarda yeniden sormamak için `F4Box Permissions` zamanlanmış görevi (en yüksek yetki).
@@ -272,7 +280,7 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 
 ## İlk sürümün sınırları
 
-- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Redis ve otomatik HTTPS bu sürümde yoktur. Node.js tek sabit LTS paketiyle sunulur; sürümler arasında geçiş yoktur.
+- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Redis isteğe bağlıdır. Node.js tek sabit LTS paketiyle sunulur; sürümler arasında geçiş yoktur.
 - Ortam bu Windows makinesinde üretim içindir; Caddy loopback’e bağlanır. Dışarı Cloudflare tüneli ile açılır. Her proje tek bir PHP FastCGI süreci kullanır. Hatalar varsayılan olarak sayfada gösterilmez.
 - Yeni Laravel oluşturma PHP bağımlılıklarını kurar; frontend bağımlılıkları ve Vite derlemesi proje terminalinden `npm` ile yapılır.
 - MySQL sürüm yükseltmesi, otomatik veri taşıma ve yedekten geri yükleme henüz yoktur. Veri klasörünü başka MySQL sürümüyle açmayın.

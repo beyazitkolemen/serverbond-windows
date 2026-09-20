@@ -191,6 +191,8 @@ pub struct Settings {
     pub mail: crate::preferences::MailSettings,
     #[serde(default)]
     pub postgres: crate::preferences::PostgresSettings,
+    #[serde(default)]
+    pub redis: crate::preferences::RedisSettings,
     pub projects_dir: String,
     pub backups_dir: String,
     pub start_on_launch: bool,
@@ -210,6 +212,7 @@ impl Default for Settings {
             tunnel: Default::default(),
             mail: Default::default(),
             postgres: Default::default(),
+            redis: Default::default(),
             projects_dir: String::new(),
             backups_dir: String::new(),
             start_on_launch: false,
@@ -218,7 +221,7 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub fn reserved_ports(&self) -> [u16; 7] {
+    pub fn reserved_ports(&self) -> [u16; 8] {
         [
             self.web_port,
             self.mysql_port,
@@ -227,6 +230,7 @@ impl Settings {
             self.mail.web_port,
             self.web.https_port,
             self.postgres.port,
+            self.redis.port,
         ]
     }
 
@@ -319,6 +323,7 @@ pub struct Snapshot {
     pub tunnel: crate::tunnel::TunnelState,
     pub mail: crate::mail::MailState,
     pub postgres: crate::postgres::PostgresState,
+    pub redis: crate::redis::RedisState,
     pub github: crate::github::GithubState,
     pub node: crate::node::NodeState,
     pub permissions: crate::permissions::PermissionState,

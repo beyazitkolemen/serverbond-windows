@@ -44,6 +44,11 @@ impl Manager {
                 path_dirs.push(q(bin));
             }
         }
+        if let Ok(redis) = self.tool_executable(crate::redis::ID) {
+            if let Some(bin) = redis.parent() {
+                path_dirs.push(q(bin));
+            }
+        }
         let prefix = path_dirs.join(" + ';' + ");
         Ok(format!(
             "$ErrorActionPreference = 'Stop'\n$env:PATH = {prefix} + ';' + $env:PATH\n$env:PHPRC = {}\n$env:F4BOX_PHP_EXT = {ext}\n$env:PHP_INI_SCAN_DIR = ''\nfunction global:php {{ & {php} -c {} @args }}\nfunction global:composer {{ & {php} -c {} {} @args }}\nSet-Location -LiteralPath {}\n",

@@ -555,6 +555,7 @@ impl Manager {
             crate::tunnel::ID,
             crate::mail::ID,
             crate::postgres::ID,
+            crate::redis::ID,
             "github",
         ]
         .contains(&id)

@@ -211,6 +211,7 @@ impl Manager {
             crate::tunnel::ID,
             crate::mail::ID,
             crate::postgres::ID,
+            crate::redis::ID,
             crate::node::ID,
         ] {
             if let Ok(path) = self.tool_executable(tool) {

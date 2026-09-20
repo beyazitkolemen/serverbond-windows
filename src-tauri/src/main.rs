@@ -472,6 +472,18 @@ async fn postgres(
     .await
 }
 #[tauri::command]
+async fn redis(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "install" => state.install_redis(),
+        "repair" => state.repair_redis(),
+        "start" => state.start_redis(),
+        "stop" => state.stop_redis(),
+        _ => Err(anyhow::anyhow!("Bilinmeyen Redis işlemi")),
+    })
+    .await
+}
+#[tauri::command]
 async fn github(
     state: tauri::State<'_, State>,
     action: String,
@@ -750,6 +762,7 @@ fn main() {
             tunnel,
             mail,
             postgres,
+            redis,
             github,
             node,
             save_tunnel_token,

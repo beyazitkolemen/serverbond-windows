@@ -815,6 +815,38 @@ fn postgres_is_optional_and_rejects_port_collisions() {
 }
 
 #[test]
+fn redis_is_optional_and_rejects_port_collisions() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().redis;
+    assert!(!state.installed && !state.running);
+    assert_eq!(state.port, 16379);
+    assert!(!state.auto_start);
+
+    let mut settings = available_settings(Settings::default());
+    settings.redis.port = settings.web_port;
+    assert!(manager.save_settings(settings.clone()).is_err());
+
+    settings.redis.port = 16380;
+    settings.redis.auto_start = true;
+    manager.save_settings(settings).unwrap();
+    let saved = manager.snapshot().unwrap().redis;
+    assert_eq!(saved.port, 16380);
+    assert!(saved.auto_start);
+
+    assert!(manager
+        .start_redis()
+        .unwrap_err()
+        .to_string()
+        .contains("Redis kurulu değil"));
+    assert!(manager.stop_redis().is_ok());
+    assert_eq!(
+        manager.read_log("redis").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+}
+
+#[test]
 fn github_import_rejects_bad_repos_and_existing_folders() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

@@ -42,6 +42,12 @@ const shots = [
     height: 1560,
   },
   {
+    file: "15-redis.png",
+    nav: "Hizmetler",
+    tab: "Redis",
+    height: 1280,
+  },
+  {
     file: "12-github.png",
     nav: "Hizmetler",
     tab: "GitHub",

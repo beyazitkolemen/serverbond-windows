@@ -92,6 +92,7 @@ const preview: Snapshot = {
       maxMessages: 500,
     },
     postgres: { port: 15432, autoStart: false },
+    redis: { port: 16379, autoStart: false },
     projectsDir: "",
     backupsDir: "",
     startOnLaunch: false,
@@ -124,6 +125,15 @@ const preview: Snapshot = {
     port: 15432,
     autoStart: false,
     passwordSaved: false,
+    issue: null,
+  },
+  redis: {
+    version: toolVersion("redis"),
+    installed: false,
+    running: false,
+    pid: null,
+    port: 16379,
+    autoStart: false,
     issue: null,
   },
   github: {

@@ -20,8 +20,9 @@ Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her
 | Mailpit | `mailpit-windows-amd64.zip` 1.31.2, 10479883 bayt | yerelde hesaplandı | Hizmetler → E-posta |
 | Node.js | `node-v24.21.0-win-x64.zip` | resmî [`SHASUMS256.txt`](https://nodejs.org/dist/v24.21.0/SHASUMS256.txt) | Ayarlar → Sistem |
 | PostgreSQL | `postgresql-17.11-1-windows-x64-binaries.zip`, 340719294 bayt | yerelde hesaplandı | Hizmetler → PostgreSQL |
+| Redis | `Redis-8.10.2-Windows-x64-msys2.zip`, 13938657 bayt | GitHub release `digest` `7c8cebd5…ee85` | Hizmetler → Redis |
 
-Cloudflared, Mailpit ve PostgreSQL yayımlanmış bir özet dosyası sunmadığı için bu kayıtların SHA-256'sı indirilen dosyadan yerelde hesaplanmıştır. MySQL, cloudflared, Mailpit ve PostgreSQL özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
+Cloudflared, Mailpit ve PostgreSQL yayımlanmış bir özet dosyası sunmadığı için bu kayıtların SHA-256'sı indirilen dosyadan yerelde hesaplanmıştır. Redis özeti GitHub release `digest` alanından alınmıştır. MySQL, cloudflared, Mailpit ve PostgreSQL özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
 
 ## Sürüm güncelleme
 

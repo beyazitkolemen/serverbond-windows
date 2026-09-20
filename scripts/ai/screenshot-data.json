@@ -188,6 +188,7 @@
       "maxMessages": 500
     },
     "postgres": { "port": 15432, "autoStart": false },
+    "redis": { "port": 16379, "autoStart": false },
     "projectsDir": "",
     "backupsDir": "",
     "startOnLaunch": true
@@ -310,6 +311,15 @@
     "port": 15432,
     "autoStart": false,
     "passwordSaved": true,
+    "issue": null
+  },
+  "redis": {
+    "version": "8.10.2",
+    "installed": true,
+    "running": true,
+    "pid": 18240,
+    "port": 16379,
+    "autoStart": false,
     "issue": null
   },
   "github": {

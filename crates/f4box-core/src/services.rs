@@ -300,6 +300,7 @@ impl Manager {
                 } else {
                     self.start_mail_autostart();
                     self.start_postgres_autostart();
+                    self.start_redis_autostart();
                     self.start_tunnel_autostart();
                 }
                 outcome
@@ -308,6 +309,7 @@ impl Manager {
             crate::tunnel::ID => self.start_tunnel_inner(),
             crate::mail::ID => self.start_mail_inner(),
             crate::postgres::ID => self.start_postgres_inner(),
+            crate::redis::ID => self.start_redis_inner(),
             "php" => self.start_php(),
             "caddy" => {
                 let before = self
@@ -611,6 +613,7 @@ impl Manager {
             crate::tunnel::ID,
             crate::mail::ID,
             crate::postgres::ID,
+            crate::redis::ID,
         ]
         .contains(&id)
             && !Self::is_project_service_id(id)

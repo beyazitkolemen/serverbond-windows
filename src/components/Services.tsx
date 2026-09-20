@@ -6,10 +6,12 @@ import type {
   TunnelState,
   MailState,
   PostgresState,
+  RedisState,
   GithubState,
 } from "../types";
 import MailActions from "./MailActions";
 import PostgresSettings from "./PostgresSettings";
+import RedisActions from "./RedisActions";
 import GithubSettings from "./GithubSettings";
 import TunnelSettings from "./TunnelSettings";
 
@@ -17,6 +19,7 @@ const sections = [
   "phpMyAdmin",
   "E-posta",
   "PostgreSQL",
+  "Redis",
   "GitHub",
   "Tünel",
 ] as const;
@@ -78,6 +81,7 @@ export default function Services({
   tunnel,
   mail,
   postgres,
+  redis,
   github,
 }: {
   settings: Values;
@@ -87,6 +91,7 @@ export default function Services({
   tunnel: TunnelState;
   mail: MailState;
   postgres: PostgresState;
+  redis: RedisState;
   github: GithubState;
 }) {
   const [values, setValues] = useState(() => structuredClone(settings));
@@ -115,7 +120,7 @@ export default function Services({
       </nav>
       <p className="section-note">
         {running
-          ? "phpMyAdmin, e-posta ve PostgreSQL ayarlarını kaydetmek için önce ortamı durdurun. GitHub ve tünel jetonu ortam çalışırken de yazılır."
+          ? "phpMyAdmin, e-posta, PostgreSQL ve Redis ayarlarını kaydetmek için önce ortamı durdurun. GitHub ve tünel jetonu ortam çalışırken de yazılır."
           : "İsteğe bağlı hizmetler ortamın çalışması için gerekli değildir. Kaydedilen portlar sonraki başlangıçta uygulanır."}
       </p>
       <form
@@ -287,6 +292,34 @@ export default function Services({
               />
             </section>
           )}
+          {section === "Redis" && (
+            <section className="settings-section">
+              <h2>İsteğe bağlı Redis</h2>
+              <p className="section-note">
+                Laravel kuyruk, önbellek ve oturum için. Ortamın çalışması için
+                gerekli değildir; başlatılamazsa ortam düşmez. <code>.env</code>{" "}
+                yazılmaz.
+              </p>
+              <div className="settings-grid">
+                <NumberField
+                  label="Port"
+                  value={values.redis.port}
+                  min={1}
+                  max={65535}
+                  onChange={(v) =>
+                    change("redis", { ...values.redis, port: v })
+                  }
+                />
+              </div>
+              <Toggle
+                label="Ortam başlatıldığında Redis'i de başlat"
+                value={values.redis.autoStart}
+                onChange={(v) =>
+                  change("redis", { ...values.redis, autoStart: v })
+                }
+              />
+            </section>
+          )}
         </fieldset>
         {!["Tünel", "GitHub"].includes(section) && (
           <div className="settings-save">
@@ -320,6 +353,9 @@ export default function Services({
       )}
       {section === "PostgreSQL" && (
         <PostgresSettings postgres={postgres} busy={busy} run={run} />
+      )}
+      {section === "Redis" && (
+        <RedisActions redis={redis} busy={busy} run={run} />
       )}
       {section === "GitHub" && (
         <GithubSettings github={github} busy={busy} run={run} />

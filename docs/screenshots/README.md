@@ -18,7 +18,7 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Hizmetler
 
-phpMyAdmin, Mailpit, PostgreSQL, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır.
+phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır.
 
 ## Projeler, kuyruk ve zamanlama
 
@@ -55,6 +55,12 @@ Mailpit'in SMTP ve arayüz portları, saklama sınırı, PHP `mail()` yönlendir
 MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: port, otomatik başlatma, kur/başlat/onar ve parola. `.env` yazılmaz.
 
 ![İsteğe bağlı PostgreSQL](11-postgresql.png)
+
+## İsteğe bağlı Redis
+
+Laravel kuyruk, önbellek ve oturum için Redis 8: port 16379, kur/başlat/onar, otomatik başlatma. `.env` yazılmaz; Laravel `predis` kullanır.
+
+![İsteğe bağlı Redis](15-redis.png)
 
 ## GitHub hesabı ve proje ekleme
 

@@ -8,6 +8,7 @@ const sources = [
   { id: "caddy", label: "Caddy" },
   { id: "composer", label: "Composer" },
   { id: "postgres", label: "PostgreSQL" },
+  { id: "redis", label: "Redis" },
 ];
 
 export function LogPreview({

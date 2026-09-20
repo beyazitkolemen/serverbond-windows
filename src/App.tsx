@@ -30,7 +30,10 @@ const headings: Record<Page, [string, string]> = {
   packages: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
   projects: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
   logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
-  services: ["Hizmetler", "phpMyAdmin, e-posta, PostgreSQL, GitHub ve tünel."],
+  services: [
+    "Hizmetler",
+    "phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel.",
+  ],
   settings: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
 };
 
@@ -468,6 +471,7 @@ export default function App() {
               tunnel={state.tunnel}
               mail={state.mail}
               postgres={state.postgres}
+              redis={state.redis}
               github={state.github}
             />
           ) : null}
