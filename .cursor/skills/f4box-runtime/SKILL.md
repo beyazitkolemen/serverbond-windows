@@ -16,6 +16,10 @@ Giriş noktası `Manager` (`crates/f4box-core/src/lib.rs`). Uzun işlemler `gate
 
 Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_fastcgi 127.0.0.1:<port>`.
 
+## Kuyruk ve zamanlama
+
+`crates/f4box-core/src/jobs.rs`. İşçi: `queue-{projectUuid}-{workerUuid}-{n}` → `php artisan queue:work`. Zamanlayıcı: `schedule-{projectUuid}` → `schedule:work` (crontab’daki dakikalık `schedule:run`). En fazla 8 işçi, işçi başına 8 süreç. `artisan` yoksa başlatma reddedilir. `.env` yazılmaz. Ortam `start("php"|"all")` sonrası `autoStart` olanlar açılır; `stop` hepsini kapatır. Beklenmedik çıkışta otomatik yeniden başlama yok.
+
 ## Projeler
 
 - Ad: 1–48 karakter, `[a-z0-9-]` (kenarda tire yok), Windows ayrılmış adları yok (`con`, `com0`, `lpt0`, …)

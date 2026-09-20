@@ -1,6 +1,6 @@
 use f4box_core::{
     install::{extract_zip, verify_hash},
-    model::{caddy_config, catalog, validate_slug, Project, Settings},
+    model::{caddy_config, catalog, validate_slug, Project, QueueWorker, Settings},
     Manager,
 };
 use std::{fs, io::Write};
@@ -70,6 +70,8 @@ fn caddy_routes_to_public_and_binds_loopback() {
         host: "demo.localhost".into(),
         path: "C:/Project With Space/demo".into(),
         php_version: "8.4.25".into(),
+        workers: Vec::new(),
+        schedule: Default::default(),
     };
     let config = caddy_config(
         &Settings::default(),
@@ -509,4 +511,68 @@ fn requirements_detect_an_external_port_owner_without_changing_settings() {
             .status,
         "ok"
     );
+}
+
+#[test]
+fn project_jobs_persist_and_reject_invalid_workers() {
+    let home = tempfile::tempdir().unwrap();
+    let project_dir = tempfile::tempdir().unwrap();
+    fs::create_dir(project_dir.path().join("public")).unwrap();
+    fs::write(project_dir.path().join("public/index.php"), "<?php").unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let project = manager
+        .add_project("demo".into(), project_dir.path().into())
+        .unwrap();
+    assert!(project.workers.is_empty());
+    assert!(!project.schedule.enabled);
+    let worker = QueueWorker {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: "emails".into(),
+        connection: "database".into(),
+        queue: "high,default".into(),
+        processes: 2,
+        ..Default::default()
+    };
+    manager
+        .save_project_jobs(&project.id, vec![worker.clone()], Default::default())
+        .unwrap();
+    let mut bad = worker.clone();
+    bad.name = "rm -rf".into();
+    let before = fs::read(home.path().join("config.json")).unwrap();
+    assert!(manager
+        .save_project_jobs(&project.id, vec![bad], Default::default())
+        .is_err());
+    assert_eq!(fs::read(home.path().join("config.json")).unwrap(), before);
+    drop(manager);
+    let reopened = Manager::new(home.path().into()).unwrap();
+    let saved = &reopened.snapshot().unwrap().projects[0];
+    assert_eq!(saved.project.workers[0].name, "emails");
+    assert_eq!(saved.project.workers[0].queue, "high,default");
+    assert_eq!(saved.worker_states[0].running, 0);
+    assert!(reopened
+        .start_project_worker(&project.id, &worker.id)
+        .unwrap_err()
+        .to_string()
+        .contains("artisan"));
+    assert!(reopened.read_log("../queue").is_err());
+}
+
+#[test]
+fn legacy_projects_load_without_queue_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("legacy-app");
+    fs::create_dir_all(path.join("public")).unwrap();
+    fs::write(path.join("public/index.php"), "<?php").unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let config = serde_json::json!({
+        "phpVersion": "8.4.25",
+        "settings": {"webPort": 18088, "mysqlPort": 23316, "phpPort": 19330},
+        "projects": [{"id": id, "name": "legacy-app", "host": "legacy-app.localhost", "path": path}]
+    });
+    fs::write(dir.path().join("config.json"), config.to_string()).unwrap();
+    let manager = Manager::new(dir.path().into()).unwrap();
+    let project = &manager.snapshot().unwrap().projects[0];
+    assert!(project.project.workers.is_empty());
+    assert!(!project.schedule_running);
+    assert!(!project.project.schedule.auto_start);
 }

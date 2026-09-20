@@ -1,4 +1,5 @@
 pub mod install;
+mod jobs;
 pub mod model;
 mod phpmyadmin;
 pub mod preferences;
@@ -301,36 +302,67 @@ impl Manager {
                 .projects
                 .into_iter()
                 .map(|project| {
+                    // One guard per project: std mutexes are not reentrant.
+                    let errors = self
+                        .service_errors
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     let id = Self::project_service_id(&project.id);
                     let running = processes.contains_key(&id);
                     let pid = processes.get(&id).map(|p| p.child.id());
-                    let issue = self
-                        .service_errors
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .get(&id)
-                        .cloned()
-                        .or_else(|| {
-                            let package = php_package(&project.php_version).ok()?;
-                            install::validate_installation(
-                                &self.home.join("bin/php").join(&project.php_version),
-                                &package,
-                            )
-                            .err()
-                            .map(|e| format!("PHP {}: {e:#}", project.php_version))
-                        });
+                    let issue = errors.get(&id).cloned().or_else(|| {
+                        let package = php_package(&project.php_version).ok()?;
+                        install::validate_installation(
+                            &self.home.join("bin/php").join(&project.php_version),
+                            &package,
+                        )
+                        .err()
+                        .map(|e| format!("PHP {}: {e:#}", project.php_version))
+                    });
                     let php_port = self
                         .project_ports
                         .lock()
                         .unwrap_or_else(|e| e.into_inner())
                         .get(&project.id)
                         .copied();
+                    let mut worker_states = Vec::with_capacity(project.workers.len());
+                    for worker in &project.workers {
+                        let mut pids = Vec::new();
+                        let mut worker_issue = None;
+                        for index in 0..worker.processes {
+                            let sid = crate::jobs::queue_service_id(&project.id, &worker.id, index);
+                            if let Some(child) = processes.get(&sid) {
+                                pids.push(child.child.id());
+                            }
+                            if let Some(error) = errors.get(&sid) {
+                                worker_issue = Some(error.clone());
+                            }
+                        }
+                        worker_states.push(WorkerState {
+                            id: worker.id.clone(),
+                            running: pids.len() as u8,
+                            pids,
+                            issue: worker_issue,
+                        });
+                    }
+                    let schedule_id = crate::jobs::schedule_service_id(&project.id);
+                    let schedule_running = processes.contains_key(&schedule_id);
+                    let schedule_pid = processes.get(&schedule_id).map(|p| p.child.id());
+                    let schedule_issue = errors
+                        .get(&schedule_id)
+                        .or_else(|| errors.get(&format!("jobs-{}", project.id)))
+                        .cloned();
+                    drop(errors);
                     ProjectStatus {
                         project,
                         running,
                         pid,
                         php_port,
                         issue,
+                        worker_states,
+                        schedule_running,
+                        schedule_pid,
+                        schedule_issue,
                     }
                 })
                 .collect(),
@@ -487,15 +519,7 @@ impl Manager {
     }
 
     pub fn read_log(&self, id: &str) -> Result<String> {
-        if !["f4box", "php", "mysql", "caddy", "composer"].contains(&id)
-            && !self
-                .config
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .projects
-                .iter()
-                .any(|p| Self::project_service_id(&p.id) == id)
-        {
+        if !Self::is_managed_log(id) {
             bail!("Geçersiz günlük.");
         }
         let path = self.home.join("logs").join(format!("{id}.log"));

@@ -275,8 +275,10 @@ impl Manager {
             .and_then(|_| self.start_project_workers());
         if result.is_err() {
             self.rollback_new_services(&before);
+            return result;
         }
-        result
+        self.start_autostart_jobs();
+        Ok(())
     }
 
     fn start_default_php(&self) -> Result<()> {
@@ -447,6 +449,7 @@ impl Manager {
         } else {
             if id == "php" {
                 self.stop_service("caddy")?;
+                self.stop_project_jobs()?;
                 self.stop_project_workers()?;
                 self.project_ports
                     .lock()
@@ -511,7 +514,10 @@ impl Manager {
     }
 
     pub(crate) fn stop_service(&self, id: &str) -> Result<()> {
-        if !["caddy", "php", "mysql"].contains(&id) && !Self::is_project_service_id(id) {
+        if !["caddy", "php", "mysql"].contains(&id)
+            && !Self::is_project_service_id(id)
+            && !Self::is_job_service_id(id)
+        {
             bail!("Bilinmeyen servis.");
         }
         let child = self

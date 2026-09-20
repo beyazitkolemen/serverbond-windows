@@ -13,6 +13,7 @@ import {
 import { call, chooseFolder } from "../api";
 import type { Project, Run, PackageStatus } from "../types";
 import { phpSupportsLaravel12, projectAddress } from "../version";
+import ProjectJobs from "./ProjectJobs";
 
 export default function Projects({
   projects,
@@ -83,6 +84,7 @@ export default function Projects({
                   run={run}
                   anyRunning={anyRunning}
                 />
+                <ProjectJobs project={project} busy={busy} run={run} />
               </div>
               <div className="project-actions">
                 <button
@@ -115,10 +117,13 @@ export default function Projects({
                   <Terminal size={15} /> Terminal
                 </button>
                 <button
-                  className="icon-button"
+                  className="button secondary small"
                   disabled={busy || !mysqlRunning}
-                  title="Veritabanı oluştur"
-                  aria-label={`${project.name} veritabanı oluştur`}
+                  title={
+                    mysqlRunning
+                      ? "Proje adıyla veritabanı oluştur"
+                      : "Önce MySQL'i başlatın"
+                  }
                   onClick={() =>
                     void run("Veritabanı oluşturuluyor…", () =>
                       call("database", {
@@ -128,13 +133,15 @@ export default function Projects({
                     )
                   }
                 >
-                  <Database size={18} />
+                  <Database size={15} />
+                  Veritabanı
                 </button>
                 <button
-                  className="icon-button"
+                  className="button secondary small"
                   disabled={busy || !mysqlRunning}
-                  title="Veritabanını yedekle"
-                  aria-label={`${project.name} veritabanını yedekle`}
+                  title={
+                    mysqlRunning ? "SQL yedeği al" : "Önce MySQL'i başlatın"
+                  }
                   onClick={() =>
                     void run("Yedek alınıyor…", () =>
                       call("database", {
@@ -144,7 +151,8 @@ export default function Projects({
                     )
                   }
                 >
-                  <Archive size={18} />
+                  <Archive size={15} />
+                  Yedek
                 </button>
                 <button
                   className="icon-button danger"
@@ -163,9 +171,10 @@ export default function Projects({
         <div className="empty-state">
           <Folder size={44} strokeWidth={1.5} />
           <div>
-            <h3>Bir sonraki fikriniz burada başlasın.</h3>
+            <h3>İlk Laravel projenizi ekleyin</h3>
             <p>
-              Mevcut projenizi ekleyin veya yeni bir Laravel projesi oluşturun.
+              Mevcut klasörü seçin veya yeni proje oluşturun. PHP sürümü, kuyruk
+              işçileri ve zamanlayıcı proje kartından yönetilir.
             </p>
           </div>
         </div>

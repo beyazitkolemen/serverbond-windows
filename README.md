@@ -60,6 +60,14 @@ Projenin sürümü değiştirilmeden önce paket ve uzantılar doğrulanır. Yal
 
 Proje kartındaki **Terminal**, o proje klasöründe Windows PowerShell açar. `php`, `composer` ve Composer'ın `@php` alt komutları projenin seçili PHP sürümünü kullanır. Örneğin `php artisan migrate` doğrudan çalıştırılabilir. Yalnızca açılan terminalin ortamı ayarlanır; sistem PATH'i değişmez. Proje sürümü değiştikten sonra açık terminali kapatıp yeniden açın. PHP ve Composer paketlerinin kurulu olması gerekir; terminal açılması servisleri başlatmaz.
 
+### Kuyruk ve zamanlama
+
+Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıcı vardır. İşçi `php artisan queue:work` sürecidir: bağlantı, kuyruk adı, süreç sayısı, zaman aşımı ve bellek limiti ayarlanır. Birden fazla işçi (örneğin `default` ve `emails`) eklenebilir. **Ortamla başlat** açıkken **Ortamı başlat** bu süreçleri de açar; ayrı **Başlat / Durdur** ile tek tek yönetilir.
+
+**Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** düğmesi `schedule:list` çıktısını gösterir. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz.
+
+Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek sınırından çıkan işçi otomatik yeniden başlamaz; **Başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir.
+
 **Ayarlar → Kurulum gereksinimleri**, Windows x64, Visual C++ x64 çalışma zamanı, Windows PowerShell, veri klasörüne yazma, disk alanı ve portları denetler. F4Box'a ait açık portlar kullanılabilir kabul edilir; başka uygulamanın portu hata olarak gösterilir. Visual C++ eksikse Microsoft indirme bağlantısı sunulur. Paket indirmeden önce platform, çalışma zamanı ve yazma erişimi denetlenir; düşük disk alanı uyarı olarak gösterilir. WebView2 kurulumu Tauri kurulum paketi tarafından yönetilir.
 
 Her sürüm `bin/php/<sürüm>/` altında, üretilen PHP ayarları `config/php/<sürüm>/php.ini` altında tutulur. Uzantı dizini kullanılan PHP paketine aittir; eski kurulumların ortak `config/php.ini` dosyası artık kullanılmaz. F4Box bu ayar dosyalarını başlangıçta yeniden üretir. Windows genel PATH ayarı değiştirilmez.
@@ -186,7 +194,7 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 
 ## İlk sürümün sınırları
 
-- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Node.js, Redis, otomatik HTTPS ve kuyruk yönetimi bu sürümde yoktur.
+- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Node.js, Redis ve otomatik HTTPS bu sürümde yoktur.
 - Ortam yerel geliştirme içindir; ağdan erişime açılmaz. Her proje tek bir PHP FastCGI süreci kullanır.
 - Yeni Laravel oluşturma PHP bağımlılıklarını kurar; frontend bağımlılıkları/Vite derlemesi ayrıca proje içinde yapılır.
 - MySQL sürüm yükseltmesi, otomatik veri taşıma ve yedekten geri yükleme henüz yoktur. Veri klasörünü başka MySQL sürümüyle açmayın.

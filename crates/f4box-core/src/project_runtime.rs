@@ -217,10 +217,12 @@ impl Manager {
         self.save_config(updated)?;
         let result: Result<()> = (|| {
             for project in &changed {
+                self.stop_jobs_for_project(&project.id)?;
                 self.stop_service(&Self::project_service_id(&project.id))?;
             }
             if php_running || web_running {
                 self.start_project_workers()?;
+                self.start_autostart_jobs();
             }
             if web_running {
                 self.stop_service("caddy")?;
@@ -256,6 +258,7 @@ impl Manager {
         for project in &original.projects {
             if !updated.projects.iter().any(|p| p.id == project.id) {
                 let key = Self::project_service_id(&project.id);
+                self.stop_jobs_for_project(&project.id)?;
                 self.stop_service(&key)?;
                 self.project_ports
                     .lock()

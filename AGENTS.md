@@ -27,7 +27,7 @@ Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md).
 
 ## Kod
 
-- `crates/f4box-core`: katalog, indirme, süreç, MySQL, projeler
+- `crates/f4box-core`: katalog, indirme, süreç, MySQL, projeler, kuyruk/zamanlayıcı
 - `src-tauri`: dar IPC, tepsi, GitHub güncelleyici eklentileri
 - `src`: React arayüzü (`src/updates.ts` GitHub sürüm denetimi)
 - Sabit paketler `catalog.json` / `php-versions.json`; SHA-256 olmadan güncellenmez

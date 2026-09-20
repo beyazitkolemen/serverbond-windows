@@ -11,6 +11,30 @@ export interface PackageStatus {
   license: string;
   source: string;
 }
+export interface QueueWorker {
+  id: string;
+  name: string;
+  connection: string;
+  queue: string;
+  processes: number;
+  timeout: number;
+  sleep: number;
+  maxTries: number;
+  memory: number;
+  backoff: number;
+  enabled: boolean;
+  autoStart: boolean;
+}
+export interface ProjectSchedule {
+  enabled: boolean;
+  autoStart: boolean;
+}
+export interface WorkerState {
+  id: string;
+  running: number;
+  pids: number[];
+  issue: string | null;
+}
 export interface Project {
   id: string;
   name: string;
@@ -20,6 +44,12 @@ export interface Project {
   running: boolean;
   phpPort: number | null;
   issue: string | null;
+  workers: QueueWorker[];
+  schedule: ProjectSchedule;
+  workerStates: WorkerState[];
+  scheduleRunning: boolean;
+  schedulePid: number | null;
+  scheduleIssue: string | null;
 }
 export interface PhpSettings {
   timezone: string;

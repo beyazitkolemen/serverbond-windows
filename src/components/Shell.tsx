@@ -26,10 +26,14 @@ export function Shell({
   page,
   onPage,
   children,
+  updateAvailable = false,
+  onOpenUpdates,
 }: {
   page: Page;
   onPage: (p: Page) => void;
   children: ReactNode;
+  updateAvailable?: boolean;
+  onOpenUpdates?: () => void;
 }) {
   return (
     <div className="app-shell">
@@ -65,19 +69,18 @@ export function Shell({
           ))}
         </nav>
         <div className="sidebar-note">
-          <span className="sidebar-note-title">
-            Sizin makineniz.
-            <br />
-            Sizin ortamınız.
-          </span>
-          <p>
-            PHP'den veritabanına,
-            <br />
-            tüm araçlar elinizin altında.
-          </p>
           <span className="local-label">
-            <span className="status-dot green" /> Yerel olarak çalışır
+            <span className="status-dot green" /> Bu bilgisayarda çalışır
           </span>
+          {updateAvailable && onOpenUpdates ? (
+            <button
+              type="button"
+              className="sidebar-update"
+              onClick={onOpenUpdates}
+            >
+              Yeni sürüm var
+            </button>
+          ) : null}
         </div>
         <div className="sidebar-footer">
           <Monitor size={17} />

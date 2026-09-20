@@ -36,6 +36,7 @@ pub(crate) fn load_config(path: &Path) -> Result<(Config, bool)> {
             migrated = true;
         }
         php_package(&project.php_version)?;
+        crate::jobs::validate_project_jobs(&project.workers, &project.schedule)?;
         if project.host != config.settings.project_host(&project.name)
             || project.host == "phpmyadmin.f4box.localhost"
         {
@@ -301,6 +302,8 @@ mod tests {
             host: "demo.localhost".into(),
             path: dir.path().join("demo"),
             php_version: config.php_version.clone(),
+            workers: Vec::new(),
+            schedule: Default::default(),
         };
         config.projects = vec![project.clone(), project];
         let bytes = serde_json::to_vec(&config).unwrap();

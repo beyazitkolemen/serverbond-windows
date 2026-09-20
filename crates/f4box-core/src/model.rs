@@ -48,6 +48,49 @@ pub fn selected_catalog(version: &str) -> Result<Vec<Package>> {
         .collect())
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct QueueWorker {
+    pub id: String,
+    pub name: String,
+    pub connection: String,
+    pub queue: String,
+    pub processes: u8,
+    pub timeout: u32,
+    pub sleep: u32,
+    pub max_tries: u32,
+    pub memory: u32,
+    pub backoff: u32,
+    pub enabled: bool,
+    pub auto_start: bool,
+}
+
+impl Default for QueueWorker {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            name: "default".into(),
+            connection: "default".into(),
+            queue: "default".into(),
+            processes: 1,
+            timeout: 60,
+            sleep: 3,
+            max_tries: 1,
+            memory: 128,
+            backoff: 0,
+            enabled: true,
+            auto_start: true,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectSchedule {
+    pub enabled: bool,
+    pub auto_start: bool,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
@@ -57,6 +100,19 @@ pub struct Project {
     pub host: String,
     #[serde(default)]
     pub php_version: String,
+    #[serde(default)]
+    pub workers: Vec<QueueWorker>,
+    #[serde(default)]
+    pub schedule: ProjectSchedule,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkerState {
+    pub id: String,
+    pub running: u8,
+    pub pids: Vec<u32>,
+    pub issue: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -68,6 +124,10 @@ pub struct ProjectStatus {
     pub pid: Option<u32>,
     pub php_port: Option<u16>,
     pub issue: Option<String>,
+    pub worker_states: Vec<WorkerState>,
+    pub schedule_running: bool,
+    pub schedule_pid: Option<u32>,
+    pub schedule_issue: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -17,7 +17,7 @@
 | Hızlı proje oluşturma | `sites.conf` ile proje tarifleri, otomatik veritabanı oluşturma ve paket önbelleği yönetilir. [Quick-app](https://laragon.org/docs/quick-app) | Laravel 12 Composer kurulumu ve mevcut Laravel projesi ekleme var. Veritabanı oluşturma ayrı işlem. WordPress/Symfony tarifleri ve kullanıcı tanımlı komut kataloğu yok. |
 | Paket ekleme | `packages.conf` içindeki indirme adresleri değiştirilebilir; toplu ekleme vardır. [Quick-add](https://laragon.org/docs/quick-add) | Sabit sürüm + SHA-256 doğrulamalı beş bileşen, PHP sürüm kataloğu, toplu kurulum ve onarım. Kullanıcının keyfî indirme adresi eklemesi desteklenmez. |
 | Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer ve çalışma diziniyle PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
-| Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Özel Procfile, queue worker ve scheduler yönetimi yok. |
+| Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
 | E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Henüz paket/servis yok. Eklendiğinde SMTP ve web portları ile otomatik başlangıç ayarları birlikte sunulmalı. |
 | Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Yerel geliştirmeyle sınırlı. Tünel, dış erişim ve token yönetimi yok. |
 | Taşınabilirlik | Laragon klasörünün başka sürücü/bilgisayara taşınması belgelenir. [Portable](https://laragon.org/docs/portable) | Programlar özel klasörde tutulur. F4Box parolaları Windows DPAPI ile mevcut hesaba bağlıdır; farklı bilgisayara klasör kopyalamak tam taşınabilirlik sağlamaz. Taşıma/export için ayrı tasarım gerekir. |
@@ -54,7 +54,8 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 
 - Yerel HTTPS ve sertifika yaşam döngüsü.
 - Node.js / npm ve Mailpit kurulumu, sürüm ve port yönetimi.
-- Proje bazlı queue/scheduler süreçleri, terminal/editör seçimi.
+- Terminal/editör seçimi.
+- Proje bazlı queue/scheduler süreçleri (v1.1: `queue:work` ve `schedule:work`).
 - MySQL veri taşıma, parola değiştirme, yedekten geri yükleme ve zamanlanmış yedek.
 - Tepsi menüsü ve kullanıcı tercihiyle Windows açılışında başlama.
 - Otomatik proje keşfi ve özel vhost/web kökü yönetimi.

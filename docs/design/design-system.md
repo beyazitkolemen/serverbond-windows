@@ -14,8 +14,8 @@ Türkçe Windows masaüstü geliştirme ortamı. React ve mevcut CSS altyapısı
 
 - **Genel bakış:** gerçek servis durumu, etkin servis sayısı, varsayılan PHP ve proje sayısı; PHP seçimi; bileşen tablosu; projeler; son günlükler.
 - **Bileşenler:** aynı servis tablosu, ek lisans/PID bilgisi ve onarım işlemleri.
-- **Projeler:** proje adresi ve klasörü, projeye özel PHP, terminal, veritabanı ve yedekleme işlemleri. Boş durumda mevcut/yeni proje akışı açıklanır.
-- **Ayarlar:** bölüm sekmeleri, gruplandırılmış form yüzeyleri ve görünür kaydetme alanı. Windows tercihleri servis ayarlarından bağımsız kaydedilir.
+- **Projeler:** proje adresi ve klasörü, projeye özel PHP, terminal, veritabanı, yedek ve kapalı/açılır kuyruk-zamanlama paneli. Boş durumda mevcut/yeni proje akışı açıklanır.
+- **Ayarlar:** yapışkan bölüm sekmeleri, gruplandırılmış formlar ve altta sabit kaydetme çubuğu. Windows tercihleri ve güncellemeler ayrı kaydedilir.
 - **Günlükler:** kaynak seçimi ve açık renkli, sabit genişlikli kayıt alanı.
 
 ## Davranış ve erişilebilirlik

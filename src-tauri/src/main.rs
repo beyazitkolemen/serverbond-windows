@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use tauri::Manager as _;
 
 use f4box_core::{
-    model::{Project, Settings, Snapshot},
+    model::{Project, ProjectSchedule, QueueWorker, Settings, Snapshot},
     Manager,
 };
 use std::{path::PathBuf, sync::Arc};
@@ -194,6 +194,62 @@ async fn settings_validate_import(json: String) -> Result<Settings, String> {
 }
 
 #[tauri::command]
+async fn save_project_jobs(
+    state: tauri::State<'_, State>,
+    id: String,
+    workers: Vec<QueueWorker>,
+    schedule: ProjectSchedule,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.save_project_jobs(&id, workers, schedule)
+    })
+    .await
+}
+#[tauri::command]
+async fn start_project_worker(
+    state: tauri::State<'_, State>,
+    id: String,
+    worker_id: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.start_project_worker(&id, &worker_id)
+    })
+    .await
+}
+#[tauri::command]
+async fn stop_project_worker(
+    state: tauri::State<'_, State>,
+    id: String,
+    worker_id: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.stop_project_worker(&id, &worker_id)
+    })
+    .await
+}
+#[tauri::command]
+async fn start_project_schedule(state: tauri::State<'_, State>, id: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.start_project_schedule(&id)).await
+}
+#[tauri::command]
+async fn stop_project_schedule(state: tauri::State<'_, State>, id: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.stop_project_schedule(&id)).await
+}
+#[tauri::command]
+async fn list_project_schedule(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.list_project_schedule(&id)).await
+}
+
+#[tauri::command]
 async fn recover_configuration(state: tauri::State<'_, State>) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || state.recover_configuration()).await
@@ -357,7 +413,13 @@ fn main() {
             database,
             open_project,
             open_home,
-            open_phpmyadmin
+            open_phpmyadmin,
+            save_project_jobs,
+            start_project_worker,
+            stop_project_worker,
+            start_project_schedule,
+            stop_project_schedule,
+            list_project_schedule
         ])
         .build(tauri::generate_context!());
     let app = match app {

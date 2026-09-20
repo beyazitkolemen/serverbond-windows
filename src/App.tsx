@@ -22,23 +22,14 @@ import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<Page, [string, string]> = {
-  overview: [
-    "Geliştirmeye yer açın.",
-    "Servislerinizi yönetin. Projenize odaklanın.",
-  ],
-  packages: [
-    "Araç kutunuz.",
-    "Geliştirme araçlarını kurun, başlatın ve yönetin.",
-  ],
+  overview: ["Ortamınız.", "Servisleri başlatın, projenize geçin."],
+  packages: ["Bileşenler.", "PHP, MySQL ve web sunucusunu kurun veya onarın."],
   projects: [
-    "Projeleriniz.",
-    "Mevcut projenizi ekleyin veya yeni bir Laravel projesi oluşturun.",
+    "Projeler.",
+    "Laravel ekleyin; PHP, kuyruk ve zamanlamayı karttan yönetin.",
   ],
-  logs: ["Günlükler.", "Kurulum ve servis kayıtlarını buradan takip edin."],
-  settings: [
-    "Ayarlar.",
-    "PHP, veritabanı, web sunucusu ve çalışma alanı tercihleri.",
-  ],
+  logs: ["Günlükler.", "Kurulum, kuyruk ve servis kayıtları."],
+  settings: ["Ayarlar.", "Portlar, PHP, Windows tercihleri ve güncellemeler."],
 };
 
 export default function App() {
@@ -182,7 +173,15 @@ export default function App() {
       .filter((p) => ["php", "mysql", "caddy"].includes(p.id))
       .every((p) => p.installed) ?? false;
   return (
-    <Shell page={page} onPage={setPage}>
+    <Shell
+      page={page}
+      onPage={setPage}
+      updateAvailable={Boolean(appUpdate)}
+      onOpenUpdates={() => {
+        setPage("settings");
+        setOpenUpdates((n) => n + 1);
+      }}
+    >
       <div className="workspace-toolbar">
         <div className="breadcrumb">
           <Monitor size={15} />
@@ -369,13 +368,20 @@ export default function App() {
               <div className="setup-icon">
                 <Check size={19} />
               </div>
-              <div>
-                <h2>İlk projenize hazır olun</h2>
-                <p>
-                  Gerekli bileşenleri kurun, projenizi ekleyin ve çalışmaya
-                  başlayın.
-                </p>
-              </div>
+              <ol className="setup-steps">
+                <li>
+                  <strong>1. Kur</strong>
+                  <span>PHP, MySQL ve Caddy</span>
+                </li>
+                <li>
+                  <strong>2. Ekle</strong>
+                  <span>Laravel projeniz</span>
+                </li>
+                <li>
+                  <strong>3. Başlat</strong>
+                  <span>Ortam, kuyruk, schedule</span>
+                </li>
+              </ol>
               <button
                 className="button banner-button"
                 disabled={disabled}

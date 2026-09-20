@@ -38,6 +38,8 @@ impl Manager {
             name,
             path,
             php_version: original.php_version.clone(),
+            workers: Vec::new(),
+            schedule: Default::default(),
         };
         if project.host == "phpmyadmin.f4box.localhost" {
             bail!("Bu adres phpMyAdmin için ayrılmış.");
