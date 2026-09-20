@@ -62,6 +62,6 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 - Yerel e-posta yakalama (v1.1: Mailpit; dışa giden gerçek SMTP aktarımı yok).
 - MySQL veri taşıma, parola değiştirme ve zamanlanmış yedek (v1.1: yedek + `.sql` geri yükleme).
 - Tepsi menüsü ve kullanıcı tercihiyle Windows açılışında başlama.
-- Otomatik proje keşfi ve özel vhost/web kökü yönetimi (v1.1: `www` / yeni projeler klasörü taraması; özel vhost yok).
+- Otomatik proje keşfi ve özel vhost/web kökü yönetimi (v1.1: `projects` / `www` ve isteğe bağlı çalışma alanı; iki seviye müşteri/uygulama taraması; özel vhost yok).
 
 Bunlar tamamlanmış özellikler değildir. Mevcut ayar ekranı, bugün F4Box tarafından yönetilen PHP/MySQL/Caddy/phpMyAdmin bileşenlerinin günlük geliştirme seçeneklerini kapsar.

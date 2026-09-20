@@ -40,7 +40,7 @@ Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paket
 
 Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa F4Box o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
 
-**Klasör tara** yeni projeler klasöründeki (`www` veya Ayarlar’daki yol) `public/index.php` köklerini listeler. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
+**Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 
 | Bileşen | Sabit sürüm | İşlev |
 | --- | --- | --- |
@@ -160,7 +160,8 @@ F4Box/
   data/      # kalıcı MySQL verileri
   backups/   # SQL yedekleri
   logs/      # servis ve kurulum kayıtları
-  www/       # yeni Laravel projeleri için varsayılan konum
+  projects/  # Laravel çalışma alanı (müşteri/uygulama alt klasörleri taranır)
+  www/       # eski düz proje klasörü; hâlâ taranır
   config.json
 ```
 
@@ -169,7 +170,7 @@ Uygulama kapanırken servisler durur. Windows Job Objects beklenmeyen kapanışt
 ### Sorun giderme ve onarım
 
 - **Kurulum eksik:** Yardımcı dosyalar ve kurulum kaydı kontrol edilir. Ortamı durdurup Bileşenler ekranındaki **Onar** düğmesine basın. Bozuk, etkin olmayan PHP sürümü listeden seçilince **Onar ve kullan** görünür.
-- Onarım SHA-256 doğrulanmış önbellekten veya resmî indirmeden yapılır. Yeni paket tamamen açılmadan mevcut klasör değiştirilmez. Önceki program klasörü `bin/<bileşen>/<sürüm>-before-repair-<kimlik>` adıyla korunur; `data`, `www`, `backups` ve proje `.env` dosyalarına dokunulmaz.
+- Onarım SHA-256 doğrulanmış önbellekten veya resmî indirmeden yapılır. Yeni paket tamamen açılmadan mevcut klasör değiştirilmez. Önceki program klasörü `bin/<bileşen>/<sürüm>-before-repair-<kimlik>` adıyla korunur; `data`, `projects`, `www`, `backups` ve proje `.env` dosyalarına dokunulmaz.
 - **Beklenmedik servis kapanışı:** Bileşenler ekranındaki uyarıyı ve ilgili günlüğü inceleyin; **Başlat** başarılı olduğunda uyarı temizlenir.
 - Portlar kaydedilirken kullanımda olup olmadıkları kontrol edilir. Port sonradan başka program tarafından alınırsa servis başlangıcında tekrar kontrol edilir.
 - PHP resmî sürüm adresi 404/410 döndürürse aynı sabit paket resmî arşivde aranır; SHA-256 kontrolü değişmez. İndirmede bağlantı için 30 saniye, tüm aktarım için 30 dakika bekleme sınırı vardır.

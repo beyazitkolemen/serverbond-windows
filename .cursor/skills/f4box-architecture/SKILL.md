@@ -21,8 +21,10 @@ Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa akt
 Varsayılan `%LOCALAPPDATA%\F4Box`, geliştirmede `F4BOX_HOME`. İkinci süreç `manager.lock` ile reddedilir.
 
 ```text
-bin/  cache/  config/  data/  backups/  logs/  www/  config.json
+bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 ```
+
+`projects/` yeni Laravel köklerinin varsayılan çalışma alanıdır. `www/` eski düz yerleşim için taranmaya devam eder. Kullanıcı `projects_dir` verirse yalnızca o yol okunur.
 
 `config.json` 2 MB, en fazla 1000 proje. Kayıt atomiktir; önceki geçerli kopya `config.last-good.json`.
 

@@ -234,12 +234,14 @@ export default function Settings({
               <h2>Çalışma alanı</h2>
               {folder(
                 "projectsDir",
-                "Yeni projeler için klasör",
-                `${home}\\www`,
+                "Proje çalışma alanı",
+                `${home}\\projects`,
               )}
               <p className="section-note">
-                Boş değer varsayılan www klasörünü kullanır. Klasör mevcut
-                olmalı; kayıtlı projeler taşınmaz.
+                Yeni Laravel projeleri buraya yazılır. Klasör tara bir ve iki
+                seviye kökleri okur: magaza veya musteri/magaza. vendor ve
+                node_modules atlanır. Boş değer projects klasörünü kullanır;
+                eski www klasörü de taranır. Kayıtlı projeler taşınmaz.
               </p>
               <Toggle
                 label="F4Box açıldığında ortamı otomatik başlat"

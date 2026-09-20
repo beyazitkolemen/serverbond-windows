@@ -427,7 +427,7 @@ export default function App() {
               mysqlRunning={state.packages.some(
                 (p) => p.id === "mysql" && p.running,
               )}
-              home={state.settings.projectsDir || `${state.home}/www`}
+              home={state.settings.projectsDir || `${state.home}/projects`}
               hostPattern={state.settings.web.hostPattern}
             />
           ) : null}

@@ -4,9 +4,160 @@ use crate::{
     Manager,
 };
 use anyhow::{bail, Context, Result};
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
+
+/// Runtime, bağımlılık ve çerçeve klasörleri proje kökü değildir.
+const SKIP_FOLDERS: &[&str] = &[
+    ".git",
+    ".idea",
+    ".vscode",
+    "backups",
+    "bin",
+    "bootstrap",
+    "build",
+    "cache",
+    "config",
+    "data",
+    "database",
+    "dist",
+    "logs",
+    "node_modules",
+    "public",
+    "resources",
+    "storage",
+    "target",
+    "tests",
+    "vendor",
+    "welcome",
+];
+
+fn is_skippable_folder(name: &str) -> bool {
+    name.starts_with('.')
+        || SKIP_FOLDERS
+            .iter()
+            .any(|skip| skip.eq_ignore_ascii_case(name))
+}
+
+fn is_laravel_root(path: &Path) -> bool {
+    path.join("public/index.php").is_file()
+}
+
+fn list_dirs(path: &Path) -> Vec<PathBuf> {
+    let mut entries: Vec<_> = fs::read_dir(path)
+        .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir())
+        .collect();
+    entries.sort();
+    entries
+}
+
+fn folder_name(path: &Path) -> Option<String> {
+    path.file_name()
+        .and_then(|value| value.to_str())
+        .map(str::to_string)
+}
+
+struct Candidate {
+    path: PathBuf,
+    folder: String,
+    parent: Option<String>,
+    depth: u8,
+}
+
+fn collect_candidates(root: &Path, registered: &HashSet<PathBuf>, out: &mut Vec<Candidate>) {
+    for path in list_dirs(root) {
+        let Some(folder) = folder_name(&path) else {
+            continue;
+        };
+        let Ok(path) = dunce::canonicalize(&path) else {
+            continue;
+        };
+        if registered.contains(&path) {
+            continue;
+        }
+        if is_laravel_root(&path) {
+            out.push(Candidate {
+                path,
+                folder,
+                parent: None,
+                depth: 1,
+            });
+            continue;
+        }
+        if is_skippable_folder(&folder) {
+            continue;
+        }
+        for child in list_dirs(&path) {
+            let Some(child_name) = folder_name(&child) else {
+                continue;
+            };
+            let Ok(child) = dunce::canonicalize(&child) else {
+                continue;
+            };
+            if registered.contains(&child)
+                || !is_laravel_root(&child)
+                || is_skippable_folder(&child_name)
+            {
+                continue;
+            }
+            out.push(Candidate {
+                path: child,
+                folder: child_name,
+                parent: Some(folder.clone()),
+                depth: 2,
+            });
+        }
+    }
+}
+
+fn discover_slug(folder: &str, parent: Option<&str>, used: &HashSet<String>) -> Option<String> {
+    let base = slug_from_folder(folder).ok()?;
+    if !used.contains(&base) {
+        return Some(base);
+    }
+    let parent = parent?;
+    let org = slug_from_folder(parent).ok()?;
+    let qualified = format!("{org}-{base}");
+    if qualified.len() <= 48 && validate_slug(&qualified).is_ok() && !used.contains(&qualified) {
+        Some(qualified)
+    } else {
+        None
+    }
+}
 
 impl Manager {
+    pub fn default_projects_dir(&self) -> PathBuf {
+        self.home.join("projects")
+    }
+
+    pub fn project_scan_roots(&self) -> Vec<PathBuf> {
+        let projects_dir = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .projects_dir
+            .clone();
+        if !projects_dir.is_empty() {
+            return vec![PathBuf::from(projects_dir)];
+        }
+        let mut roots = vec![self.default_projects_dir()];
+        let legacy = self.home.join("www");
+        if legacy.is_dir() {
+            roots.push(legacy);
+        }
+        roots
+    }
+
     pub fn add_project(&self, name: String, path: PathBuf) -> Result<Project> {
         let _guard = self.gate()?;
         self.add_project_inner(name, path)
@@ -58,48 +209,42 @@ impl Manager {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
-        let root = if config.settings.projects_dir.is_empty() {
-            self.home.join("www")
-        } else {
-            PathBuf::from(&config.settings.projects_dir)
-        };
-        if !root.is_dir() {
-            return Ok(Vec::new());
-        }
+        let mut used: HashSet<String> = config
+            .projects
+            .iter()
+            .map(|project| project.name.clone())
+            .collect();
+        let registered: HashSet<PathBuf> = config
+            .projects
+            .iter()
+            .map(|project| project.path.clone())
+            .collect();
         let mut found = Vec::new();
-        let mut entries: Vec<_> = fs::read_dir(&root)?.filter_map(Result::ok).collect();
-        entries.sort_by_key(|entry| entry.file_name());
-        for entry in entries {
-            let Ok(path) = dunce::canonicalize(entry.path()) else {
-                continue;
-            };
-            if !path.is_dir() || !path.join("public/index.php").is_file() {
-                continue;
+        let mut candidates = Vec::new();
+        for root in self.project_scan_roots() {
+            if root.is_dir() {
+                collect_candidates(&root, &registered, &mut candidates);
             }
-            let Some(folder) = path.file_name().and_then(|value| value.to_str()) else {
-                continue;
-            };
-            let Ok(name) = slug_from_folder(folder) else {
-                continue;
-            };
-            if config
-                .projects
-                .iter()
-                .any(|project| project.name == name || project.path == path)
-                || found
-                    .iter()
-                    .any(|item: &DiscoveredProject| item.name == name)
-            {
-                continue;
+        }
+        candidates.sort_by(|a, b| a.depth.cmp(&b.depth).then_with(|| a.path.cmp(&b.path)));
+        for candidate in candidates {
+            if config.projects.len() + found.len() >= 1000 {
+                break;
             }
+            let Some(name) = discover_slug(&candidate.folder, candidate.parent.as_deref(), &used)
+            else {
+                continue;
+            };
             let host = config.settings.project_host(&name);
             if host == "phpmyadmin.f4box.localhost" {
                 continue;
             }
-            found.push(DiscoveredProject { name, path, host });
-            if config.projects.len() + found.len() >= 1000 {
-                break;
-            }
+            used.insert(name.clone());
+            found.push(DiscoveredProject {
+                name,
+                path: candidate.path,
+                host,
+            });
         }
         Ok(found)
     }

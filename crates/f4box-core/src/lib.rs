@@ -74,12 +74,12 @@ impl Manager {
         lock.try_lock_exclusive()
             .context("Bu veri klasörü başka bir F4Box penceresinde kullanılıyor.")?;
         for dir in [
-            "bin", "cache", "config", "data", "logs", "www", "welcome", "backups",
+            "bin", "cache", "config", "data", "logs", "www", "projects", "welcome", "backups",
         ] {
             fs::create_dir_all(home.join(dir))?;
         }
         let mut existing_data = false;
-        for dir in ["bin", "data", "www"] {
+        for dir in ["bin", "data", "www", "projects"] {
             existing_data |= fs::read_dir(home.join(dir))?.next().transpose()?.is_some();
         }
         let first_run = !home.join("config.json").try_exists()?

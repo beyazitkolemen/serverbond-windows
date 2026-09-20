@@ -819,6 +819,68 @@ fn discover_finds_laravel_folders_and_skips_registered_ones() {
 }
 
 #[test]
+fn discover_uses_projects_workspace_and_nested_client_apps() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let workspace = manager.default_projects_dir();
+    assert!(workspace.ends_with("projects"));
+    fs::create_dir_all(workspace.join("shop/public")).unwrap();
+    fs::write(workspace.join("shop/public/index.php"), "<?php").unwrap();
+    fs::create_dir_all(workspace.join("acme/api/public")).unwrap();
+    fs::write(workspace.join("acme/api/public/index.php"), "<?php").unwrap();
+    fs::create_dir_all(workspace.join("acme/vendor/public")).unwrap();
+    fs::write(workspace.join("acme/vendor/public/index.php"), "<?php").unwrap();
+    fs::create_dir_all(workspace.join("acme/api/vendor/fake/public")).unwrap();
+    fs::write(
+        workspace.join("acme/api/vendor/fake/public/index.php"),
+        "<?php",
+    )
+    .unwrap();
+    let found = manager.discover_projects().unwrap();
+    let mut names: Vec<_> = found.iter().map(|item| item.name.clone()).collect();
+    names.sort();
+    assert_eq!(names, ["api", "shop"]);
+}
+
+#[test]
+fn discover_qualifies_nested_slug_when_the_folder_name_is_taken() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let workspace = manager.default_projects_dir();
+    fs::create_dir_all(workspace.join("shop/public")).unwrap();
+    fs::write(workspace.join("shop/public/index.php"), "<?php").unwrap();
+    fs::create_dir_all(workspace.join("acme/shop/public")).unwrap();
+    fs::write(workspace.join("acme/shop/public/index.php"), "<?php").unwrap();
+    let found = manager.discover_projects().unwrap();
+    let mut names: Vec<_> = found.iter().map(|item| item.name.clone()).collect();
+    names.sort();
+    assert_eq!(names, ["acme-shop", "shop"]);
+}
+
+#[test]
+fn discover_custom_workspace_does_not_scan_default_folders() {
+    let home = tempfile::tempdir().unwrap();
+    let custom = home.path().join("work/apps");
+    fs::create_dir_all(custom.join("portal/public")).unwrap();
+    fs::write(custom.join("portal/public/index.php"), "<?php").unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    fs::create_dir_all(manager.default_projects_dir().join("ignored/public")).unwrap();
+    fs::write(
+        manager
+            .default_projects_dir()
+            .join("ignored/public/index.php"),
+        "<?php",
+    )
+    .unwrap();
+    let mut settings = available_settings(manager.snapshot().unwrap().settings);
+    settings.projects_dir = custom.to_string_lossy().into();
+    manager.save_settings(settings).unwrap();
+    let found = manager.discover_projects().unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].name, "portal");
+}
+
+#[test]
 fn restore_explains_missing_mysql_and_rejects_non_sql() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

@@ -195,7 +195,7 @@
     {
       "id": "6f1b6d1c-2f7c-4f0a-9d3e-2b7c4f0a9d3e",
       "name": "magaza",
-      "path": "C:\\Users\\dev\\F4Box\\www\\magaza",
+      "path": "C:\\Users\\dev\\F4Box\\projects\\magaza",
       "host": "magaza.localhost",
       "phpVersion": "8.4.25",
       "running": true,

@@ -487,7 +487,9 @@ function ProjectDialog({
         <div className="input-with-button">
           <input
             id="project-path"
-            placeholder="C:\\Projeler\\ornek-proje"
+            placeholder={
+              create ? "C:\\Projeler" : "C:\\Projeler\\ornek-proje"
+            }
             value={path}
             disabled={busy}
             onChange={(e) => setPath(e.target.value)}
@@ -512,7 +514,7 @@ function ProjectDialog({
         </div>
         <p className="field-hint">
           {create
-            ? `Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
+            ? `Üst klasörde ornek-proje/ oluşur. Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
             : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}{" "}
           MySQL çalışıyorsa {databaseName(name || "ornek-proje")} veritabanı
           oluşturulur; proje .env dosyası yazılmaz.
@@ -738,8 +740,9 @@ function DiscoverDialog({
       {items.length ? (
         <>
           <p className="dialog-copy">
-            Yeni projeler klasöründe {items.length} Laravel kökü bulundu.
-            Kayıtlı projeler atlandı. .env dosyaları değiştirilmez.
+            Çalışma alanında {items.length} Laravel kökü bulundu. Kayıtlı
+            projeler atlandı. İki seviye (müşteri/uygulama) taranır; .env
+            dosyaları değiştirilmez.
           </p>
           <ul className="discover-list">
             {items.map((item) => (
@@ -753,8 +756,8 @@ function DiscoverDialog({
         </>
       ) : (
         <p className="dialog-copy">
-          Yeni projeler klasöründe henüz kayıtlı olmayan Laravel kökü yok.
-          public/index.php içeren alt klasörler taranır.
+          Çalışma alanında henüz kayıtlı olmayan Laravel kökü yok.
+          public/index.php içeren bir veya iki seviye klasörler taranır.
         </p>
       )}
       {serverError ? (
