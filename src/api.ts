@@ -150,6 +150,7 @@ export async function call<T = void>(
       ![
         "snapshot",
         "read_log",
+        "read_project_log",
         "read_project_worker_log",
         "read_project_schedule_log",
         "list_project_schedule",
@@ -197,6 +198,31 @@ export async function call<T = void>(
     const sample = (globalThis as { __F4BOX_PREVIEW__?: Snapshot })
       .__F4BOX_PREVIEW__;
     return structuredClone(sample ?? preview) as T;
+  }
+  if (command === "read_project_log") {
+    const source = String(args?.source ?? "php");
+    if (source === "schedule") {
+      return [
+        "[2026-09-20 21:15:00] Running scheduled command: inspire",
+        "[2026-09-20 21:15:00] Processed:  inspire",
+        "[2026-09-20 21:16:00] Running scheduled command: app:prune-tokens",
+      ].join("\n") as T;
+    }
+    if (source.startsWith("worker:")) {
+      return [
+        "[2026-09-20 21:15:05] Processing: App\\Jobs\\SendOrderMail",
+        "[2026-09-20 21:15:06] Processed:  App\\Jobs\\SendOrderMail",
+        "[2026-09-20 21:15:12] Processing: App\\Jobs\\IndexProduct",
+        "[2026-09-20 21:15:13] Processed:  App\\Jobs\\IndexProduct",
+      ].join("\n") as T;
+    }
+    return [
+      "[20-Sep-2026 21:15:02 Europe/Istanbul] NOTICE: PHP 8.4.25 Development Server started",
+      "127.0.0.1:19012 [21:15:03] GET /",
+      "127.0.0.1:19012 [21:15:04] GET /css/app.css",
+      '[20-Sep-2026 21:15:08 Europe/Istanbul] PHP Warning:  Undefined array key "page" in app/Http/Controllers/CatalogController.php on line 42',
+      "127.0.0.1:19012 [21:15:11] GET /siparisler",
+    ].join("\n") as T;
   }
   if (
     command === "read_log" ||

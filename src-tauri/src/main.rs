@@ -344,6 +344,15 @@ async fn read_project_schedule_log(
     let state = state.inner().clone();
     blocking(state.clone(), move || state.read_project_schedule_log(&id)).await
 }
+#[tauri::command]
+async fn read_project_log(
+    state: tauri::State<'_, State>,
+    id: String,
+    source: String,
+) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.read_project_log(&id, &source)).await
+}
 
 #[tauri::command]
 async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
@@ -607,6 +616,7 @@ fn main() {
             flush_failed_jobs,
             read_project_worker_log,
             read_project_schedule_log,
+            read_project_log,
             tunnel,
             mail,
             node,

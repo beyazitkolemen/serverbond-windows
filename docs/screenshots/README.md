@@ -22,6 +22,12 @@ Proje kartından PHP sürümü seçimi; kart içindeki panelden Laravel `schedul
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 
+## Proje günlükleri
+
+Proje kartındaki görüntüleyici PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi günlüklerini sekmeler, arama, satır numarası ve hata vurgusuyla gösterir.
+
+![Proje günlük görüntüleyicisi](09-proje-gunlukleri.png)
+
 ## Yerel e-posta yakalama
 
 Mailpit'in SMTP ve arayüz portları, saklama sınırı, PHP `mail()` yönlendirmesi ve servis durumu.

@@ -28,7 +28,7 @@ const headings: Record<Page, [string, string]> = {
     "Projeler.",
     "Laravel ekleyin; PHP, kuyruk ve zamanlamayı karttan yönetin.",
   ],
-  logs: ["Günlükler.", "Kurulum, kuyruk ve servis kayıtları."],
+  logs: ["Günlükler.", "Kurulum, proje ve servis kayıtları."],
   settings: ["Ayarlar.", "Portlar, PHP, Windows tercihleri ve güncellemeler."],
 };
 

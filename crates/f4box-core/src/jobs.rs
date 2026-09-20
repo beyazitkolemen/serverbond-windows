@@ -232,6 +232,29 @@ pub fn should_start_saved_schedule(
         && (!previous.enabled || !previous.auto_start)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ProjectLogKind {
+    Php,
+    Schedule,
+    Worker(String),
+}
+
+pub fn parse_project_log_source(source: &str) -> Result<ProjectLogKind> {
+    match source {
+        "php" => Ok(ProjectLogKind::Php),
+        "schedule" => Ok(ProjectLogKind::Schedule),
+        other => {
+            let worker = other
+                .strip_prefix("worker:")
+                .context("Geçersiz günlük kaynağı.")?;
+            if uuid::Uuid::parse_str(worker).is_err() {
+                bail!("Geçersiz kuyruk işçisi kimliği.");
+            }
+            Ok(ProjectLogKind::Worker(worker.into()))
+        }
+    }
+}
+
 pub fn failed_job_token(value: Option<&str>) -> Result<String> {
     let value = value.unwrap_or("all").trim();
     if value.eq_ignore_ascii_case("all") {
@@ -444,6 +467,17 @@ impl Manager {
     pub fn read_project_schedule_log(&self, id: &str) -> Result<String> {
         let _project = self.project(id)?;
         self.read_log(&schedule_service_id(id))
+    }
+
+    pub fn read_project_log(&self, id: &str, source: &str) -> Result<String> {
+        match parse_project_log_source(source)? {
+            ProjectLogKind::Php => {
+                let project = self.project(id)?;
+                self.read_log(&Self::project_service_id(&project.id))
+            }
+            ProjectLogKind::Schedule => self.read_project_schedule_log(id),
+            ProjectLogKind::Worker(worker_id) => self.read_project_worker_log(id, &worker_id),
+        }
     }
 
     pub(crate) fn start_autostart_jobs(&self) {
@@ -817,6 +851,21 @@ mod tests {
         assert_eq!(failed_job_token(None).unwrap(), "all");
         assert_eq!(failed_job_token(Some("42")).unwrap(), "42");
         assert!(failed_job_token(Some("rm;rf")).is_err());
+        assert_eq!(
+            parse_project_log_source("php").unwrap(),
+            ProjectLogKind::Php
+        );
+        assert_eq!(
+            parse_project_log_source("schedule").unwrap(),
+            ProjectLogKind::Schedule
+        );
+        let worker = uuid::Uuid::new_v4().to_string();
+        assert_eq!(
+            parse_project_log_source(&format!("worker:{worker}")).unwrap(),
+            ProjectLogKind::Worker(worker)
+        );
+        assert!(parse_project_log_source("worker:not-a-uuid").is_err());
+        assert!(parse_project_log_source("../php").is_err());
     }
 
     #[test]

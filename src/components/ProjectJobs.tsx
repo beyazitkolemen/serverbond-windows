@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { call } from "../api";
 import type { Project, ProjectSchedule, QueueWorker, Run } from "../types";
+import LogViewer from "./LogViewer";
 
 function emptyWorker(name = "default"): QueueWorker {
   return {
@@ -62,9 +63,9 @@ export default function ProjectJobs({
     () => project.schedule ?? { enabled: false, autoStart: false },
   );
   const [tasks, setTasks] = useState("");
-  const [scheduleLog, setScheduleLog] = useState("");
+  const [scheduleLog, setScheduleLog] = useState(false);
   const [failed, setFailed] = useState("");
-  const [workerLogs, setWorkerLogs] = useState<Record<string, string>>({});
+  const [workerLogs, setWorkerLogs] = useState<Record<string, boolean>>({});
   const dirty =
     JSON.stringify(workers) !==
       JSON.stringify((project.workers ?? []).map(normalizeWorker)) ||
@@ -170,9 +171,7 @@ export default function ProjectJobs({
                   (!project.scheduleRunning && !schedule.enabled)
                 }
                 title={
-                  dirty
-                    ? "Önce zamanlayıcı ayarlarını kaydedin"
-                    : undefined
+                  dirty ? "Önce zamanlayıcı ayarlarını kaydedin" : undefined
                 }
                 onClick={() =>
                   void run(
@@ -235,15 +234,7 @@ export default function ProjectJobs({
                 type="button"
                 className="button secondary small"
                 disabled={busy}
-                onClick={() =>
-                  void run("Zamanlayıcı günlüğü okunuyor…", async () =>
-                    setScheduleLog(
-                      await call<string>("read_project_schedule_log", {
-                        id: project.id,
-                      }),
-                    ),
-                  )
-                }
+                onClick={() => setScheduleLog((value) => !value)}
               >
                 <ScrollText size={14} />
                 Günlük
@@ -254,13 +245,25 @@ export default function ProjectJobs({
             <p className="project-job-issue">{project.scheduleIssue}</p>
           )}
           {tasks && <pre className="project-console">{tasks}</pre>}
-          {scheduleLog && <pre className="project-console">{scheduleLog}</pre>}
+          {scheduleLog ? (
+            <LogViewer
+              compact
+              label={`${project.name} zamanlayıcı günlüğü`}
+              sources={[{ id: "schedule", label: "Zamanlayıcı" }]}
+              load={() =>
+                call<string>("read_project_log", {
+                  id: project.id,
+                  source: "schedule",
+                })
+              }
+            />
+          ) : null}
           {workers.map((worker, index) => {
             const state = (project.workerStates ?? []).find(
               (item) => item.id === worker.id,
             );
             const running = (state?.running ?? 0) > 0;
-            const log = workerLogs[worker.id];
+            const log = Boolean(workerLogs[worker.id]);
             return (
               <div className="project-worker" key={worker.id}>
                 <div className="project-worker-head">
@@ -279,9 +282,7 @@ export default function ProjectJobs({
                     <button
                       type="button"
                       className="button secondary small"
-                      disabled={
-                        busy || dirty || (!running && !worker.enabled)
-                      }
+                      disabled={busy || dirty || (!running && !worker.enabled)}
                       title={
                         dirty
                           ? "Önce kuyruk ayarlarını kaydedin"
@@ -331,16 +332,10 @@ export default function ProjectJobs({
                       className="button secondary small"
                       disabled={busy}
                       onClick={() =>
-                        void run("İşçi günlüğü okunuyor…", async () => {
-                          const text = await call<string>(
-                            "read_project_worker_log",
-                            { id: project.id, workerId: worker.id },
-                          );
-                          setWorkerLogs((current) => ({
-                            ...current,
-                            [worker.id]: text,
-                          }));
-                        })
+                        setWorkerLogs((current) => ({
+                          ...current,
+                          [worker.id]: !current[worker.id],
+                        }))
                       }
                     >
                       <ScrollText size={14} />
@@ -510,7 +505,24 @@ export default function ProjectJobs({
                 {state?.issue && (
                   <p className="project-job-issue">{state.issue}</p>
                 )}
-                {log && <pre className="project-console">{log}</pre>}
+                {log ? (
+                  <LogViewer
+                    compact
+                    label={`${worker.name} günlüğü`}
+                    sources={[
+                      {
+                        id: `worker:${worker.id}`,
+                        label: worker.name.trim() || "İşçi",
+                      },
+                    ]}
+                    load={() =>
+                      call<string>("read_project_log", {
+                        id: project.id,
+                        source: `worker:${worker.id}`,
+                      })
+                    }
+                  />
+                ) : null}
               </div>
             );
           })}
@@ -540,13 +552,15 @@ export default function ProjectJobs({
                   className="button secondary small"
                   disabled={busy}
                   onClick={() =>
-                    void run("Başarısız işler yeniden kuyruğa alınıyor…", async () =>
-                      setFailed(
-                        await call<string>("retry_failed_jobs", {
-                          id: project.id,
-                          job: "all",
-                        }),
-                      ),
+                    void run(
+                      "Başarısız işler yeniden kuyruğa alınıyor…",
+                      async () =>
+                        setFailed(
+                          await call<string>("retry_failed_jobs", {
+                            id: project.id,
+                            job: "all",
+                          }),
+                        ),
                     )
                   }
                 >

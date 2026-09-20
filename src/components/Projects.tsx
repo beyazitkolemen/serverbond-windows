@@ -19,6 +19,7 @@ import {
   projectUrl,
 } from "../version";
 import ProjectJobs from "./ProjectJobs";
+import ProjectLogs from "./ProjectLogs";
 
 export default function Projects({
   projects,
@@ -70,9 +71,8 @@ export default function Projects({
             onClick={() => {
               clearError();
               void run("Proje klasörleri taranıyor…", async () => {
-                const found = await call<DiscoveredProject[]>(
-                  "discover_projects",
-                );
+                const found =
+                  await call<DiscoveredProject[]>("discover_projects");
                 setDiscovered(found);
               });
             }}
@@ -213,6 +213,7 @@ export default function Projects({
                 </div>
               </div>
               <ProjectJobs project={project} busy={busy} run={run} />
+              <ProjectLogs project={project} />
             </article>
           ))}
         </div>
@@ -309,7 +310,6 @@ function ProjectPhp({
   anyRunning: boolean;
 }) {
   const [version, setVersion] = useState(project.phpVersion);
-  const [log, setLog] = useState<string | null>(null);
   useEffect(() => setVersion(project.phpVersion), [project.phpVersion]);
   const selected = versions.find((p) => p.version === version);
   const repair = Boolean(selected?.repairable && !selected.installed);
@@ -367,26 +367,6 @@ function ProjectPhp({
         <p className="field-error" role="status">
           {project.issue}
         </p>
-      ) : null}
-      <button
-        className="runtime-log-toggle"
-        disabled={busy}
-        onClick={() => {
-          if (log !== null) setLog(null);
-          else
-            void run("PHP günlüğü okunuyor…", async () =>
-              setLog(
-                await call<string>("read_log", {
-                  id: `php-project-${project.id}`,
-                }),
-              ),
-            );
-        }}
-      >
-        {log !== null ? "PHP günlüğünü gizle" : "PHP günlüğü"}
-      </button>
-      {log !== null ? (
-        <pre className="console project-console">{log}</pre>
       ) : null}
     </div>
   );

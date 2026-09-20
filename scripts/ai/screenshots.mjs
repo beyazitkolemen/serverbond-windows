@@ -40,6 +40,12 @@ const shots = [
     tab: "Web sunucusu",
     height: 1600,
   },
+  {
+    file: "09-proje-gunlukleri.png",
+    nav: "Projeler",
+    expand: [".project-logs-toggle"],
+    height: 1680,
+  },
 ];
 
 const types = {

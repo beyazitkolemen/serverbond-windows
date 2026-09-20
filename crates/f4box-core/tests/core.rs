@@ -636,6 +636,20 @@ fn project_jobs_persist_and_reject_invalid_workers() {
         reopened.read_project_schedule_log(&project.id).unwrap(),
         "Henüz günlük kaydı yok."
     );
+    assert_eq!(
+        reopened.read_project_log(&project.id, "php").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+    assert_eq!(
+        reopened
+            .read_project_log(&project.id, &format!("worker:{}", worker.id))
+            .unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+    assert!(reopened.read_project_log(&project.id, "../php").is_err());
+    assert!(reopened
+        .read_project_log(&project.id, "worker:not-a-uuid")
+        .is_err());
     let failed = reopened.list_failed_jobs(&project.id).unwrap_err();
     assert!(format!("{failed:#}").contains("artisan"), "{failed:#}");
     assert!(reopened.read_log("../queue").is_err());

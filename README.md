@@ -29,8 +29,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
 | Yerel e-posta yakalama | Node.js ve Windows izinleri |
 | ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png) |
-| Yerel HTTPS |  |
-| ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) |  |
+| Yerel HTTPS | Proje günlükleri |
+| ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -75,7 +75,11 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 
 **Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
 
-Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]` ve `f4box schedule <ad> start|stop|restart|list|log`.
+Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `f4box schedule <ad> start|stop|restart|list|log` ve `f4box logs <ad> [php|schedule|işçi]`.
+
+### Proje günlükleri
+
+Her proje kartındaki **Günlükler** paneli PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi süreç kayıtlarını aynı görüntüleyicide açar. Kaynak sekmeleri, metin araması, satır numarası, hata/uyarı vurgusu, kopyalama ve açıkken otomatik yenileme vardır. **Günlükler** sayfası aynı görüntüleyiciyi F4Box, PHP, MySQL, Caddy ve Composer için kullanır.
 
 ### Node.js, npm ve npx
 
@@ -226,6 +230,7 @@ cargo run -p f4box-core --bin f4box -- add benim-projem C:\Projeler\benim-projem
 cargo run -p f4box-core --bin f4box -- queue benim-projem start default
 cargo run -p f4box-core --bin f4box -- queue benim-projem failed
 cargo run -p f4box-core --bin f4box -- schedule benim-projem list
+cargo run -p f4box-core --bin f4box -- logs benim-projem php
 ```
 
 Tüm PHP paketlerini indirerek FastCGI, uzantılar, Composer, çalışan ortamda sürüm geçişi, başarısız geçişten geri dönüş ve seçim kalıcılığı testi (ayrı geçici veri dizini kullanır):
