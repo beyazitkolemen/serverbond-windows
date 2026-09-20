@@ -18,13 +18,13 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Projeler, kuyruk ve zamanlama
 
-Proje kartında Aç, Terminal ve Veritabanı; yedek ve kaldırma Diğer menüsünde. Panelden Laravel zamanlayıcısı, `queue:work` işçileri, yeniden başlatma, günlükler ve başarısız işler.
+Proje listesi ve sekmeli detay: Özet, Zamanlama, Kuyruklar, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 
 ## Proje günlükleri
 
-Proje kartındaki görüntüleyici PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi günlüklerini sekmeler, arama, satır numarası ve hata vurgusuyla gösterir.
+Proje detayındaki Günlükler sekmesi PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi kayıtlarını arama, satır numarası ve hata vurgusuyla gösterir.
 
 ![Proje günlük görüntüleyicisi](09-proje-gunlukleri.png)
 

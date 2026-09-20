@@ -1,16 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Folder,
-  Plus,
-  ExternalLink,
-  Trash2,
-  X,
-  FolderOpen,
-  Database,
-  Archive,
-  Terminal,
-  MoreHorizontal,
-} from "lucide-react";
+import { Folder, Plus, X, FolderOpen, ExternalLink } from "lucide-react";
 import { call, chooseFolder, chooseSqlFile } from "../api";
 import type { DiscoveredProject, Project, Run, PackageStatus } from "../types";
 import {
@@ -19,8 +8,7 @@ import {
   projectAddress,
   projectUrl,
 } from "../version";
-import ProjectJobs from "./ProjectJobs";
-import ProjectLogs from "./ProjectLogs";
+import ProjectDetail, { CompactProjectRow } from "./ProjectDetail";
 
 export default function Projects({
   projects,
@@ -65,6 +53,15 @@ export default function Projects({
   const [discovered, setDiscovered] = useState<DiscoveredProject[] | null>(
     null,
   );
+  const [selectedId, setSelectedId] = useState<string | null>(
+    projects[0]?.id ?? null,
+  );
+  useEffect(() => {
+    if (!projects.some((item) => item.id === selectedId)) {
+      setSelectedId(projects[0]?.id ?? null);
+    }
+  }, [projects, selectedId]);
+  const selected = projects.find((item) => item.id === selectedId) ?? null;
   return (
     <section aria-labelledby="projects-heading">
       <div className="section-heading">
@@ -109,7 +106,7 @@ export default function Projects({
           </button>
         </div>
       </div>
-      {projects.length ? (
+      {projects.length && compact ? (
         <div className="project-list">
           {projects.map((project) => (
             <article className="project-row" key={project.id}>
@@ -125,26 +122,11 @@ export default function Projects({
                   <p className="project-path" title={project.path}>
                     {project.path.replace(/^\\\\\?\\/, "")}
                   </p>
-                  {compact ? (
-                    <p className="project-path">
-                      {project.running
-                        ? `PHP ${project.phpVersion} · ${project.phpPort}`
-                        : `PHP ${project.phpVersion}`}
-                    </p>
-                  ) : (
-                    <>
-                      <p className="project-path">
-                        MySQL: {databaseName(project.name)}
-                      </p>
-                      <ProjectPhp
-                        project={project}
-                        versions={phpVersions}
-                        busy={busy}
-                        run={run}
-                        anyRunning={anyRunning}
-                      />
-                    </>
-                  )}
+                  <p className="project-path">
+                    {project.running
+                      ? `PHP ${project.phpVersion} · ${project.phpPort}`
+                      : `PHP ${project.phpVersion}`}
+                  </p>
                 </div>
                 <div className="project-actions">
                   <button
@@ -164,115 +146,48 @@ export default function Projects({
                     <ExternalLink size={16} />
                     Aç
                   </button>
-                  {!compact ? (
-                    <>
-                      <button
-                        className="button secondary small"
-                        disabled={busy}
-                        aria-label={`${project.name} terminalini aç`}
-                        onClick={() =>
-                          void run("Proje terminali açılıyor…", () =>
-                            call("open_project_terminal", { id: project.id }),
-                          )
-                        }
-                      >
-                        <Terminal size={16} /> Terminal
-                      </button>
-                      <button
-                        className="button secondary small"
-                        disabled={busy || !mysqlRunning}
-                        title={
-                          mysqlRunning
-                            ? "Proje adıyla veritabanı oluştur"
-                            : "Önce MySQL'i başlatın"
-                        }
-                        onClick={() =>
-                          void run("Veritabanı oluşturuluyor…", () =>
-                            call("database", {
-                              name: project.name,
-                              action: "create",
-                            }),
-                          )
-                        }
-                      >
-                        <Database size={16} />
-                        Veritabanı
-                      </button>
-                      <details className="project-more">
-                        <summary
-                          className="button secondary small"
-                          title="Diğer işlemler"
-                        >
-                          <MoreHorizontal size={16} />
-                          <span className="visually-hidden">
-                            {project.name} diğer işlemler
-                          </span>
-                        </summary>
-                        <div className="project-more-panel">
-                          <button
-                            className="button secondary small"
-                            disabled={busy || !mysqlRunning}
-                            title={
-                              mysqlRunning
-                                ? "SQL yedeği al"
-                                : "Önce MySQL'i başlatın"
-                            }
-                            onClick={() =>
-                              void run("Yedek alınıyor…", () =>
-                                call("database", {
-                                  name: project.name,
-                                  action: "backup",
-                                }),
-                              )
-                            }
-                          >
-                            <Archive size={16} />
-                            Yedek al
-                          </button>
-                          <button
-                            className="button secondary small"
-                            disabled={busy || !mysqlRunning}
-                            title={
-                              mysqlRunning
-                                ? "SQL yedeğini geri yükle"
-                                : "Önce MySQL'i başlatın"
-                            }
-                            onClick={() => setRestore(project)}
-                          >
-                            <Archive size={16} />
-                            Geri yükle
-                          </button>
-                          <button
-                            className="button danger-button small"
-                            disabled={busy}
-                            onClick={() => setRemove(project)}
-                          >
-                            <Trash2 size={16} />
-                            Listeden kaldır
-                          </button>
-                        </div>
-                      </details>
-                    </>
-                  ) : (
+                  <span
+                    className={`service-status ${project.running ? "running" : ""}`}
+                  >
                     <span
-                      className={`service-status ${project.running ? "running" : ""}`}
-                    >
-                      <span
-                        className={`status-dot ${project.running ? "green" : ""}`}
-                      />
-                      {project.running ? "Çalışıyor" : "Kapalı"}
-                    </span>
-                  )}
+                      className={`status-dot ${project.running ? "green" : ""}`}
+                    />
+                    {project.running ? "Çalışıyor" : "Kapalı"}
+                  </span>
                 </div>
               </div>
-              {!compact ? (
-                <>
-                  <ProjectJobs project={project} busy={busy} run={run} />
-                  <ProjectLogs project={project} />
-                </>
-              ) : null}
             </article>
           ))}
+        </div>
+      ) : projects.length ? (
+        <div className="project-workspace">
+          <div className="project-picker" role="listbox" aria-label="Projeler">
+            {projects.map((project) => (
+              <CompactProjectRow
+                key={project.id}
+                project={project}
+                url={projectUrl(project.host, webPort, https, httpsPort)}
+                selected={project.id === selectedId}
+                onSelect={() => setSelectedId(project.id)}
+              />
+            ))}
+          </div>
+          {selected ? (
+            <ProjectDetail
+              project={selected}
+              busy={busy}
+              run={run}
+              webPort={webPort}
+              https={https}
+              httpsPort={httpsPort}
+              mysqlRunning={mysqlRunning}
+              webRunning={webRunning}
+              phpVersions={phpVersions}
+              anyRunning={anyRunning}
+              onRemove={() => setRemove(selected)}
+              onRestore={() => setRestore(selected)}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="empty-state">
@@ -378,82 +293,6 @@ export default function Projects({
         />
       ) : null}
     </section>
-  );
-}
-
-function ProjectPhp({
-  project,
-  versions,
-  busy,
-  run,
-  anyRunning,
-}: {
-  project: Project;
-  versions: PackageStatus[];
-  busy: boolean;
-  run: Run;
-  anyRunning: boolean;
-}) {
-  const [version, setVersion] = useState(project.phpVersion);
-  useEffect(() => setVersion(project.phpVersion), [project.phpVersion]);
-  const selected = versions.find((p) => p.version === version);
-  const repair = Boolean(selected?.repairable && !selected.installed);
-  return (
-    <div className="project-runtime">
-      <div className="project-php-controls">
-        <label htmlFor={`php-${project.id}`}>PHP</label>
-        <select
-          id={`php-${project.id}`}
-          aria-label={`${project.name} PHP sürümü`}
-          value={version}
-          disabled={busy}
-          onChange={(e) => setVersion(e.target.value)}
-        >
-          {versions.map((p) => (
-            <option key={p.version} value={p.version}>
-              {p.version}
-              {p.installed ? " · Kurulu" : ""}
-            </option>
-          ))}
-        </select>
-        <button
-          className="button secondary small"
-          disabled={
-            busy ||
-            (repair && anyRunning) ||
-            (version === project.phpVersion && selected?.installed)
-          }
-          title={
-            repair && anyRunning
-              ? "Onarmak için önce ortamı durdurun"
-              : undefined
-          }
-          onClick={() =>
-            void run(`${project.name} için PHP ${version} hazırlanıyor…`, () =>
-              call(repair ? "repair_project_php" : "select_project_php", {
-                id: project.id,
-                version,
-              }),
-            )
-          }
-        >
-          {repair
-            ? "Onar ve uygula"
-            : selected?.installed
-              ? "Uygula"
-              : "İndir ve uygula"}
-        </button>
-        <span className={`service-status ${project.running ? "running" : ""}`}>
-          <span className={`status-dot ${project.running ? "green" : ""}`} />
-          {project.running ? `Çalışıyor · ${project.phpPort}` : "Durduruldu"}
-        </span>
-      </div>
-      {project.issue ? (
-        <p className="field-error" role="status">
-          {project.issue}
-        </p>
-      ) : null}
-    </div>
   );
 }
 

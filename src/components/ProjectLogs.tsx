@@ -18,11 +18,13 @@ function sourcesFor(project: Project): LogSource[] {
 export default function ProjectLogs({
   project,
   initialSource,
+  embedded = false,
 }: {
   project: Project;
   initialSource?: string;
+  embedded?: boolean;
 }) {
-  const [open, setOpen] = useState(Boolean(initialSource));
+  const [open, setOpen] = useState(Boolean(initialSource) || embedded);
   const sources = sourcesFor(project);
   const load = useCallback(
     (source: string) =>
@@ -37,6 +39,15 @@ export default function ProjectLogs({
   ]
     .filter(Boolean)
     .join(" · ");
+  const viewer = (
+    <LogViewer
+      sources={sources}
+      load={load}
+      label={`${project.name} günlükleri`}
+      initialSource={initialSource}
+    />
+  );
+  if (embedded) return <div className="project-logs is-embedded">{viewer}</div>;
   return (
     <div className="project-logs">
       <button
@@ -51,14 +62,7 @@ export default function ProjectLogs({
         </span>
         <ChevronDown size={18} className={open ? "is-open" : undefined} />
       </button>
-      {open ? (
-        <LogViewer
-          sources={sources}
-          load={load}
-          label={`${project.name} günlükleri`}
-          initialSource={initialSource}
-        />
-      ) : null}
+      {open ? viewer : null}
     </div>
   );
 }
