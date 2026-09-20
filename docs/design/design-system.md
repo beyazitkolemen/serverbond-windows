@@ -6,10 +6,11 @@ Türkçe Windows Laravel üretim paneli. React ve mevcut CSS altyapısı korunur
 
 Kurumsal ürün yüzeyi: koyu orman yeşili kenar çubuğu, açık çalışma alanı, tek yeşil vurgu. Pazarlama başlığı ve nane yıkanmış kartlar kullanılmaz.
 
-- **Renkler:** zemin `--canvas` `#eef1ef`, yüzey `--surface` `#ffffff`, kenar `--border` `#d5ded9`. Metin `--ink` `#14241c`, ikincil `--muted` `#5d6d65`. Kenar çubuğu `--sidebar` `#10241c`. Vurgu `--accent` `#147a56`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler bu tokenları kullanır; slate veya nane hex bırakılmaz.
+- **Renkler:** zemin `--canvas` `#eef1ef`, yüzey `--surface` `#ffffff`, kenar `--border` `#d5ded9`. Metin `--ink` `#14241c`, ikincil `--muted` `#5d6d65`. Kenar çubuğu `--sidebar` `#10241c`, kuyu `--sidebar-well`. Vurgu `--accent` `#147a56`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler bu tokenları kullanır; slate veya nane hex bırakılmaz.
 - **Yazı:** Segoe UI Variable → Segoe UI → system-ui. Sayfa başlığı 28/650, bölüm 18/650, gövde 14, kontroller 13/600. Sürümler ve ölçümler tabular. Ürün satırı yalnızca kenar çubuğundadır; sayfa kaşı tekrarlanmaz.
 - **Izgara:** 4 piksel. Aralıklar `--space-1`…`--space-9` (4–36). Kenar boşluğu dışı 9, 11, 13, 15, 17, 19, 22, 25 kullanılmaz.
-- **Yerleşim:** kenar çubuğu `--sidebar-w` 224 (850 altında 76). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 36 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; başlık, gezinme ve alt bilgi aynı dikey hatta durur.
+- **Yerleşim:** kenar çubuğu `--sidebar-w` 240 (850 altında 76). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 36 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; marka, gezinme kuyuları ve alt bilgi aynı dikey hatta durur.
+- **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Ortam (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar `--sidebar-well` kuyusunda; seçili satırda 4 px vurgu çubuğu.
 - **Kontrol:** birincil yükseklik `--control-h` 36, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 36. Girdi ve seçici aynı yükseklikte hizalanır.
 - **Şekil:** kontroller 6, kartlar 8 piksel. Gölge yalnızca kart, tablo, modal ve yapışkan çubuklarda (`--shadow-sm` / `--shadow-md`).
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
