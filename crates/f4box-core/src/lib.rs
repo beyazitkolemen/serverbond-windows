@@ -103,6 +103,9 @@ impl Manager {
             let mut config = Config::default();
             // Choose available initial ports without touching other developer tools.
             let mut selected_ports = std::collections::HashSet::new();
+            selected_ports.insert(config.settings.web.https_port);
+            selected_ports.insert(config.settings.mail.smtp_port);
+            selected_ports.insert(config.settings.mail.web_port);
             for port in [
                 &mut config.settings.web_port,
                 &mut config.settings.mysql_port,

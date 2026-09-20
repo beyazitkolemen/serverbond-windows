@@ -802,7 +802,7 @@ export default function Settings({
               <button
                 type="button"
                 className="button secondary"
-                disabled={busy || !values.web.https}
+                disabled={busy || !settings.web.https}
                 onClick={() =>
                   void run("Sertifika güven deposuna ekleniyor…", () =>
                     call("https_trust", { action: "trust" }),

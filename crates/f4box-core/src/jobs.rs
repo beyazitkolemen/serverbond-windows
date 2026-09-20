@@ -139,6 +139,14 @@ pub fn validate_project_jobs(workers: &[QueueWorker], _schedule: &ProjectSchedul
     Ok(())
 }
 
+pub fn should_respawn_worker(worker: &QueueWorker, was_running: bool) -> bool {
+    was_running && worker.enabled
+}
+
+pub fn should_stop_schedule(enabled: bool, running: bool) -> bool {
+    running && !enabled
+}
+
 pub fn assign_worker_ids(workers: Vec<QueueWorker>) -> Result<Vec<QueueWorker>> {
     let mut assigned = Vec::with_capacity(workers.len());
     for mut worker in workers {
@@ -181,12 +189,14 @@ impl Manager {
             .iter_mut()
             .find(|p| p.id == id)
             .context("Proje bulunamadı.")?;
+        let name = project.name.clone();
         let previous = project.workers.clone();
+        let previous_schedule = project.schedule.clone();
         project.workers = workers.clone();
-        project.schedule = schedule;
+        project.schedule = schedule.clone();
         self.save_config(&config)?;
-        self.reconcile_project_jobs(id, &previous, &workers)?;
-        self.log(format!("Kuyruk ve zamanlayıcı ayarları kaydedildi: {}", id));
+        self.reconcile_project_jobs(id, &previous, &workers, &previous_schedule, &schedule)?;
+        self.log(format!("Kuyruk ve zamanlayıcı ayarları kaydedildi: {name}"));
         Ok(())
     }
 
@@ -401,32 +411,46 @@ impl Manager {
         Ok(())
     }
 
+    fn queue_worker_running(&self, project_id: &str, worker: &QueueWorker) -> bool {
+        (0..worker.processes.max(MAX_PROCESSES)).any(|index| {
+            self.processes
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .contains_key(&queue_service_id(project_id, &worker.id, index))
+        })
+    }
+
     fn reconcile_project_jobs(
         &self,
         project_id: &str,
         previous: &[QueueWorker],
         current: &[QueueWorker],
+        _previous_schedule: &ProjectSchedule,
+        current_schedule: &ProjectSchedule,
     ) -> Result<()> {
         for old in previous {
             let still = current.iter().find(|w| w.id == old.id);
             match still {
                 None => self.stop_queue_worker(project_id, old)?,
                 Some(new) if new != old => {
-                    let running = (0..old.processes).any(|index| {
-                        self.processes
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner())
-                            .contains_key(&queue_service_id(project_id, &old.id, index))
-                    });
+                    let running = self.queue_worker_running(project_id, old);
                     self.stop_queue_worker(project_id, old)?;
-                    if running {
-                        if let Ok(project) = self.project(project_id) {
-                            let _ = self.spawn_queue_worker(&project, new);
-                        }
+                    if should_respawn_worker(new, running) {
+                        let project = self.project(project_id)?;
+                        self.spawn_queue_worker(&project, new)?;
                     }
                 }
                 Some(_) => {}
             }
+        }
+        let schedule_id = schedule_service_id(project_id);
+        let schedule_running = self
+            .processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(&schedule_id);
+        if should_stop_schedule(current_schedule.enabled, schedule_running) {
+            self.stop_service(&schedule_id)?;
         }
         Ok(())
     }
@@ -562,5 +586,18 @@ mod tests {
             })
             .collect::<Vec<_>>();
         assert!(validate_project_jobs(&many, &ProjectSchedule::default()).is_err());
+    }
+
+    #[test]
+    fn saving_a_disabled_worker_does_not_restart_it() {
+        let mut worker = worker();
+        worker.enabled = false;
+        assert!(!should_respawn_worker(&worker, true));
+        worker.enabled = true;
+        assert!(should_respawn_worker(&worker, true));
+        assert!(!should_respawn_worker(&worker, false));
+        assert!(should_stop_schedule(false, true));
+        assert!(!should_stop_schedule(true, true));
+        assert!(!should_stop_schedule(false, false));
     }
 }

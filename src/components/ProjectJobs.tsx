@@ -139,7 +139,16 @@ export default function ProjectJobs({
               <button
                 type="button"
                 className="button secondary small"
-                disabled={busy || !schedule.enabled}
+                disabled={
+                  busy ||
+                  dirty ||
+                  (!project.scheduleRunning && !schedule.enabled)
+                }
+                title={
+                  dirty
+                    ? "Önce zamanlayıcı ayarlarını kaydedin"
+                    : undefined
+                }
                 onClick={() =>
                   void run(
                     project.scheduleRunning
@@ -208,7 +217,18 @@ export default function ProjectJobs({
                     <button
                       type="button"
                       className="button secondary small"
-                      disabled={busy}
+                      disabled={
+                        busy ||
+                        dirty ||
+                        (!running && !worker.enabled)
+                      }
+                      title={
+                        dirty
+                          ? "Önce kuyruk ayarlarını kaydedin"
+                          : !worker.enabled
+                            ? "İşçiyi etkinleştirip kaydedin"
+                            : undefined
+                      }
                       onClick={() =>
                         void run(
                           running ? "İşçi durduruluyor…" : "İşçi başlatılıyor…",
@@ -299,6 +319,42 @@ export default function ProjectJobs({
                         value={worker.memory}
                         onChange={(e) =>
                           update(index, { memory: Number(e.target.value) })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Bekleme (sn)
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={worker.sleep}
+                        onChange={(e) =>
+                          update(index, { sleep: Number(e.target.value) })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Deneme
+                      <input
+                        type="number"
+                        min={0}
+                        max={1000}
+                        value={worker.maxTries}
+                        onChange={(e) =>
+                          update(index, { maxTries: Number(e.target.value) })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Geri offset (sn)
+                      <input
+                        type="number"
+                        min={0}
+                        max={3600}
+                        value={worker.backoff}
+                        onChange={(e) =>
+                          update(index, { backoff: Number(e.target.value) })
                         }
                       />
                     </label>

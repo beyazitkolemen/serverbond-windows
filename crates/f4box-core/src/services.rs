@@ -404,6 +404,27 @@ impl Manager {
             .args(["--adapter", "caddyfile"]);
         self.spawn_service("caddy", cmd, config.settings.web_port)?;
         if config.settings.web.https {
+            let https_port = config.settings.web.https_port;
+            let deadline = Instant::now() + Duration::from_secs(10);
+            while Instant::now() < deadline
+                && TcpStream::connect_timeout(
+                    &SocketAddrV4::new(Ipv4Addr::LOCALHOST, https_port).into(),
+                    Duration::from_millis(150),
+                )
+                .is_err()
+            {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            if TcpStream::connect_timeout(
+                &SocketAddrV4::new(Ipv4Addr::LOCALHOST, https_port).into(),
+                Duration::from_millis(150),
+            )
+            .is_err()
+            {
+                self.log(format!(
+                    "HTTPS {https_port} portu henüz yanıt vermiyor. Caddy günlüğünü kontrol edin."
+                ));
+            }
             self.try_trust_https();
         }
         Ok(())
@@ -700,15 +721,10 @@ impl Manager {
     pub fn backup_database(&self, name: &str) -> Result<String> {
         let _guard = self.gate()?;
         crate::model::validate_slug(name)?;
-        if !self
-            .snapshot()?
-            .packages
-            .iter()
-            .any(|p| p.package.id == "mysql" && p.running)
-        {
+        if !self.mysql_is_running() {
             bail!("Yedek almadan önce MySQL'i başlatın.");
         }
-        let database = name.replace('-', "_");
+        let database = crate::model::database_name(name);
         let custom = self
             .config
             .lock()

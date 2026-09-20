@@ -70,7 +70,9 @@ impl Manager {
         let mut entries: Vec<_> = fs::read_dir(&root)?.filter_map(Result::ok).collect();
         entries.sort_by_key(|entry| entry.file_name());
         for entry in entries {
-            let path = entry.path();
+            let Ok(path) = dunce::canonicalize(entry.path()) else {
+                continue;
+            };
             if !path.is_dir() || !path.join("public/index.php").is_file() {
                 continue;
             }
