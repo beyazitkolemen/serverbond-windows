@@ -25,6 +25,18 @@ pub fn php_versions() -> Vec<Package> {
     serde_json::from_str(include_str!("../php-versions.json")).expect("embedded PHP catalog")
 }
 
+/// Optional helpers that are installed on demand and never block the environment.
+pub fn tools() -> Vec<Package> {
+    serde_json::from_str(include_str!("../tools.json")).expect("embedded tool catalog")
+}
+
+pub fn tool_package(id: &str) -> Result<Package> {
+    tools()
+        .into_iter()
+        .find(|p| p.id == id)
+        .context("Bu yardımcı araç katalogda bulunmuyor.")
+}
+
 pub fn php_package(version: &str) -> Result<Package> {
     php_versions()
         .into_iter()
@@ -141,6 +153,7 @@ pub struct Settings {
     pub mysql: crate::preferences::MysqlSettings,
     pub web: crate::preferences::WebSettings,
     pub phpmyadmin: crate::preferences::PmaSettings,
+    pub tunnel: crate::preferences::TunnelSettings,
     pub projects_dir: String,
     pub backups_dir: String,
     pub start_on_launch: bool,
@@ -157,6 +170,7 @@ impl Default for Settings {
             mysql: Default::default(),
             web: Default::default(),
             phpmyadmin: Default::default(),
+            tunnel: Default::default(),
             projects_dir: String::new(),
             backups_dir: String::new(),
             start_on_launch: false,
@@ -218,6 +232,8 @@ pub struct Snapshot {
     pub php_versions: Vec<PackageStatus>,
     pub settings: Settings,
     pub projects: Vec<ProjectStatus>,
+    pub tunnel: crate::tunnel::TunnelState,
+    pub permissions: crate::permissions::PermissionState,
     pub logs: Vec<String>,
     pub home: PathBuf,
     pub busy: bool,

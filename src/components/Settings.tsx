@@ -5,11 +5,15 @@ import type {
   Settings as Values,
   PhpSettings,
   PackageStatus,
+  PermissionState,
   Run,
+  TunnelState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
+import TunnelSettings from "./TunnelSettings";
+import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
 
 const sections = [
@@ -18,6 +22,7 @@ const sections = [
   "MySQL",
   "Web sunucusu",
   "phpMyAdmin",
+  "Tünel",
   "Yedek ve aktarım",
   "Sistem",
   "Güncellemeler",
@@ -106,6 +111,8 @@ export default function Settings({
   busy,
   running,
   run,
+  tunnel,
+  permissions,
   appUpdate,
   onAppUpdate,
   openUpdates,
@@ -116,6 +123,8 @@ export default function Settings({
   busy: boolean;
   running: boolean;
   run: Run;
+  tunnel: TunnelState;
+  permissions: PermissionState;
   appUpdate: UpdateInfo | null;
   onAppUpdate: (update: UpdateInfo | null) => void;
   openUpdates: number;
@@ -688,7 +697,7 @@ export default function Settings({
             </section>
           )}
         </fieldset>
-        {section !== "Sistem" && section !== "Güncellemeler" && (
+        {!["Sistem", "Güncellemeler", "Tünel"].includes(section) && (
           <div className="settings-save">
             <span>
               {dirty ? "Kaydedilmemiş değişiklikler var" : "Ayarlar güncel"}
@@ -714,8 +723,12 @@ export default function Settings({
           </div>
         )}
       </form>
+      {section === "Tünel" && (
+        <TunnelSettings tunnel={tunnel} busy={busy} run={run} />
+      )}
       {section === "Sistem" && (
         <>
+          <PermissionSettings permissions={permissions} busy={busy} run={run} />
           <Requirements busy={busy} run={run} />
           <section className="settings-section">
             <h2>MySQL bağlantısı</h2>

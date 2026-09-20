@@ -13,6 +13,17 @@ use std::{
     time::{Duration, Instant},
 };
 
+fn log_contains(path: &std::path::Path, offset: u64, marker: &str) -> Result<bool> {
+    use std::io::{Read, Seek, SeekFrom};
+    let Ok(mut file) = fs::File::open(path) else {
+        return Ok(false);
+    };
+    file.seek(SeekFrom::Start(offset))?;
+    let mut bytes = Vec::new();
+    file.take(256 * 1024).read_to_end(&mut bytes)?;
+    Ok(String::from_utf8_lossy(&bytes).contains(marker))
+}
+
 pub fn port_free(port: u16) -> Result<()> {
     TcpListener::bind((Ipv4Addr::LOCALHOST, port)).with_context(|| format!("{port} portu başka bir uygulama tarafından kullanılıyor. Ayarlar ekranından farklı port seçin."))?;
     Ok(())
@@ -207,6 +218,51 @@ impl Manager {
         Ok(())
     }
 
+    /// Starts a child that never opens a listening port: readiness is the line the
+    /// program prints into its own log.
+    pub(crate) fn spawn_watched(
+        &self,
+        id: &str,
+        cmd: Command,
+        marker: &str,
+        timeout: Duration,
+    ) -> Result<()> {
+        if self
+            .processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(id)
+            .is_some_and(|p| p.alive())
+        {
+            return Ok(());
+        }
+        let log = self.home.join("logs").join(format!("{id}.log"));
+        let offset = log.metadata().map(|m| m.len()).unwrap_or(0);
+        let mut child = ManagedChild::spawn(cmd, &log)?;
+        let deadline = Instant::now() + timeout;
+        loop {
+            if let Some(status) = child.child.try_wait()? {
+                bail!("{id} başlatılamadı ({status}). Günlükler ekranındaki {id} kaydını kontrol edin.");
+            }
+            if log_contains(&log, offset, marker)? {
+                break;
+            }
+            if Instant::now() > deadline {
+                bail!("{id} hazır olduğunu bildirmedi. Günlükler ekranındaki {id} kaydını kontrol edin.");
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        self.processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id.into(), child);
+        self.service_errors
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(id);
+        Ok(())
+    }
+
     pub fn restart(&self) -> Result<()> {
         let _guard = self.gate()?;
         self.stop_inner()?;
@@ -239,10 +295,13 @@ impl Manager {
                     .and_then(|_| self.start_caddy());
                 if outcome.is_err() {
                     self.rollback_new_services(&before);
+                } else {
+                    self.start_tunnel_autostart();
                 }
                 outcome
             }
             "mysql" => self.start_mysql(),
+            crate::tunnel::ID => self.start_tunnel_inner(),
             "php" => self.start_php(),
             "caddy" => {
                 let before = self
@@ -514,7 +573,7 @@ impl Manager {
     }
 
     pub(crate) fn stop_service(&self, id: &str) -> Result<()> {
-        if !["caddy", "php", "mysql"].contains(&id)
+        if !["caddy", "php", "mysql", crate::tunnel::ID].contains(&id)
             && !Self::is_project_service_id(id)
             && !Self::is_job_service_id(id)
         {

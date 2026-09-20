@@ -201,7 +201,14 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
         "{}-{}.{}",
         package.id,
         package.version,
-        if package.archive { "zip" } else { "phar" }
+        if package.archive {
+            "zip"
+        } else {
+            Path::new(&package.executable)
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .unwrap_or("bin")
+        }
     ));
     if cache.exists() && verify_hash(&cache, &package.sha256).is_err() {
         fs::remove_file(&cache)?;

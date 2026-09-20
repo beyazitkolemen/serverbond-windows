@@ -449,6 +449,8 @@ export default function App() {
               busy={disabled}
               running={running}
               run={run}
+              tunnel={state.tunnel}
+              permissions={state.permissions}
               appUpdate={appUpdate}
               onAppUpdate={setAppUpdate}
               openUpdates={openUpdates}

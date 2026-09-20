@@ -20,6 +20,12 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 `crates/f4box-core/src/jobs.rs`. İşçi: `queue-{projectUuid}-{workerUuid}-{n}` → `php artisan queue:work`. Zamanlayıcı: `schedule-{projectUuid}` → `schedule:work` (crontab’daki dakikalık `schedule:run`). En fazla 8 işçi, işçi başına 8 süreç. `artisan` yoksa başlatma reddedilir. `.env` yazılmaz. Ortam `start("php"|"all")` sonrası `autoStart` olanlar açılır; `stop` hepsini kapatır. Beklenmedik çıkışta otomatik yeniden başlama yok.
 
+## Cloudflare tüneli ve Windows izinleri
+
+`tunnel.rs`: servis `cloudflared`, isteğe bağlı paket `tools.json` içinde. Jeton `config/cloudflared-token.dpapi` (DPAPI), sürece `TUNNEL_TOKEN` ortam değişkeniyle geçer; komut satırına yazılmaz. Hazır olma ölçütü günlükteki `Registered tunnel connection` (`spawn_watched`). `start("all")` sonunda `autoStart` açıksa denenir; hata ortamı düşürmez, `service_errors` dolar.
+
+`permissions.rs`: tek yükseltilmiş PowerShell betiği (netsh güvenlik duvarı kuralları, `icacls`, isteğe bağlı `Add-MpPreference`). Betik metni saf fonksiyonla üretilir ve testlidir; yollar tek tırnak içinde kaçırılır. Sonuç `config/permissions.json`. Uygulamanın kendisi hiçbir zaman yükseltilmez.
+
 ## Projeler
 
 - Ad: 1–48 karakter, `[a-z0-9-]` (kenarda tire yok), Windows ayrılmış adları yok (`con`, `com0`, `lpt0`, …)

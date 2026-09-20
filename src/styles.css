@@ -1425,6 +1425,40 @@ td:first-child {
 .settings-fields:disabled {
   opacity: 0.65;
 }
+.tunnel-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #dbe5de;
+  border-radius: 10px;
+  background: #f8faf8;
+}
+.tunnel-status .status-dot {
+  margin-top: 7px;
+  width: 8px;
+  height: 8px;
+}
+.tunnel-status .status-dot.on {
+  background: #279469;
+}
+.tunnel-status p {
+  margin: 2px 0 0;
+}
+.permission-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #56685c;
+  display: grid;
+  gap: 4px;
+}
+.permission-list.done {
+  color: #276440;
+}
+.permission-list.error {
+  color: #8a2a24;
+}
 @media (max-width: 700px) {
   .settings-grid {
     grid-template-columns: 1fr;

@@ -214,7 +214,7 @@ fn corrupt_configuration_is_not_silently_replaced() {
 fn catalog_only_contains_pinned_https_packages() {
     let packages = catalog();
     assert_eq!(packages.len(), 5);
-    for package in packages {
+    for package in packages.into_iter().chain(f4box_core::model::tools()) {
         assert!(package.url.starts_with("https://"));
         assert_eq!(package.sha256.len(), 64);
         assert!(package.sha256.bytes().all(|b| b.is_ascii_hexdigit()));
@@ -555,6 +555,47 @@ fn project_jobs_persist_and_reject_invalid_workers() {
         .to_string()
         .contains("artisan"));
     assert!(reopened.read_log("../queue").is_err());
+}
+
+#[test]
+fn tunnel_rejects_bad_tokens_and_reports_a_missing_client() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().tunnel;
+    assert!(!state.installed && !state.token_saved && !state.running);
+    assert!(!state.auto_start);
+    assert!(manager.save_tunnel_token("too-short").is_err());
+    assert!(!home.path().join("config/cloudflared-token.dpapi").exists());
+    manager.save_tunnel_auto_start(true).unwrap();
+    assert!(manager.snapshot().unwrap().tunnel.auto_start);
+    drop(manager);
+    let reopened = Manager::new(home.path().into()).unwrap();
+    assert!(reopened.snapshot().unwrap().tunnel.auto_start);
+    // Without a saved token the environment still starts; only the tunnel reports it.
+    assert!(reopened
+        .start_tunnel()
+        .unwrap_err()
+        .to_string()
+        .contains("jeton"));
+    assert!(reopened.stop_tunnel().is_ok());
+    assert_eq!(
+        reopened.read_log("cloudflared").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+}
+
+#[test]
+fn granting_windows_permissions_needs_installed_programs() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().permissions;
+    assert!(!state.granted && state.applied.is_empty() && state.pending.is_empty());
+    assert!(manager
+        .grant_permissions(false)
+        .unwrap_err()
+        .to_string()
+        .contains("bileşenleri kurun"));
+    assert!(!home.path().join("config/permissions.json").exists());
 }
 
 #[test]

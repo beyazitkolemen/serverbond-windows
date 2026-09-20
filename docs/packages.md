@@ -12,7 +12,9 @@ Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her
 | phpMyAdmin | [Resmî 5.2.3 all-languages ZIP SHA-256](https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip.sha256) |
 | MySQL | `https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.10-winx64.zip`, resmî HTTPS kaynağından indirilen 280672277 baytlık dosyanın yerelde hesaplanan SHA-256 özeti |
 
-MySQL özeti bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
+İsteğe bağlı araçlar `crates/f4box-core/tools.json` içindedir ve ortamın çalışması için gerekmez. Şu an tek kayıt Cloudflare Tunnel bağlayıcısıdır: `cloudflared-windows-amd64.exe` 2026.9.1, GitHub sürüm varlığından indirilen 54976432 baytlık dosyanın yerelde hesaplanan SHA-256 özeti. Bu paket Ayarlar → Tünel bölümünden kurulur.
+
+MySQL ve cloudflared özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
 
 ## Sürüm güncelleme
 

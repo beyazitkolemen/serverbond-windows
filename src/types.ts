@@ -95,14 +95,37 @@ export interface Settings {
     rows: number;
     loginSeconds: number;
   };
+  tunnel: {
+    autoStart: boolean;
+  };
   projectsDir: string;
   backupsDir: string;
   startOnLaunch: boolean;
+}
+export interface TunnelState {
+  version: string;
+  installed: boolean;
+  running: boolean;
+  pid: number | null;
+  tokenSaved: boolean;
+  autoStart: boolean;
+  issue: string | null;
+}
+export interface PermissionState {
+  granted: boolean;
+  appliedAt: string | null;
+  applied: string[];
+  failed: string[];
+  programs: string[];
+  defenderExclusion: boolean;
+  pending: string[];
 }
 export interface Snapshot {
   packages: PackageStatus[];
   phpVersions: PackageStatus[];
   projects: Project[];
+  tunnel: TunnelState;
+  permissions: PermissionState;
   logs: string[];
   home: string;
   settings: Settings;

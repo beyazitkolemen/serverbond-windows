@@ -2,6 +2,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { Snapshot } from "./types";
 import catalog from "../crates/f4box-core/catalog.json";
 import phpVersions from "../crates/f4box-core/php-versions.json";
+import tools from "../crates/f4box-core/tools.json";
 
 export const desktop = isTauri();
 
@@ -77,9 +78,28 @@ const preview: Snapshot = {
       connectSeconds: 3,
     },
     phpmyadmin: { enabled: true, language: "tr", rows: 25, loginSeconds: 1440 },
+    tunnel: { autoStart: false },
     projectsDir: "",
     backupsDir: "",
     startOnLaunch: false,
+  },
+  tunnel: {
+    version: tools[0].version,
+    installed: false,
+    running: false,
+    pid: null,
+    tokenSaved: false,
+    autoStart: false,
+    issue: null,
+  },
+  permissions: {
+    granted: false,
+    appliedAt: null,
+    applied: [],
+    failed: [],
+    programs: [],
+    defenderExclusion: false,
+    pending: [],
   },
   busy: false,
   anyRunning: false,

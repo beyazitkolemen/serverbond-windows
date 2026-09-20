@@ -2,7 +2,7 @@
 
 Windows x64 üzerinde PHP, MySQL, Caddy ve Composer indirip kuran; Laravel projelerini ve yerel servisleri yöneten Rust + Tauri masaüstü uygulaması.
 
-PHP sürümü seçimi, projeye özel çalışma ortamları, phpMyAdmin, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
+PHP sürümü seçimi, projeye özel çalışma ortamları, kuyruk ve zamanlama süreçleri, phpMyAdmin, Cloudflare tüneli, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
 ## İndir — v1.1
 
@@ -43,6 +43,7 @@ Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `
 | Caddy | 2.11.4 | Proje yönlendirme ve dosya sunma |
 | Composer | 2.10.3 | Laravel proje kurulumu |
 | phpMyAdmin | 5.2.3, tüm diller | Tarayıcıdan MySQL yönetimi |
+| Cloudflared | 2026.9.1 | İsteğe bağlı Cloudflare tüneli |
 
 Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklarından indirilir. Windows x64 Visual C++ 2015–2022 Redistributable ve WebView2 Runtime gerekir. Bu bilgisayarda ikisi de mevcuttur. Başka bir bilgisayarda PHP/MySQL başlatılamıyorsa önce [Microsoft Visual C++ Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) kurulmalıdır. Tauri kurulum paketi WebView2 gereksinimini yönetir.
 
@@ -67,6 +68,26 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 **Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** düğmesi `schedule:list` çıktısını gösterir. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz.
 
 Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek sınırından çıkan işçi otomatik yeniden başlamaz; **Başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir.
+
+### Cloudflare tüneli
+
+**Ayarlar → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
+
+1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun ve bağlayıcı jetonunu kopyalayın.
+2. Jetonu **Ayarlar → Tünel** alanına yapıştırıp kaydedin. Jeton Windows DPAPI ile mevcut hesaba bağlı olarak şifrelenir; komut satırına ve günlüklere yazılmaz, sürece ortam değişkeni olarak verilir.
+3. **Tüneli başlat** bağlayıcıyı çalıştırır. Hangi genel adresin hangi yerel porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler; F4Box yalnızca bağlayıcıyı çalıştırır ve durumunu gösterir.
+
+**Ortam başlatıldığında tüneli de başlat** açıkken **Ortamı başlat** tüneli de açar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Jetonu silmek tüneli durdurur. Komut satırından: `f4box tunnel install|token <jeton>|start|stop|status`.
+
+### Windows izinleri
+
+F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. **Ayarlar → Sistem → Windows izinleri** tek bir Windows onay penceresiyle şunları bir kez uygular:
+
+- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
+- Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
+- İsteğe bağlı kutu işaretlenirse Microsoft Defender'da veri klasörü istisnası. Bu seçenek varsayılan olarak kapalıdır: Composer ve PHP hızlanır, ancak o klasörde tarama koruması kalkar.
+
+Yükseltilmiş yetkiyle yalnızca F4Box'ın ürettiği bu betik çalışır; uygulamanın kendisi yükseltilmez. Onay verilmezse hiçbir ayar değişmez. Uygulanan ve uygulanamayan maddeler kartta ve günlüklerde listelenir; yeni bir PHP sürümü veya cloudflared kurduktan sonra kart eksik programları bildirir ve **İzinleri yenile** ile eklenir. Komut satırından: `f4box permissions grant [defender]`.
 
 **Ayarlar → Kurulum gereksinimleri**, Windows x64, Visual C++ x64 çalışma zamanı, Windows PowerShell, veri klasörüne yazma, disk alanı ve portları denetler. F4Box'a ait açık portlar kullanılabilir kabul edilir; başka uygulamanın portu hata olarak gösterilir. Visual C++ eksikse Microsoft indirme bağlantısı sunulur. Paket indirmeden önce platform, çalışma zamanı ve yazma erişimi denetlenir; düşük disk alanı uyarı olarak gösterilir. WebView2 kurulumu Tauri kurulum paketi tarafından yönetilir.
 

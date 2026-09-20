@@ -19,7 +19,7 @@
 | Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer ve çalışma diziniyle PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
 | Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
 | E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Henüz paket/servis yok. Eklendiğinde SMTP ve web portları ile otomatik başlangıç ayarları birlikte sunulmalı. |
-| Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Yerel geliştirmeyle sınırlı. Tünel, dış erişim ve token yönetimi yok. |
+| Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Ayarlar → Tünel bölümünde Cloudflare Tunnel: sabit `cloudflared` paketi, DPAPI ile şifrelenen jeton, başlat/durdur ve ortamla otomatik başlatma. Ngrok ve bölge seçimi yok; genel adres eşlemesi Cloudflare panelinde yapılır. |
 | Taşınabilirlik | Laragon klasörünün başka sürücü/bilgisayara taşınması belgelenir. [Portable](https://laragon.org/docs/portable) | Programlar özel klasörde tutulur. F4Box parolaları Windows DPAPI ile mevcut hesaba bağlıdır; farklı bilgisayara klasör kopyalamak tam taşınabilirlik sağlamaz. Taşıma/export için ayrı tasarım gerekir. |
 | Hızlı erişim | Sistem tepsisi menüsü servis, günlük ve terminal işlemlerini toplar. [Context Menu](https://laragon.org/docs/context-menu) | Windows tepsisinde başlat/durdur/yeniden başlat, servis alt menüleri, phpMyAdmin, ayarlar, günlükler, veri klasörü ve çıkış var. Tepsiye küçültme ve ikinci açılışta mevcut pencereyi gösterme desteklenir. Proje/terminal işlemleri ana pencerede. |
 
@@ -56,6 +56,7 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 - Node.js / npm ve Mailpit kurulumu, sürüm ve port yönetimi.
 - Terminal/editör seçimi.
 - Proje bazlı queue/scheduler süreçleri (v1.1: `queue:work` ve `schedule:work`).
+- Dış paylaşım (v1.1: Cloudflare Tunnel bağlayıcısı; genel adres eşlemesi Cloudflare panelinde).
 - MySQL veri taşıma, parola değiştirme, yedekten geri yükleme ve zamanlanmış yedek.
 - Tepsi menüsü ve kullanıcı tercihiyle Windows açılışında başlama.
 - Otomatik proje keşfi ve özel vhost/web kökü yönetimi.

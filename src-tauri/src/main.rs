@@ -250,6 +250,44 @@ async fn list_project_schedule(
 }
 
 #[tauri::command]
+async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "install" => state.install_tunnel(),
+        "repair" => state.repair_tunnel(),
+        "start" => state.start_tunnel(),
+        "stop" => state.stop_tunnel(),
+        "forget" => state.clear_tunnel_token(),
+        _ => Err(anyhow::anyhow!("Bilinmeyen tünel işlemi")),
+    })
+    .await
+}
+#[tauri::command]
+async fn save_tunnel_token(state: tauri::State<'_, State>, token: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.save_tunnel_token(&token)).await
+}
+#[tauri::command]
+async fn save_tunnel_auto_start(
+    state: tauri::State<'_, State>,
+    auto_start: bool,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.save_tunnel_auto_start(auto_start)
+    })
+    .await
+}
+#[tauri::command]
+async fn grant_permissions(
+    state: tauri::State<'_, State>,
+    defender: bool,
+) -> Result<f4box_core::permissions::PermissionState, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.grant_permissions(defender)).await
+}
+
+#[tauri::command]
 async fn recover_configuration(state: tauri::State<'_, State>) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || state.recover_configuration()).await
@@ -419,7 +457,11 @@ fn main() {
             stop_project_worker,
             start_project_schedule,
             stop_project_schedule,
-            list_project_schedule
+            list_project_schedule,
+            tunnel,
+            save_tunnel_token,
+            save_tunnel_auto_start,
+            grant_permissions
         ])
         .build(tauri::generate_context!());
     let app = match app {

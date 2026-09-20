@@ -313,7 +313,16 @@ impl Manager {
     }
 
     pub(crate) fn is_managed_log(id: &str) -> bool {
-        if ["f4box", "php", "mysql", "caddy", "composer"].contains(&id) {
+        if [
+            "f4box",
+            "php",
+            "mysql",
+            "caddy",
+            "composer",
+            crate::tunnel::ID,
+        ]
+        .contains(&id)
+        {
             return true;
         }
         if Self::is_project_service_id(id) || Self::is_job_service_id(id) {

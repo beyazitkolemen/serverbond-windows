@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|forget\n  permissions grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -87,6 +87,31 @@ fn main() -> Result<()> {
                 ),
             }
         }
+        "tunnel" => match args.get(1).map(String::as_str).unwrap_or("status") {
+            "install" => manager.install_tunnel()?,
+            "start" => manager.start_tunnel()?,
+            "stop" => manager.stop_tunnel()?,
+            "token" => manager.save_tunnel_token(args.get(2).context("Jeton gerekli.")?)?,
+            "forget" => manager.clear_tunnel_token()?,
+            "status" => println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.snapshot()?.tunnel)?
+            ),
+            _ => bail!("Kullanım: tunnel install|start|stop|token <jeton>|forget|status"),
+        },
+        "permissions" => match args.get(1).map(String::as_str).unwrap_or("status") {
+            "grant" => println!(
+                "{}",
+                serde_json::to_string_pretty(
+                    &manager.grant_permissions(args.get(2).is_some_and(|a| a == "defender"))?
+                )?
+            ),
+            "status" => println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.permission_state())?
+            ),
+            _ => bail!("Kullanım: permissions grant [defender]|status"),
+        },
         "smoke" => smoke(&manager)?,
         _ => bail!("Bilinmeyen komut. f4box help"),
     }

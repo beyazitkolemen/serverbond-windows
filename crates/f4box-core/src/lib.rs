@@ -1,6 +1,7 @@
 pub mod install;
 mod jobs;
 pub mod model;
+pub mod permissions;
 mod phpmyadmin;
 pub mod preferences;
 mod process;
@@ -12,6 +13,7 @@ mod secrets;
 mod services;
 mod storage;
 mod terminal;
+pub mod tunnel;
 
 use anyhow::{bail, Context, Result};
 use fs2::FileExt;
@@ -221,6 +223,31 @@ impl Manager {
         Ok(path)
     }
 
+    pub fn tool_executable(&self, id: &str) -> Result<PathBuf> {
+        let package = tool_package(id)?;
+        let directory = self.home.join("bin").join(id).join(&package.version);
+        install::validate_installation(&directory, &package)
+            .with_context(|| format!("{} kullanıma hazır değil.", package.name))?;
+        Ok(directory.join(package.executable))
+    }
+
+    pub(crate) fn install_tool(&self, id: &str) -> Result<()> {
+        let package = tool_package(id)?;
+        self.check_install_requirements()?;
+        install::install(&self.home, &package, |line| self.log(line))?;
+        Ok(())
+    }
+
+    pub(crate) fn repair_tool(&self, id: &str) -> Result<()> {
+        let package = tool_package(id)?;
+        install::repair(&self.home, &package, |line| self.log(line))?;
+        self.service_errors
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(id);
+        Ok(())
+    }
+
     fn package_status(&self, package: Package, process: Option<&ManagedChild>) -> PackageStatus {
         let dir = self
             .home
@@ -279,6 +306,7 @@ impl Manager {
                 self.package_status(package, process)
             })
             .collect();
+        let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
         Ok(Snapshot {
             packages,
             php_versions: php_versions()
@@ -366,6 +394,8 @@ impl Manager {
                     }
                 })
                 .collect(),
+            tunnel,
+            permissions: self.permission_state(),
             logs: self
                 .logs
                 .lock()

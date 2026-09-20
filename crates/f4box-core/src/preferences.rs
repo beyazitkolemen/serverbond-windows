@@ -133,6 +133,12 @@ impl Default for PmaSettings {
     }
 }
 
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct TunnelSettings {
+    pub auto_start: bool,
+}
+
 fn range(value: u32, min: u32, max: u32, name: &str) -> Result<()> {
     if !(min..=max).contains(&value) {
         bail!("{name}: {min}–{max} arasında olmalı.");
