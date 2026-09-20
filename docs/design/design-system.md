@@ -16,13 +16,15 @@ Kurumsal ürün yüzeyi: koyu orman yeşili kenar çubuğu, açık çalışma al
 
 ## Sayfalar
 
-- **Genel bakış:** ortam özeti (beyaz kart, ölçümler), bileşen tablosu, projeler, son günlükler.
-- **Bileşenler:** aynı servis tablosu, lisans/PID ve onarım.
-- **Projeler:** adres ve klasör, PHP, terminal, veritabanı, kuyruk-zamanlama, günlük görüntüleyici.
-- **Ayarlar:** yapışkan sekmeler, kartlı formlar, altta kaydetme çubuğu.
+- **Genel bakış:** kontrol odası. Ortam özeti (ölçümler ilgili sayfaya gider), sade bileşen tablosu, kompakt proje satırları, son kayıtlar. PHP seçici, kuyruk paneli ve uzun notlar bu sayfada yoktur.
+- **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
+- **Projeler:** adres, PHP, birincil işlemler (Aç, Terminal, Veritabanı); yedek ve kaldırma Diğer menüsünde. Kuyruk ve günlük görüntüleyici kartta.
+- **Ayarlar:** Ortam / Hizmetler / Yönetim gruplu sekmeler, kartlı formlar, altta kaydetme çubuğu.
 - **Günlükler:** kaynak sekmeli görüntüleyici.
 
 ## Davranış ve erişilebilirlik
+
+Başarı bildirimi dört saniyede kapanır; hata kullanıcı kapatana kadar kalır. Çalışan ortamdan çıkış onay ister. Boş proje durumunda tara ve ekle eylemleri görünür.
 
 Checkbox anahtarları klavye ve etiket ilişkisini korur. Görünür odak, içeriğe geç, native dialog/Escape ve reduced-motion desteklenir.
 

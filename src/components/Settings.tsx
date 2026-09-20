@@ -32,6 +32,20 @@ const sections = [
   "Sistem",
   "Güncellemeler",
 ] as const;
+const sectionGroups = [
+  {
+    label: "Ortam",
+    items: ["Genel", "PHP", "MySQL", "Web sunucusu"],
+  },
+  {
+    label: "Hizmetler",
+    items: ["phpMyAdmin", "E-posta", "Tünel"],
+  },
+  {
+    label: "Yönetim",
+    items: ["Yedek ve aktarım", "Sistem", "Güncellemeler"],
+  },
+] as const;
 const extensions = [
   "curl",
   "fileinfo",
@@ -213,15 +227,27 @@ export default function Settings({
   return (
     <div className="settings-layout">
       <nav className="settings-tabs" aria-label="Ayar bölümleri">
-        {sections.map((s) => (
-          <button
-            type="button"
-            key={s}
-            aria-current={s === section ? "page" : undefined}
-            onClick={() => setSection(s)}
+        {sectionGroups.map((group) => (
+          <div
+            key={group.label}
+            className="settings-tab-group"
+            role="group"
+            aria-label={group.label}
           >
-            {s}
-          </button>
+            <span className="settings-tab-caption">{group.label}</span>
+            <div className="settings-tab-row">
+              {group.items.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  aria-current={s === section ? "page" : undefined}
+                  onClick={() => setSection(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
       <p className="section-note">
@@ -332,9 +358,9 @@ export default function Settings({
                 </select>
               </label>
               <p className="section-note">
-                Yeni projeler ve ortak FastCGI bu sürümü kullanır. Kurulu değilse
-                indirilir. Ortam çalışırken değiştirilemez; proje kartından ayrı
-                sürüm seçilebilir.
+                Yeni projeler ve ortak FastCGI bu sürümü kullanır. Kurulu
+                değilse indirilir. Ortam çalışırken değiştirilemez; proje
+                kartından ayrı sürüm seçilebilir.
               </p>
               <label>
                 Ayar kapsamı
@@ -611,9 +637,9 @@ export default function Settings({
                 />
               ) : null}
               <p className="section-note">
-                Caddy dahili bir CA ile {`{name}.localhost`} adreslerine sertifika
-                verir. HTTP istekleri HTTPS’e yönlendirilir. Sertifika bu
-                Windows kullanıcısının güven deposuna yazılır; yönetici onayı
+                Caddy dahili bir CA ile {`{name}.localhost`} adreslerine
+                sertifika verir. HTTP istekleri HTTPS’e yönlendirilir. Sertifika
+                bu Windows kullanıcısının güven deposuna yazılır; yönetici onayı
                 gerekmez. Ortam çalışırken port değiştirilemez. Kaydettikten
                 sonra ortamı başlatın; sertifika güveni aşağıdaki düğmelerle
                 yönetilir.
@@ -692,9 +718,8 @@ export default function Settings({
                 {values.web.https
                   ? `https://phpmyadmin.f4box.localhost:${values.web.httpsPort}`
                   : `http://phpmyadmin.f4box.localhost:${values.webPort}`}
-                .
-                Dosyalar bileşen kuruluysa sunulur. Yükleme limitleri varsayılan
-                PHP sürümünün profilinden alınır.
+                . Dosyalar bileşen kuruluysa sunulur. Yükleme limitleri
+                varsayılan PHP sürümünün profilinden alınır.
               </p>
             </section>
           )}
@@ -960,8 +985,8 @@ export default function Settings({
             </p>
             <h3>Parolayı değiştir</h3>
             <p className="section-note">
-              MySQL çalışırken kök parolasını buradan değiştirin. 8–128 karakter;
-              boşluk ve tırnak kullanmayın.
+              MySQL çalışırken kök parolasını buradan değiştirin. 8–128
+              karakter; boşluk ve tırnak kullanmayın.
             </p>
             <div className="settings-grid">
               <label>

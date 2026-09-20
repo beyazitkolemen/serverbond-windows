@@ -121,7 +121,7 @@ export function Notice({
   if (!error && !busy && !message) return null;
   return (
     <div
-      className={`notice ${error ? "error" : ""}`}
+      className={`notice ${error ? "error" : message && !busy ? "success" : ""}`}
       role={error ? "alert" : "status"}
     >
       {busy && !error ? <LoaderCircle className="spin" size={20} /> : null}

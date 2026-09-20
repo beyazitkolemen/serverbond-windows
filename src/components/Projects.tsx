@@ -9,6 +9,7 @@ import {
   Database,
   Archive,
   Terminal,
+  MoreHorizontal,
 } from "lucide-react";
 import { call, chooseFolder, chooseSqlFile } from "../api";
 import type { DiscoveredProject, Project, Run, PackageStatus } from "../types";
@@ -37,6 +38,8 @@ export default function Projects({
   phpVersions,
   anyRunning,
   hostPattern,
+  compact = false,
+  onOpen,
 }: {
   projects: Project[];
   busy: boolean;
@@ -53,6 +56,8 @@ export default function Projects({
   phpVersions: PackageStatus[];
   anyRunning: boolean;
   hostPattern: string;
+  compact?: boolean;
+  onOpen?: () => void;
 }) {
   const [modal, setModal] = useState(false);
   const [remove, setRemove] = useState<Project | null>(null);
@@ -63,23 +68,34 @@ export default function Projects({
   return (
     <section aria-labelledby="projects-heading">
       <div className="section-heading">
-        <h2 id="projects-heading">Projeler</h2>
+        <h2
+          id="projects-heading"
+          className={compact ? undefined : "visually-hidden"}
+        >
+          Projeler
+        </h2>
         <div className="heading-actions">
-          <button
-            className="button secondary small"
-            disabled={busy}
-            onClick={() => {
-              clearError();
-              void run("Proje klasörleri taranıyor…", async () => {
-                const found =
-                  await call<DiscoveredProject[]>("discover_projects");
-                setDiscovered(found);
-              });
-            }}
-          >
-            <FolderOpen size={16} />
-            Klasör tara
-          </button>
+          {onOpen ? (
+            <button type="button" className="section-link" onClick={onOpen}>
+              Tümünü yönet
+            </button>
+          ) : (
+            <button
+              className="button secondary small"
+              disabled={busy}
+              onClick={() => {
+                clearError();
+                void run("Proje klasörleri taranıyor…", async () => {
+                  const found =
+                    await call<DiscoveredProject[]>("discover_projects");
+                  setDiscovered(found);
+                });
+              }}
+            >
+              <FolderOpen size={16} />
+              Klasör tara
+            </button>
+          )}
           <button
             className="button primary small"
             disabled={busy}
@@ -109,16 +125,26 @@ export default function Projects({
                   <p className="project-path" title={project.path}>
                     {project.path.replace(/^\\\\\?\\/, "")}
                   </p>
-                  <p className="project-path">
-                    MySQL: {databaseName(project.name)}
-                  </p>
-                  <ProjectPhp
-                    project={project}
-                    versions={phpVersions}
-                    busy={busy}
-                    run={run}
-                    anyRunning={anyRunning}
-                  />
+                  {compact ? (
+                    <p className="project-path">
+                      {project.running
+                        ? `PHP ${project.phpVersion} · ${project.phpPort}`
+                        : `PHP ${project.phpVersion}`}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="project-path">
+                        MySQL: {databaseName(project.name)}
+                      </p>
+                      <ProjectPhp
+                        project={project}
+                        versions={phpVersions}
+                        busy={busy}
+                        run={run}
+                        anyRunning={anyRunning}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="project-actions">
                   <button
@@ -135,85 +161,116 @@ export default function Projects({
                       )
                     }
                   >
-                    <ExternalLink size={15} />
+                    <ExternalLink size={16} />
                     Aç
                   </button>
-                  <button
-                    className="button secondary small"
-                    disabled={busy}
-                    aria-label={`${project.name} terminalini aç`}
-                    onClick={() =>
-                      void run("Proje terminali açılıyor…", () =>
-                        call("open_project_terminal", { id: project.id }),
-                      )
-                    }
-                  >
-                    <Terminal size={15} /> Terminal
-                  </button>
-                  <button
-                    className="button secondary small"
-                    disabled={busy || !mysqlRunning}
-                    title={
-                      mysqlRunning
-                        ? "Proje adıyla veritabanı oluştur"
-                        : "Önce MySQL'i başlatın"
-                    }
-                    onClick={() =>
-                      void run("Veritabanı oluşturuluyor…", () =>
-                        call("database", {
-                          name: project.name,
-                          action: "create",
-                        }),
-                      )
-                    }
-                  >
-                    <Database size={15} />
-                    Veritabanı
-                  </button>
-                  <button
-                    className="button secondary small"
-                    disabled={busy || !mysqlRunning}
-                    title={
-                      mysqlRunning ? "SQL yedeği al" : "Önce MySQL'i başlatın"
-                    }
-                    onClick={() =>
-                      void run("Yedek alınıyor…", () =>
-                        call("database", {
-                          name: project.name,
-                          action: "backup",
-                        }),
-                      )
-                    }
-                  >
-                    <Archive size={15} />
-                    Yedek
-                  </button>
-                  <button
-                    className="button secondary small"
-                    disabled={busy || !mysqlRunning}
-                    title={
-                      mysqlRunning
-                        ? "SQL yedeğini geri yükle"
-                        : "Önce MySQL'i başlatın"
-                    }
-                    onClick={() => setRestore(project)}
-                  >
-                    <Archive size={15} />
-                    Geri yükle
-                  </button>
-                  <button
-                    className="icon-button danger"
-                    disabled={busy}
-                    title="Listeden kaldır"
-                    aria-label={`${project.name} listeden kaldır`}
-                    onClick={() => setRemove(project)}
-                  >
-                    <Trash2 size={17} />
-                  </button>
+                  {!compact ? (
+                    <>
+                      <button
+                        className="button secondary small"
+                        disabled={busy}
+                        aria-label={`${project.name} terminalini aç`}
+                        onClick={() =>
+                          void run("Proje terminali açılıyor…", () =>
+                            call("open_project_terminal", { id: project.id }),
+                          )
+                        }
+                      >
+                        <Terminal size={16} /> Terminal
+                      </button>
+                      <button
+                        className="button secondary small"
+                        disabled={busy || !mysqlRunning}
+                        title={
+                          mysqlRunning
+                            ? "Proje adıyla veritabanı oluştur"
+                            : "Önce MySQL'i başlatın"
+                        }
+                        onClick={() =>
+                          void run("Veritabanı oluşturuluyor…", () =>
+                            call("database", {
+                              name: project.name,
+                              action: "create",
+                            }),
+                          )
+                        }
+                      >
+                        <Database size={16} />
+                        Veritabanı
+                      </button>
+                      <details className="project-more">
+                        <summary
+                          className="button secondary small"
+                          title="Diğer işlemler"
+                        >
+                          <MoreHorizontal size={16} />
+                          <span className="visually-hidden">
+                            {project.name} diğer işlemler
+                          </span>
+                        </summary>
+                        <div className="project-more-panel">
+                          <button
+                            className="button secondary small"
+                            disabled={busy || !mysqlRunning}
+                            title={
+                              mysqlRunning
+                                ? "SQL yedeği al"
+                                : "Önce MySQL'i başlatın"
+                            }
+                            onClick={() =>
+                              void run("Yedek alınıyor…", () =>
+                                call("database", {
+                                  name: project.name,
+                                  action: "backup",
+                                }),
+                              )
+                            }
+                          >
+                            <Archive size={16} />
+                            Yedek al
+                          </button>
+                          <button
+                            className="button secondary small"
+                            disabled={busy || !mysqlRunning}
+                            title={
+                              mysqlRunning
+                                ? "SQL yedeğini geri yükle"
+                                : "Önce MySQL'i başlatın"
+                            }
+                            onClick={() => setRestore(project)}
+                          >
+                            <Archive size={16} />
+                            Geri yükle
+                          </button>
+                          <button
+                            className="button danger-button small"
+                            disabled={busy}
+                            onClick={() => setRemove(project)}
+                          >
+                            <Trash2 size={16} />
+                            Listeden kaldır
+                          </button>
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <span
+                      className={`service-status ${project.running ? "running" : ""}`}
+                    >
+                      <span
+                        className={`status-dot ${project.running ? "green" : ""}`}
+                      />
+                      {project.running ? "Çalışıyor" : "Kapalı"}
+                    </span>
+                  )}
                 </div>
               </div>
-              <ProjectJobs project={project} busy={busy} run={run} />
-              <ProjectLogs project={project} />
+              {!compact ? (
+                <>
+                  <ProjectJobs project={project} busy={busy} run={run} />
+                  <ProjectLogs project={project} />
+                </>
+              ) : null}
             </article>
           ))}
         </div>
@@ -221,11 +278,39 @@ export default function Projects({
         <div className="empty-state">
           <Folder size={44} strokeWidth={1.5} />
           <div>
-            <h3>İlk Laravel projenizi ekleyin</h3>
+            <h3>Çalışma alanında proje yok</h3>
             <p>
-              Mevcut klasörü seçin veya yeni proje oluşturun. PHP sürümü, kuyruk
-              işçileri ve zamanlayıcı proje kartından yönetilir.
+              Mevcut bir Laravel klasörü ekleyin veya yeni proje oluşturun. PHP
+              sürümü, kuyruk ve zamanlayıcı proje sayfasından yönetilir.
             </p>
+            <div className="empty-actions">
+              <button
+                className="button secondary small"
+                disabled={busy}
+                onClick={() => {
+                  clearError();
+                  void run("Proje klasörleri taranıyor…", async () => {
+                    const found =
+                      await call<DiscoveredProject[]>("discover_projects");
+                    setDiscovered(found);
+                  });
+                }}
+              >
+                <FolderOpen size={16} />
+                Klasör tara
+              </button>
+              <button
+                className="button primary small"
+                disabled={busy}
+                onClick={() => {
+                  clearError();
+                  setModal(true);
+                }}
+              >
+                <Plus size={16} />
+                Proje ekle
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -487,9 +572,7 @@ function ProjectDialog({
         <div className="input-with-button">
           <input
             id="project-path"
-            placeholder={
-              create ? "C:\\Projeler" : "C:\\Projeler\\ornek-proje"
-            }
+            placeholder={create ? "C:\\Projeler" : "C:\\Projeler\\ornek-proje"}
             value={path}
             disabled={busy}
             onChange={(e) => setPath(e.target.value)}

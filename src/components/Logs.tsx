@@ -9,11 +9,22 @@ const sources = [
   { id: "composer", label: "Composer" },
 ];
 
-export function LogPreview({ logs }: { logs: string[] }) {
+export function LogPreview({
+  logs,
+  onOpen,
+}: {
+  logs: string[];
+  onOpen?: () => void;
+}) {
   return (
     <section aria-labelledby="logs-heading">
       <div className="section-heading">
-        <h2 id="logs-heading">Günlükler</h2>
+        <h2 id="logs-heading">Son kayıtlar</h2>
+        {onOpen ? (
+          <button type="button" className="section-link" onClick={onOpen}>
+            Tüm günlükler
+          </button>
+        ) : null}
       </div>
       <pre
         className="console preview-console"

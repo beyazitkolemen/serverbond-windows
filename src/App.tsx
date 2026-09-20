@@ -22,14 +22,11 @@ import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<Page, [string, string]> = {
-  overview: ["Genel bakış", "Servisleri başlatın, projenize geçin."],
-  packages: ["Bileşenler", "PHP, MySQL ve web sunucusunu kurun veya onarın."],
-  projects: [
-    "Projeler",
-    "Laravel ekleyin; PHP, kuyruk ve zamanlamayı karttan yönetin.",
-  ],
+  overview: ["Genel bakış", "Servis durumu, projeler ve son kayıtlar."],
+  packages: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
+  projects: ["Projeler", "Çalışma alanındaki Laravel uygulamaları."],
   logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
-  settings: ["Ayarlar", "Portlar, PHP, Windows tercihleri ve güncellemeler."],
+  settings: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
 };
 
 export default function App() {
@@ -41,6 +38,7 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [appUpdate, setAppUpdate] = useState<UpdateInfo | null>(null);
   const [openUpdates, setOpenUpdates] = useState(0);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const inFlight = useRef(false);
   const requestNumber = useRef(0);
   const refresh = useCallback(async () => {
@@ -141,6 +139,11 @@ export default function App() {
       active = false;
     };
   }, []);
+  useEffect(() => {
+    if (!message || error) return;
+    const timer = window.setTimeout(() => setMessage(""), 4000);
+    return () => clearTimeout(timer);
+  }, [message, error]);
   const run: Run = async (label, action) => {
     if (inFlight.current) return false;
     inFlight.current = true;
@@ -204,7 +207,7 @@ export default function App() {
               <div className="desktop-actions" aria-label="Masaüstü işlemleri">
                 <button
                   className="toolbar-button"
-                  title="Hızlı menü"
+                  title="Uygulama menüsü"
                   onClick={() =>
                     void run("Menü açılıyor…", () =>
                       call("desktop_action", { action: "menu" }),
@@ -212,7 +215,7 @@ export default function App() {
                   }
                 >
                   <Ellipsis size={18} />
-                  <span>Hızlı menü</span>
+                  <span>Uygulama menüsü</span>
                 </button>
                 <button
                   className="icon-button"
@@ -231,11 +234,15 @@ export default function App() {
                   aria-label="F4Box'tan çık"
                   title="F4Box'tan çık"
                   disabled={operationBusy}
-                  onClick={() =>
+                  onClick={() => {
+                    if (running) {
+                      setLeaveOpen(true);
+                      return;
+                    }
                     void call("desktop_action", { action: "exit" }).catch((e) =>
                       setError(String(e)),
-                    )
-                  }
+                    );
+                  }}
                 >
                   <LogOut size={16} />
                 </button>
@@ -344,7 +351,7 @@ export default function App() {
                 <RefreshCw size={16} />
               </div>
               <div>
-                <h2>F4Box {appUpdate.version} yayımlanmış</h2>
+                <h2>F4Box {appUpdate.version} yayımlandı</h2>
                 <p>
                   Kurulu sürüm v{appUpdate.currentVersion}. Güncelleme GitHub
                   üzerinden indirilir; onayınız olmadan kurulmaz.
@@ -361,7 +368,9 @@ export default function App() {
               </button>
             </div>
           ) : null}
-          {page === "overview" && <EnvironmentSummary state={state} />}
+          {page === "overview" && (
+            <EnvironmentSummary state={state} onPage={setPage} />
+          )}
           {page === "overview" && !installed ? (
             <div className="setup-banner">
               <div className="setup-icon">
@@ -369,16 +378,16 @@ export default function App() {
               </div>
               <ol className="setup-steps">
                 <li>
-                  <strong>1. Kur</strong>
+                  <strong>1. Bileşenler</strong>
                   <span>PHP, MySQL ve Caddy</span>
                 </li>
                 <li>
-                  <strong>2. Ekle</strong>
-                  <span>Laravel projeniz</span>
+                  <strong>2. Proje</strong>
+                  <span>Mevcut klasör veya yeni Laravel</span>
                 </li>
                 <li>
-                  <strong>3. Başlat</strong>
-                  <span>Ortam, kuyruk, schedule</span>
+                  <strong>3. Ortam</strong>
+                  <span>Servisleri buradan başlatın</span>
                 </li>
               </ol>
               <button
@@ -404,6 +413,9 @@ export default function App() {
               detailed={page === "packages"}
               pmaEnabled={state.settings.phpmyadmin.enabled}
               running={running}
+              onOpen={
+                page === "overview" ? () => setPage("packages") : undefined
+              }
             />
           ) : null}
           {page === "overview" || page === "projects" ? (
@@ -429,16 +441,14 @@ export default function App() {
               )}
               home={state.settings.projectsDir || `${state.home}/projects`}
               hostPattern={state.settings.web.hostPattern}
+              compact={page === "overview"}
+              onOpen={
+                page === "overview" ? () => setPage("projects") : undefined
+              }
             />
           ) : null}
-          {page === "overview" ? <LogPreview logs={state.logs} /> : null}
           {page === "overview" ? (
-            <button
-              className="button secondary"
-              onClick={() => setPage("settings")}
-            >
-              Kurulum gereksinimlerini denetle
-            </button>
+            <LogPreview logs={state.logs} onOpen={() => setPage("logs")} />
           ) : null}
           {page === "logs" ? <Logs /> : null}
           {page === "settings" ? (
@@ -467,6 +477,60 @@ export default function App() {
           ) : null}
         </>
       )}
+      {leaveOpen ? (
+        <LeaveDialog
+          close={() => setLeaveOpen(false)}
+          confirm={() => {
+            setLeaveOpen(false);
+            void call("desktop_action", { action: "exit" }).catch((e) =>
+              setError(String(e)),
+            );
+          }}
+        />
+      ) : null}
     </Shell>
+  );
+}
+
+function LeaveDialog({
+  close,
+  confirm,
+}: {
+  close: () => void;
+  confirm: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="modal"
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+      aria-labelledby="leave-title"
+    >
+      <div className="modal-header">
+        <h2 id="leave-title">F4Box kapatılsın mı?</h2>
+      </div>
+      <p className="dialog-copy">
+        Ortam çalışıyor. Çıkış PHP, MySQL ve web sunucusunu durdurur.
+      </p>
+      <div className="modal-actions">
+        <button type="button" className="button secondary" onClick={close}>
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          className="button danger-button"
+          onClick={confirm}
+        >
+          Çık
+        </button>
+      </div>
+    </dialog>
   );
 }

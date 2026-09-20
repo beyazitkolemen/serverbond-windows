@@ -18,6 +18,7 @@ export default function Packages({
   detailed = false,
   running,
   pmaEnabled,
+  onOpen,
 }: {
   packages: PackageStatus[];
   phpVersions: PackageStatus[];
@@ -26,6 +27,7 @@ export default function Packages({
   detailed?: boolean;
   running: boolean;
   pmaEnabled: boolean;
+  onOpen?: () => void;
 }) {
   const active = packages.find((p) => p.id === "php");
   const [version, setVersion] = useState(active?.version ?? "");
@@ -41,63 +43,75 @@ export default function Packages({
   return (
     <section aria-labelledby="packages-heading">
       <div className="section-heading">
-        <h2 id="packages-heading">Bileşenler</h2>
+        <h2
+          id="packages-heading"
+          className={detailed ? "visually-hidden" : undefined}
+        >
+          Bileşenler
+        </h2>
         {detailed ? (
           <span className="muted">Windows x64 · Doğrulanmış paketler</span>
         ) : null}
-      </div>
-      <div className="php-selector">
-        <div className="php-selector-copy">
-          <label htmlFor="php-version">Varsayılan PHP sürümü</label>
-          <p>
-            Yeni projeler için kullanılacak Windows x64 NTS paketi indirilir.
-          </p>
-          <small>
-            Varsayılan: PHP {active?.version} · Mevcut projelerin sürümü proje
-            kartından seçilir.
-          </small>
-        </div>
-        <div className="php-selector-controls">
-          <select
-            id="php-version"
-            value={version}
-            disabled={busy}
-            onChange={(event) => setVersion(event.target.value)}
-          >
-            {phpVersions.map((p) => (
-              <option key={p.version} value={p.version}>
-                PHP {p.version}
-                {p.installed ? " · Kurulu" : ""}
-              </option>
-            ))}
-          </select>
-          <button
-            className="button secondary"
-            disabled={
-              busy || !selected || alreadyActive || (needsRepair && running)
-            }
-            title={
-              needsRepair && running
-                ? "Onarmak için önce ortamı durdurun"
-                : undefined
-            }
-            onClick={() =>
-              void run(`PHP ${version} hazırlanıyor…`, () =>
-                call(needsRepair ? "repair_php" : "select_php", { version }),
-              )
-            }
-          >
-            {alreadyActive ? <Check size={16} /> : <Download size={16} />}
-            {alreadyActive
-              ? "Kullanılıyor"
-              : needsRepair
-                ? "Onar ve kullan"
-                : selected?.installed
-                  ? "Bu sürümü kullan"
-                  : "İndir ve kullan"}
+        {onOpen ? (
+          <button type="button" className="section-link" onClick={onOpen}>
+            Tümünü yönet
           </button>
-        </div>
+        ) : null}
       </div>
+      {detailed ? (
+        <div className="php-selector">
+          <div className="php-selector-copy">
+            <label htmlFor="php-version">Varsayılan PHP sürümü</label>
+            <p>
+              Yeni projeler için kullanılacak Windows x64 NTS paketi indirilir.
+            </p>
+            <small>
+              Varsayılan: PHP {active?.version} · Mevcut projelerin sürümü proje
+              kartından seçilir.
+            </small>
+          </div>
+          <div className="php-selector-controls">
+            <select
+              id="php-version"
+              value={version}
+              disabled={busy}
+              onChange={(event) => setVersion(event.target.value)}
+            >
+              {phpVersions.map((p) => (
+                <option key={p.version} value={p.version}>
+                  PHP {p.version}
+                  {p.installed ? " · Kurulu" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              className="button secondary"
+              disabled={
+                busy || !selected || alreadyActive || (needsRepair && running)
+              }
+              title={
+                needsRepair && running
+                  ? "Onarmak için önce ortamı durdurun"
+                  : undefined
+              }
+              onClick={() =>
+                void run(`PHP ${version} hazırlanıyor…`, () =>
+                  call(needsRepair ? "repair_php" : "select_php", { version }),
+                )
+              }
+            >
+              {alreadyActive ? <Check size={16} /> : <Download size={16} />}
+              {alreadyActive
+                ? "Kullanılıyor"
+                : needsRepair
+                  ? "Onar ve kullan"
+                  : selected?.installed
+                    ? "Bu sürümü kullan"
+                    : "İndir ve kullan"}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {packages.some((p) => p.issue) ? (
         <div className="package-issues" role="status">
           {packages
@@ -247,7 +261,8 @@ export default function Packages({
           </tbody>
         </table>
       </div>
-      {packages.some((p) => p.id === "phpmyadmin" && p.installed) ? (
+      {detailed &&
+      packages.some((p) => p.id === "phpmyadmin" && p.installed) ? (
         <p className="section-note">
           phpMyAdmin girişi: kullanıcı <strong>root</strong>; parola Ayarlar →
           Sistem → MySQL bağlantısı bölümünde. F4Box'ın MySQL portu otomatik

@@ -479,6 +479,31 @@ section:last-child {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
+}
+.section-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+  min-height: var(--control-h-sm);
+}
+.section-link:hover {
+  color: var(--accent);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .discover-list {
   list-style: none;
@@ -612,6 +637,12 @@ td:first-child {
   line-height: 1.6;
   color: var(--muted);
 }
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
 .console {
   font-family: "Cascadia Code", "Consolas", monospace;
   font-variant-numeric: tabular-nums;
@@ -688,6 +719,11 @@ td:first-child {
   border-color: var(--danger-border);
   color: var(--danger);
 }
+.notice.success {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-dark);
+}
 .notice .icon-button {
   color: inherit;
 }
@@ -754,6 +790,34 @@ td:first-child {
 }
 .project-actions > .icon-button.danger {
   margin-left: 6px;
+}
+.project-more {
+  position: relative;
+}
+.project-more > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.project-more > summary::-webkit-details-marker {
+  display: none;
+}
+.project-more-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 4;
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+.project-more-panel .button {
+  width: 100%;
+  justify-content: flex-start;
 }
 .modal {
   width: min(540px, calc(100vw - 32px));
@@ -1617,8 +1681,8 @@ td:first-child {
 .settings-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
+  gap: 12px 24px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1627,6 +1691,25 @@ td:first-child {
   top: 0;
   z-index: 3;
   box-shadow: var(--shadow-sm);
+}
+.settings-tab-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.settings-tab-caption {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.settings-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .settings-tabs button {
   padding: 8px 12px;
@@ -1979,9 +2062,20 @@ td:first-child {
   font-size: 14px;
   color: var(--faint);
 }
-.environment-metrics dd svg {
-  margin-left: 14px;
-  color: var(--faint);
+.metric-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.metric-link:hover {
+  color: var(--accent-dark);
 }
 .package-name {
   display: flex;
