@@ -22,9 +22,12 @@ import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<Page, [string, string]> = {
-  overview: ["Genel bakış", "Servis durumu, projeler ve son kayıtlar."],
+  overview: [
+    "Genel bakış",
+    "Bu makinedeki üretim servisleri, projeler ve kayıtlar.",
+  ],
   packages: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
-  projects: ["Projeler", "Çalışma alanındaki Laravel uygulamaları."],
+  projects: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
   logs: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
   settings: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
 };

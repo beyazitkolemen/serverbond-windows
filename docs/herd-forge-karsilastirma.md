@@ -2,27 +2,29 @@
 
 İnceleme tarihi: 20 Eylül 2026. Kapsam: Laravel Herd, Laragon ve Laravel Forge’un kamuya açık belgelerindeki roller ile F4Box’ın Windows üzerindeki konumu. Üç ürünün arayüzü bu incelemede tek tek tıklanarak doğrulanmamıştır; belgelerde yazılmayan davranış varsayılmamıştır. Laragon satırları için ayrıntı: [laragon-incelemesi.md](laragon-incelemesi.md).
 
-F4Box bir yerel geliştirme kopyası (Herd / Laragon) değildir. Amaç, Windows x64 üzerinde Laravel uygulamasını **aynı makinede üretim gibi** çalıştırmaktır: sabit PHP/MySQL/Caddy, proje PHP’si, kuyruk, zamanlayıcı ve yapılandırılmış sürüm (git + Composer + Artisan). Laravel Forge’un uzak VPS, SSH ve push-to-deploy katmanı yoktur ve eklenmez.
+F4Box bir yerel geliştirme kopyası (Herd / Laragon) değildir. Amaç, Windows x64 sunucuda Laravel uygulamasını **üretim olarak** çalıştırmaktır: sabit PHP/MySQL/Caddy, proje PHP’si, kuyruk, zamanlayıcı ve yapılandırılmış sürüm (git + Composer + Artisan). Laravel Forge’un uzak Linux VPS, SSH ve push-to-deploy katmanı yoktur; üretim bu Windows makinesindedir.
 
 ## Ürün rolleri
 
 | Ürün | Rol | F4Box karşılığı |
 | --- | --- | --- |
-| **Laravel Herd** | macOS/Windows yerel PHP/nginx, site isolate, Herd Pro’da dump / Xdebug / günlük, Expose ile paylaşım | PHP 7.4–8.5, proje PHP, Caddy, yerel HTTPS, Mailpit, Cloudflare tüneli, sekmeli proje detayı. Dump penceresi, Xdebug uzantısı ve Expose/ngrok yok. |
-| **Laragon** | Taşınabilir WAMP; Quick-add (Redis/Postgres), Quick-app, Mailpit, Auto SSL, Procfile | Caddy + MySQL 8.4, Mailpit, yerel HTTPS, kuyruk/zamanlayıcı. Redis, Postgres, Apache/Nginx, serbest Procfile ve WordPress/Symfony tarifleri yok. |
-| **Laravel Forge** | Uzak VPS: git push-to-deploy, deploy script, zero-downtime, Supervisor, Let’s Encrypt | **Yerel sürüm sekmesi**: git pull, Composer, `migrate --force`, `optimize:clear`, ek Artisan satırları, kayıtlı kuyruk işçileri ve zamanlayıcının yeniden başlatılması. Uzak SSH, sunucu provision, zero-downtime ve genel Let’s Encrypt yok. |
+| **Laravel Herd** | macOS/Windows **geliştirme**: yerel PHP/nginx, site isolate, Pro’da dump / Xdebug / günlük, Expose | PHP 7.4–8.5, proje PHP, Caddy, HTTPS, Mailpit, Cloudflare tüneli. Dump, Xdebug ve Expose yok; bunlar geliştirme aracıdır. |
+| **Laragon** | Taşınabilir **geliştirme** WAMP; Quick-add, Quick-app, Mailpit, Auto SSL, Procfile | Caddy + MySQL 8.4, Mailpit, HTTPS, kuyruk/zamanlayıcı. Redis/Postgres/Apache ve serbest Procfile yok. |
+| **Laravel Forge** | Uzak Linux VPS üretimi: git push-to-deploy, script, zero-downtime, Supervisor, Let’s Encrypt | **Aynı iş, bu Windows makinede**: sürüm tarifi, kuyruk/zamanlayıcı, tünel. Uzak SSH ve sunucu provision yok. |
 
 ```mermaid
 flowchart LR
-  subgraph local [Aynı Windows makinesi]
+  subgraph dev [Geliştirme araçları]
     Herd
     Laragon
+  end
+  subgraph windows [Windows üretimi]
     F4Box
   end
-  subgraph remote [Uzak sunucu]
+  subgraph remote [Uzak Linux VPS]
     Forge
   end
-  F4Box -->|"Sürüm sekmesi"| Recipe[git_composer_artisan]
+  F4Box -->|"Sürüm"| Recipe[git_composer_artisan]
   Recipe --> Restart[kuyruk_ve_zamanlama]
 ```
 
@@ -51,4 +53,4 @@ Herd’in site isolate ve paylaşım katmanı Cloudflare tüneli ile kısmen kar
 
 ## Doğrulama
 
-Sürüm tarifinin enjeksiyon reddi, adım sırası, `git` yokken hata, `migrate --force --no-ansi` ve eski `config.json` yüklemesi çekirdek testlerindedir. Arayüz: proje detayı → **Sürüm**. CLI: `f4box project release <ad>`.
+Sürüm tarifinin enjeksiyon reddi, adım sırası, `git` yokken hata, `migrate --force --no-ansi` ve eski `config.json` yüklemesi çekirdek testlerindedir. Yeni kurulumda `display_errors` kapalıdır; hatalar günlüğe yazılır. Arayüz: proje detayı → **Sürüm**. CLI: `f4box project release <ad>`.

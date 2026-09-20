@@ -383,6 +383,7 @@ export default function Settings({
                   ? "Değişiklik yaptığınızda bu sürüm için ayrı profil oluşur. Aynı sürümü kullanan tüm projelere uygulanır."
                   : "Özel profili olmayan tüm PHP sürümleri bu ayarları kullanır."}{" "}
                 Kurulu sürümler kaydetmeden önce çalıştırılarak doğrulanır.
+                Üretim varsayılanı: sayfada hata kapalı, günlük ve OPcache açık.
               </p>
               {version && values.phpVersions[version] && (
                 <button
@@ -440,7 +441,10 @@ export default function Settings({
               <div className="settings-grid">
                 {(
                   [
-                    ["displayErrors", "Hataları sayfada göster"],
+                    [
+                      "displayErrors",
+                      "Hataları sayfada göster (üretimde kapalı)",
+                    ],
                     ["logErrors", "Hataları günlüğe yaz"],
                     ["opcache", "OPcache etkin"],
                   ] as const

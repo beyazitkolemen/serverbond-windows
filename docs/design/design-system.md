@@ -1,6 +1,6 @@
 # F4Box tasarım sistemi
 
-Türkçe Windows masaüstü geliştirme ortamı. React ve mevcut CSS altyapısı korunur; tüm durumlar Rust çekirdeğinden gelir.
+Türkçe Windows Laravel üretim paneli. React ve mevcut CSS altyapısı korunur; tüm durumlar Rust çekirdeğinden gelir.
 
 ## Görsel dil
 

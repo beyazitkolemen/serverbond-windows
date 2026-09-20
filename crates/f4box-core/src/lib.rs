@@ -124,7 +124,7 @@ impl Manager {
             config.settings.validate()?;
             config
         };
-        fs::write(home.join("welcome/index.html"), "<!doctype html><html lang=\"tr\"><meta charset=\"utf-8\"><title>F4Box</title><style>body{font:20px system-ui;max-width:640px;margin:12vh auto;padding:24px;color:#20282f}strong{color:#008653}</style><h1><strong>F4Box</strong> çalışıyor.</h1><p>Laravel projenizi F4Box uygulamasından ekleyin.</p></html>")?;
+        fs::write(home.join("welcome/index.html"), "<!doctype html><html lang=\"tr\"><meta charset=\"utf-8\"><title>F4Box</title><style>body{font:20px system-ui;max-width:640px;margin:12vh auto;padding:24px;color:#20282f}strong{color:#008653}</style><h1><strong>F4Box</strong> çalışıyor.</h1><p>Bu Windows makinesinde Laravel üretimi hazır. Uygulamadan projenizi ekleyin.</p></html>")?;
         let manager = Self {
             home,
             config: Mutex::new(config),

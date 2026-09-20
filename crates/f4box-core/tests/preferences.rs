@@ -13,6 +13,9 @@ fn old_three_port_settings_migrate_without_changing_behavior() {
     assert!(!s.start_on_launch);
     assert!(!s.web.https);
     assert_eq!(s.web.https_port, 8443);
+    assert!(!s.php.display_errors);
+    assert!(s.php.log_errors);
+    assert!(s.php.opcache);
 }
 
 #[test]

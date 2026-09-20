@@ -14,7 +14,7 @@ description: F4Box katmanları, veri dizini ve nereye kod yazılacağı. Mimari,
 | `src` | React/TypeScript. Tek yazma yolu `call()` → IPC |
 | `crates/f4box-core/src/bin/f4box.rs` | Aynı `Manager` ile CLI |
 
-Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. Yerel sürüm tarifi `release.rs` + `Project.release`; uzak SSH yoktur.
+Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. F4Box Windows üretim ortamıdır (Forge hissi); uzak SSH ve Herd/Laragon geliştirme kopyası yoktur. Yerel sürüm tarifi `release.rs` + `Project.release`.
 
 ## Veri dizini
 

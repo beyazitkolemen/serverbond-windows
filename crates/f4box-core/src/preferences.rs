@@ -65,7 +65,7 @@ impl Default for PhpSettings {
             execution_seconds: 120,
             input_seconds: -1,
             input_vars: 1000,
-            display_errors: true,
+            display_errors: false,
             log_errors: true,
             opcache: false,
             opcache_mb: 128,

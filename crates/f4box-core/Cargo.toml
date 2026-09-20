@@ -2,7 +2,7 @@
 name = "f4box-core"
 version = "1.1.0"
 edition = "2021"
-description = "Windows Laravel development environment manager"
+description = "Windows Laravel production environment manager"
 
 [dependencies]
 anyhow = "1"

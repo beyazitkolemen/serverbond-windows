@@ -99,7 +99,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
         .clone();
     TrayIconBuilder::with_id("f4box-tray")
         .icon(icon)
-        .tooltip("F4Box · Laravel geliştirme ortamı")
+        .tooltip("F4Box · Windows Laravel üretimi")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| dispatch(app, event.id.as_ref()))

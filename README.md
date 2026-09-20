@@ -1,8 +1,8 @@
 # F4Box Laravel
 
-Windows x64 üzerinde PHP, MySQL, Caddy ve Composer indirip kuran; Laravel projelerini ve yerel servisleri yöneten Rust + Tauri masaüstü uygulaması.
+Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rust + Tauri masaüstü uygulaması. Laravel Forge’un uzak VPS katmanı yoktur; PHP, MySQL, Caddy, kuyruk, zamanlayıcı ve yapılandırılmış sürüm aynı makinede yönetilir. Herd veya Laragon geliştirme kopyası değildir.
 
-PHP sürümü seçimi, projeye özel çalışma ortamları, kuyruk ve zamanlama süreçleri, phpMyAdmin, yerel e-posta yakalama, Cloudflare tüneli, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
+PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
 ## İndir — v1.1
 
@@ -254,7 +254,7 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 ## İlk sürümün sınırları
 
 - Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Redis ve otomatik HTTPS bu sürümde yoktur. Node.js tek sabit LTS paketiyle sunulur; sürümler arasında geçiş yoktur.
-- Ortam yerel geliştirme içindir; ağdan erişime açılmaz. Her proje tek bir PHP FastCGI süreci kullanır.
+- Ortam bu Windows makinesinde üretim içindir; Caddy loopback’e bağlanır. Dışarı Cloudflare tüneli ile açılır. Her proje tek bir PHP FastCGI süreci kullanır. Hatalar varsayılan olarak sayfada gösterilmez.
 - Yeni Laravel oluşturma PHP bağımlılıklarını kurar; frontend bağımlılıkları ve Vite derlemesi proje terminalinden `npm` ile yapılır.
 - MySQL sürüm yükseltmesi, otomatik veri taşıma ve yedekten geri yükleme henüz yoktur. Veri klasörünü başka MySQL sürümüyle açmayın.
 - DPAPI parolası Windows kullanıcısına bağlıdır; veri dizininin başka bilgisayara kopyalanması tek başına taşınabilir kurulum sağlamaz. Taşıma için SQL yedeği kullanın.

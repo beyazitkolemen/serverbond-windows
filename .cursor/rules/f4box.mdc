@@ -5,7 +5,7 @@ alwaysApply: true
 
 # F4Box
 
-Windows x64 Laravel geliştirme ortamı yöneticisidir. Cloud Agent Linux üzerindedir; masaüstü EXE, NSIS, tepsi ve gerçek PHP/MySQL/Caddy burada çalışmaz.
+Windows x64 üzerinde Laravel üretim ortamı yöneticisidir (Forge hissi, uzak VPS yok). Herd/Laragon geliştirme kopyası değildir. Cloud Agent Linux üzerindedir; masaüstü EXE, NSIS, tepsi ve gerçek PHP/MySQL/Caddy burada çalışmaz.
 
 - Kullanıcıya dönük metin Türkçe kalır. Kod tanımlayıcıları mevcut İngilizce/Rust stilini korur.
 - Sahte servis durumu, uydurma ekran görüntüsü veya sahte kurulum sonucu üretme.

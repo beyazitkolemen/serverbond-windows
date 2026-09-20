@@ -42,7 +42,7 @@ const preview: Snapshot = {
       executionSeconds: 120,
       inputSeconds: -1,
       inputVars: 1000,
-      displayErrors: true,
+      displayErrors: false,
       logErrors: true,
       opcache: false,
       opcacheMb: 128,

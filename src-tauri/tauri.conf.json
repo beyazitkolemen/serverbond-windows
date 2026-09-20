@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "F4Box · Laravel geliştirme ortamı",
+        "title": "F4Box · Windows Laravel üretimi",
         "visible": false,
         "width": 1360,
         "height": 950,
@@ -28,7 +28,7 @@
     "active": true,
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
-    "shortDescription": "Windows için Laravel geliştirme ortamı",
+    "shortDescription": "Windows üzerinde Laravel üretim ortamı",
     "category": "DeveloperTool",
     "icon": ["icons/icon.ico", "icons/icon.png"]
   },
