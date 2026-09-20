@@ -44,7 +44,7 @@ const shots = [
     file: "09-proje-gunlukleri.png",
     nav: "Projeler",
     expand: [".project-logs-toggle"],
-    height: 1680,
+    height: 1520,
   },
 ];
 
