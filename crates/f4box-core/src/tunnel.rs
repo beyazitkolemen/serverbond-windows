@@ -19,20 +19,34 @@ pub struct TunnelState {
     pub issue: Option<String>,
 }
 
-/// Connector tokens are base64url text. Reject anything that could reach a shell
-/// or a command line in an unexpected shape before it is stored.
-pub fn validate_token(token: &str) -> Result<()> {
-    let token = token.trim();
-    if !(40..=4096).contains(&token.len()) {
-        bail!("Tünel jetonu 40–4096 karakter olmalı. Cloudflare Zero Trust panelinde oluşturulan jetonu olduğu gibi yapıştırın.");
+/// Pulls the connector token out of a dashboard paste. People copy the whole
+/// `cloudflared service install …` line; only the token is stored.
+pub fn normalize_token(raw: &str) -> Result<String> {
+    let trimmed = raw.trim().trim_matches(['"', '\'']);
+    let lower = trimmed.to_ascii_lowercase();
+    let candidate = if lower.contains("cloudflared")
+        || lower.contains("service install")
+        || lower.contains("--token")
+    {
+        trimmed
+            .split_whitespace()
+            .last()
+            .unwrap_or(trimmed)
+            .trim_matches(['"', '\''])
+    } else {
+        trimmed
+    };
+    let token: String = candidate.chars().filter(|c| !c.is_whitespace()).collect();
+    if !(40..=8192).contains(&token.len()) {
+        bail!("Tünel jetonu 40–8192 karakter olmalı. Cloudflare Zero Trust → Tunnels → Install and run a connector adımındaki jetonu olduğu gibi yapıştırın.");
     }
     if !token
         .bytes()
-        .all(|b| b.is_ascii_alphanumeric() || b"=-_.".contains(&b))
+        .all(|b| b.is_ascii_alphanumeric() || b"=-_+./".contains(&b))
     {
-        bail!("Tünel jetonu yalnızca harf, rakam ve = - _ . karakterlerini içerebilir.");
+        bail!("Tünel jetonu yalnızca harf, rakam ve = - _ + . / karakterlerini içerebilir. Komut satırının tamamını yapıştırsanız da olur; F4Box jetonu ayıklar.");
     }
-    Ok(())
+    Ok(token)
 }
 
 impl Manager {
@@ -75,12 +89,33 @@ impl Manager {
         self.repair_tool(ID)
     }
 
+    fn write_tunnel_token(&self, token: &str) -> Result<String> {
+        let token = normalize_token(token)?;
+        secrets::save(&self.tunnel_token_path(), &token)?;
+        self.log("Cloudflare tünel jetonu Windows hesabınıza bağlı olarak şifrelendi.");
+        Ok(token)
+    }
+
     pub fn save_tunnel_token(&self, token: &str) -> Result<()> {
         let _guard = self.gate()?;
-        validate_token(token)?;
-        secrets::save(&self.tunnel_token_path(), token.trim())?;
-        self.log("Cloudflare tünel jetonu Windows hesabınıza bağlı olarak şifrelendi.");
+        self.write_tunnel_token(token)?;
         Ok(())
+    }
+
+    /// Saves the token from the app, installs cloudflared if needed, then starts
+    /// the connector. One action covers the whole setup path.
+    pub fn apply_tunnel(&self, token: &str) -> Result<()> {
+        let _guard = self.gate()?;
+        self.write_tunnel_token(token)?;
+        self.ensure_cloudflared()?;
+        self.start_tunnel_inner()
+    }
+
+    fn ensure_cloudflared(&self) -> Result<()> {
+        if self.tool_executable(ID).is_ok() {
+            return Ok(());
+        }
+        self.install_tool(ID)
     }
 
     pub fn clear_tunnel_token(&self) -> Result<()> {
@@ -120,13 +155,14 @@ impl Manager {
     }
 
     pub(crate) fn start_tunnel_inner(&self) -> Result<()> {
-        let token = secrets::read(&self.tunnel_token_path()).context(
-            "Tünel jetonu okunamadı. Ayarlar → Cloudflare tüneli ekranından jetonu kaydedin.",
-        )?;
-        validate_token(&token)?;
+        let token = secrets::read(&self.tunnel_token_path())
+            .context("Tünel jetonu okunamadı. Ayarlar → Tünel ekranından jetonu kaydedin.")?;
+        let token = normalize_token(&token)?;
+        self.ensure_cloudflared()
+            .context("Cloudflared kurulamadı. Ayarlar → Tünel ekranından yeniden deneyin.")?;
         let executable = self
             .tool_executable(ID)
-            .context("Cloudflared kurulu değil. Ayarlar → Cloudflare tüneli ekranından kurun.")?;
+            .context("Cloudflared kurulu değil. Ayarlar → Tünel ekranından kurun.")?;
         let mut cmd = command(executable);
         // The token stays in the environment block; command lines are visible to
         // every process on the machine.
@@ -173,15 +209,25 @@ mod tests {
 
     #[test]
     fn tokens_are_checked_before_they_are_stored() {
-        validate_token(&"a".repeat(40)).unwrap();
-        validate_token(&format!("  {}  ", "eyJhIjoiYiJ9".repeat(4))).unwrap();
+        assert_eq!(normalize_token(&"a".repeat(40)).unwrap(), "a".repeat(40));
+        let jwt = format!("  {}  ", "eyJhIjoiYiJ9".repeat(4));
+        assert_eq!(normalize_token(&jwt).unwrap(), "eyJhIjoiYiJ9".repeat(4));
+        let command = format!(
+            "cloudflared.exe service install {}",
+            "eyJhIjoiYi+/._".repeat(6)
+        );
+        assert_eq!(
+            normalize_token(&command).unwrap(),
+            "eyJhIjoiYi+/._".repeat(6)
+        );
+        let wrapped = format!("\"{}\r\n{}\"", "eyJ".repeat(20), "a".repeat(20));
+        assert!(normalize_token(&wrapped).unwrap().len() >= 40);
         for invalid in [
             "short",
-            &"a".repeat(4097),
+            &"a".repeat(8193),
             &format!("{} & calc.exe", "a".repeat(40)),
-            &format!("{}\r\n{}", "a".repeat(40), "b".repeat(40)),
         ] {
-            assert!(validate_token(invalid).is_err(), "{invalid}");
+            assert!(normalize_token(invalid).is_err(), "{invalid}");
         }
     }
 }

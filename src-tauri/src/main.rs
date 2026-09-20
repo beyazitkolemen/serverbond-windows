@@ -286,9 +286,20 @@ async fn node(state: tauri::State<'_, State>, action: String) -> Result<(), Stri
     .await
 }
 #[tauri::command]
-async fn save_tunnel_token(state: tauri::State<'_, State>, token: String) -> Result<(), String> {
+async fn save_tunnel_token(
+    state: tauri::State<'_, State>,
+    token: String,
+    start: bool,
+) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || state.save_tunnel_token(&token)).await
+    blocking(state.clone(), move || {
+        if start {
+            state.apply_tunnel(&token)
+        } else {
+            state.save_tunnel_token(&token)
+        }
+    })
+    .await
 }
 #[tauri::command]
 async fn save_tunnel_auto_start(

@@ -26,7 +26,7 @@ const shots = [
     height: 1620,
   },
   { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1300 },
-  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1250 },
+  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1550 },
   {
     file: "06-sistem.png",
     nav: "Ayarlar",

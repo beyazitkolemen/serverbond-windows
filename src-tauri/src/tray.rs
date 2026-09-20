@@ -62,6 +62,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
         ("php", "PHP"),
         ("mysql", "MySQL"),
         ("caddy", "Web sunucusu"),
+        ("cloudflared", "Cloudflare tüneli"),
     ] {
         let start = item(&format!("start:{id}"), "Başlat")?;
         let stop = item(&format!("stop:{id}"), "Durdur")?;
@@ -201,6 +202,13 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
     menu.close.set_enabled(!desktop.quitting)?;
     menu.close.set_checked(desktop.preferences.close_to_tray)?;
     for (id, start, stop) in &menu.services {
+        if id == "cloudflared" {
+            start.set_enabled(
+                !busy && healthy && snapshot.tunnel.token_saved && !snapshot.tunnel.running,
+            )?;
+            stop.set_enabled(!busy && snapshot.tunnel.running)?;
+            continue;
+        }
         if let Some(package) = snapshot.packages.iter().find(|p| p.package.id == *id) {
             start.set_enabled(!busy && healthy && package.installed && !package.running)?;
             stop.set_enabled(!busy && package.running)?;

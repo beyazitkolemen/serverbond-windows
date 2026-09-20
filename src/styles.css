@@ -699,8 +699,16 @@ td:first-child {
 }
 .input-with-button {
   display: flex;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 9px;
+}
+.input-with-button textarea {
+  flex: 1;
+  min-height: 76px;
+  resize: vertical;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  line-height: 1.45;
 }
 .input-with-button .button {
   padding: 10px 13px;
@@ -1778,6 +1786,10 @@ tbody tr:hover {
 }
 .settings-section > h2 {
   font-size: 18px;
+}
+.settings-section > h3 {
+  font-size: 15px;
+  margin: 22px 0 8px;
 }
 .settings-section > h2 + :not(.section-note) {
   margin-top: 14px;

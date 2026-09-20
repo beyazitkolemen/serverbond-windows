@@ -91,11 +91,11 @@ SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en
 
 **Ayarlar → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
 
-1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun ve bağlayıcı jetonunu kopyalayın.
-2. Jetonu **Ayarlar → Tünel** alanına yapıştırıp kaydedin. Jeton Windows DPAPI ile mevcut hesaba bağlı olarak şifrelenir; komut satırına ve günlüklere yazılmaz, sürece ortam değişkeni olarak verilir.
-3. **Tüneli başlat** bağlayıcıyı çalıştırır. Hangi genel adresin hangi yerel porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler; F4Box yalnızca bağlayıcıyı çalıştırır ve durumunu gösterir.
+1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun. **Install and run a connector** adımındaki jetonu veya tüm `cloudflared.exe service install …` satırını kopyalayın.
+2. **Ayarlar → Tünel** alanına yapıştırın. F4Box jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
+3. **Kaydet ve tüneli başlat** Cloudflared’ı yoksa kurar, jetonu kaydeder ve bağlayıcıyı çalıştırır. Hangi genel adresin hangi porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler.
 
-**Ortam başlatıldığında tüneli de başlat** açıkken **Ortamı başlat** tüneli de açar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Jetonu silmek tüneli durdurur. Komut satırından: `f4box tunnel install|token <jeton>|start|stop|status`.
+Kurulum, onarım, başlat/durdur ve **Ortam başlatıldığında tüneli de başlat** aynı karttan yönetilir. Tepsi menüsü → Servisler → Cloudflare tüneli aynı başlat/durdur işini yapar. Tünel başlatılamazsa ortam çalışmaya devam eder; hata tünel kartında ve **Günlükler → cloudflared** bölümünde görünür. Komut satırından: `f4box tunnel install|token <jeton>|apply <jeton>|start|stop|status`.
 
 ### Windows izinleri
 
