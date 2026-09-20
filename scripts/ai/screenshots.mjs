@@ -17,28 +17,28 @@ const output = join(root, "docs/screenshots");
 const width = 1440;
 
 const shots = [
-  { file: "01-genel-bakis.png", nav: "Genel bakış", height: 1900 },
-  { file: "02-bilesenler.png", nav: "Bileşenler", height: 1200 },
+  { file: "01-genel-bakis.png", nav: "Genel bakış", height: 1480 },
+  { file: "02-bilesenler.png", nav: "Bileşenler", height: 1240 },
   {
     file: "03-projeler-kuyruk.png",
     nav: "Projeler",
     expand: [".project-jobs-toggle", ".project-worker-more summary"],
     height: 1880,
   },
-  { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1300 },
-  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1550 },
+  { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1360 },
+  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1600 },
   {
     file: "06-sistem.png",
     nav: "Ayarlar",
     tab: "Sistem",
-    height: 1880,
+    height: 1960,
   },
-  { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1500 },
+  { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1560 },
   {
     file: "08-web-https.png",
     nav: "Ayarlar",
     tab: "Web sunucusu",
-    height: 1600,
+    height: 1680,
   },
   {
     file: "09-proje-gunlukleri.png",

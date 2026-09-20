@@ -6,7 +6,7 @@ Görüntüler `npm run build && node scripts/ai/screenshots.mjs` komutuyla üret
 
 ## Genel bakış
 
-Ortam durumu, bileşen tablosu, proje listesi ve son günlük satırları tek ekranda.
+Kontrol odası: ortam özeti, sade bileşen tablosu, kompakt proje satırları ve son kayıtlar.
 
 ![Genel bakış](01-genel-bakis.png)
 
@@ -18,7 +18,7 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Projeler, kuyruk ve zamanlama
 
-Proje kartından PHP sürümü seçimi; kart içindeki panelden Laravel `schedule:run` zamanlayıcısı, Supervisor benzeri `queue:work` işçileri, yeniden başlatma, günlükler ve başarısız işler.
+Proje kartında Aç, Terminal ve Veritabanı; yedek ve kaldırma Diğer menüsünde. Panelden Laravel zamanlayıcısı, `queue:work` işçileri, yeniden başlatma, günlükler ve başarısız işler.
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 
@@ -48,7 +48,7 @@ Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte
 
 ## PHP ayarları
 
-PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi.
+Ortam / Hizmetler / Yönetim gruplu sekmeler; PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi.
 
 ![PHP ayarları](07-php-ayarlari.png)
 
