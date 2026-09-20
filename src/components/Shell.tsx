@@ -81,7 +81,7 @@ export function Shell({
         <div className="sidebar-footer">
           <Monitor size={17} />
           <span>Windows x64</span>
-          <span className="build-version">v0.1.0</span>
+          <span className="build-version">v1.0.0</span>
         </div>
       </aside>
       <div className="workspace">
@@ -90,7 +90,7 @@ export function Shell({
         </main>
         <footer>
           {desktop
-            ? "F4Box v0.1.0"
+            ? "F4Box v1.0.0"
             : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
         </footer>
       </div>

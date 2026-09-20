@@ -4,6 +4,14 @@ Windows x64 üzerinde PHP, MySQL, Caddy ve Composer indirip kuran; Laravel proje
 
 PHP sürümü seçimi, projeye özel çalışma ortamları, phpMyAdmin, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
+## İndir — v1.0
+
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.0/F4Box_1.0.0_x64-setup.exe): F4Box'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.0/F4Box_1.0.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\F4Box` altında saklar.
+- [Sürüm notları ve SHA-256 doğrulama dosyası](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0).
+
+Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir. Depo özel olduğu sürece indirme bağlantıları için depoya erişimi olan bir GitHub hesabıyla oturum açılmalıdır.
+
 ![F4Box genel bakış: gerçek PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
 
 ## Ekran görüntüleri
