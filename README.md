@@ -37,6 +37,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![GitHub hesabı](docs/screenshots/12-github.png) | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png) |
 | Proje .env | İsteğe bağlı Redis |
 | ![Proje .env editörü](docs/screenshots/14-proje-env.png) | ![İsteğe bağlı Redis](docs/screenshots/15-redis.png) |
+| Hizmetler | Cloudflare tüneli |
+| ![Hizmetler listesi](docs/screenshots/16-hizmetler.png) | ![Cloudflare tüneli ayarları](docs/screenshots/05-tunel.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -46,7 +48,7 @@ Derlenmiş `F4Box` uygulamasını açın. **Bileşenleri kur** ile gerekli paket
 
 Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `.localhost` alan adı kullanıldığı için hosts dosyası düzenlenmez. **Ayarlar → Web sunucusu** içinde yerel HTTPS açılırsa adres `https://proje-adi.localhost:8443` olur; HTTP istekleri yönlendirilir. Caddy dahili CA’sı Windows kullanıcı güven deposuna yazılabilir. İlk açılışta 8088/13306/19000 portları doluysa bir sonraki boş portlar seçilip kaydedilir. Daha sonra kaydedilmiş bir port başka uygulama tarafından kullanılırsa F4Box o süreci durdurmaz; Ayarlar'dan boş bir port seçin. Geçerli adres proje satırında görünür.
 
-**Hizmetler → GitHub** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
+**Hizmetler → GitHub → Ayarlar** özel depolar için kişisel erişim jetonunu bir kez kaydeder. Jeton Windows DPAPI ile şifrelenir; `git clone` / `git pull` komut satırına yazılmaz. Genel depolar jeton olmadan da klonlanır. Depo `projects` (veya Ayarlar’daki çalışma alanı) altına iner; `.env` yazılmaz. Komut: `f4box github token <jeton>|forget|import <depo> [ad] [dal]`.
 
 **Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 
@@ -310,7 +312,7 @@ Elektrik kesintisi, işletim sisteminin süreci zorla kapatması veya bellek tü
 
 ## Kullanıcı tarafından yönetilen ayarlar
 
-Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, phpMyAdmin, Yedek ve aktarım, Sistem, Güncellemeler bölümlerine ayrılır. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
+Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, Yedek ve aktarım, Sistem, Güncellemeler bölümlerine ayrılır. phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel **Hizmetler** sayfasında; port ve jeton her hizmetin **Ayarlar** düğmesindedir. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
 
 Yeni proje ve SQL yedek klasörleri seçilebilir. Adres kalıbı değişikliği tüm kayıtlı proje adreslerine uygulanır; `.env` dosyaları korunur. JSON içe aktarma, önceki ayarları getirme ve varsayılanlara dönme önce taslak oluşturur. Tercihlerin önceki sürümü `config/settings.previous.json` içinde saklanır. Onarımda kullanıcı tercihleri korunur.
 

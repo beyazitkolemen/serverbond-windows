@@ -93,7 +93,8 @@ export default function MailActions({
         )}
       </div>
       <p className="section-note">
-        Laravel için <code>.env</code> dosyasına <code>MAIL_MAILER=smtp</code>,{" "}
+        SMTP, arayüz portu ve otomatik başlatma Ayarlar düğmesindedir. Laravel
+        için <code>.env</code> dosyasına <code>MAIL_MAILER=smtp</code>,{" "}
         <code>MAIL_HOST=127.0.0.1</code> ve{" "}
         <code>MAIL_PORT={mail.smtpPort}</code> yazın; kullanıcı ve parola
         gerekmez. Yakalanan e-postalar dışarı gönderilmez.

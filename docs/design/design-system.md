@@ -19,7 +19,7 @@ Kurumsal ürün yüzeyi: koyu orman yeşili kenar çubuğu, açık çalışma al
 - **Genel bakış:** kontrol odası. Ortam özeti (ölçümler ilgili sayfaya gider), sade bileşen tablosu, kompakt proje satırları, son kayıtlar. PHP seçici, kuyruk paneli ve uzun notlar bu sayfada yoktur.
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
 - **Projeler:** solda proje listesi, sağda sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Aç ve Terminal başlıkta kalır.
-- **Hizmetler:** sol kenar çubuğunda; phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel.
+- **Hizmetler:** sol kenar çubuğunda ızgara kartları. Hizmete girince kurulum ve çalıştırma; port ve jeton **Ayarlar** düğmesindedir.
 - **Ayarlar:** Ortam / Yönetim gruplu sekmeler, kartlı formlar, altta kaydetme çubuğu.
 - **Günlükler:** kaynak sekmeli görüntüleyici.
 

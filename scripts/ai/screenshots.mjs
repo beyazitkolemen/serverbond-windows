@@ -26,8 +26,21 @@ const shots = [
     expand: [".project-worker-more summary"],
     height: 1400,
   },
-  { file: "04-eposta.png", nav: "Hizmetler", tab: "E-posta", height: 1360 },
-  { file: "05-tunel.png", nav: "Hizmetler", tab: "Tünel", height: 1600 },
+  { file: "16-hizmetler.png", nav: "Hizmetler", height: 1100 },
+  {
+    file: "04-eposta.png",
+    nav: "Hizmetler",
+    service: "E-posta",
+    openSettings: true,
+    height: 1360,
+  },
+  {
+    file: "05-tunel.png",
+    nav: "Hizmetler",
+    service: "Tünel",
+    openSettings: true,
+    height: 1400,
+  },
   {
     file: "06-sistem.png",
     nav: "Ayarlar",
@@ -38,19 +51,20 @@ const shots = [
   {
     file: "11-postgresql.png",
     nav: "Hizmetler",
-    tab: "PostgreSQL",
+    service: "PostgreSQL",
     height: 1560,
   },
   {
     file: "15-redis.png",
     nav: "Hizmetler",
-    tab: "Redis",
+    service: "Redis",
     height: 1280,
   },
   {
     file: "12-github.png",
     nav: "Hizmetler",
-    tab: "GitHub",
+    service: "GitHub",
+    openSettings: true,
     height: 1180,
   },
   {
@@ -112,6 +126,10 @@ addEventListener("DOMContentLoaded", () => {
   const steps = ${JSON.stringify(
     [
       [".nav-item", shot.nav],
+      shot.service
+        ? [`.service-tile[data-service="${shot.service}"]`, null]
+        : null,
+      shot.openSettings ? [".service-gear", "Ayarlar"] : null,
       shot.tab ? [".settings-tabs button", shot.tab] : null,
       shot.projectTab ? [".project-detail-tabs button", shot.projectTab] : null,
       ...(Array.isArray(shot.actions) ? shot.actions : []),

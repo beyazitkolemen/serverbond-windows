@@ -18,7 +18,9 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Hizmetler
 
-phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır.
+phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır. Karttan hizmete girilir; port ve jeton **Ayarlar** düğmesindedir.
+
+![Hizmetler listesi](16-hizmetler.png)
 
 ## Projeler, kuyruk ve zamanlama
 
@@ -46,25 +48,25 @@ Proje detayındaki Günlükler sekmesi PHP FastCGI, Laravel zamanlayıcı ve kuy
 
 ## Yerel e-posta yakalama
 
-Mailpit'in SMTP ve arayüz portları, saklama sınırı, PHP `mail()` yönlendirmesi ve servis durumu.
+Hizmetler → E-posta → Ayarlar: Mailpit SMTP ve arayüz portları, saklama sınırı ve PHP `mail()` yönlendirmesi. Kurulum ve gelen kutusu hizmet kartındadır.
 
 ![E-posta ayarları ve Mailpit servisi](04-eposta.png)
 
 ## İsteğe bağlı PostgreSQL
 
-MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: port, otomatik başlatma, kur/başlat/onar ve parola. `.env` yazılmaz.
+MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: kur/başlat/onar ve parola hizmet kartında; port ve otomatik başlatma Ayarlar’dadır. `.env` yazılmaz.
 
 ![İsteğe bağlı PostgreSQL](11-postgresql.png)
 
 ## İsteğe bağlı Redis
 
-Laravel kuyruk, önbellek ve oturum için Redis 8: port 16379, kur/başlat/onar, otomatik başlatma. `.env` yazılmaz; Laravel `predis` kullanır.
+Laravel kuyruk, önbellek ve oturum için Redis 8: kur/başlat/onar hizmet kartında; port 16379 ve otomatik başlatma Ayarlar’dadır. `.env` yazılmaz; Laravel `predis` kullanır.
 
 ![İsteğe bağlı Redis](15-redis.png)
 
 ## GitHub hesabı ve proje ekleme
 
-Özel depolar için jeton Hizmetler → GitHub’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
+Özel depolar için jeton Hizmetler → GitHub → Ayarlar’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
 
 ![GitHub hesabı](12-github.png)
 
@@ -72,7 +74,7 @@ Laravel kuyruk, önbellek ve oturum için Redis 8: port 16379, kur/başlat/onar,
 
 ## Cloudflare tüneli
 
-Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte otomatik başlatma tercihi.
+Cloudflared kurulumu ve tünelin başlatılması hizmet kartında; jeton ve otomatik başlatma Ayarlar’dadır.
 
 ![Cloudflare tüneli ayarları](05-tunel.png)
 

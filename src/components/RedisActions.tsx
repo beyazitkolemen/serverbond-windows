@@ -77,7 +77,8 @@ export default function RedisActions({
         )}
       </div>
       <p className="section-note">
-        Laravel <code>.env</code> dosyasına <code>REDIS_CLIENT=predis</code>,{" "}
+        Port ve otomatik başlatma Ayarlar düğmesindedir. Laravel{" "}
+        <code>.env</code> dosyasına <code>REDIS_CLIENT=predis</code>,{" "}
         <code>REDIS_HOST=127.0.0.1</code>, <code>REDIS_PORT={redis.port}</code>{" "}
         ve isteğe bağlı <code>CACHE_STORE=redis</code> /{" "}
         <code>QUEUE_CONNECTION=redis</code> yazın. F4Box <code>.env</code>{" "}

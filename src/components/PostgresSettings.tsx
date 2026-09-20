@@ -224,13 +224,13 @@ export default function PostgresSettings({
         </>
       ) : null}
       <p className="section-note">
-        MySQL varsayılan kalır; PostgreSQL isteğe bağlıdır ve ortamı bloke
-        etmez. Laravel <code>DB_CONNECTION=pgsql</code>,{" "}
-        <code>DB_HOST=127.0.0.1</code>, <code>DB_PORT={postgres.port}</code>,{" "}
-        <code>DB_USERNAME=postgres</code> değerlerini kendi <code>.env</code>{" "}
-        dosyanızda tanımlarsınız; F4Box yazmaz. PHP <code>pgsql</code> /{" "}
-        <code>pdo_pgsql</code> uzantılarını PHP sekmesinden açın. Komut:{" "}
-        <code>f4box postgres install|start|stop</code>.
+        Port ve otomatik başlatma Ayarlar düğmesindedir. MySQL varsayılan kalır;
+        PostgreSQL isteğe bağlıdır ve ortamı bloke etmez. Laravel{" "}
+        <code>DB_CONNECTION=pgsql</code>, <code>DB_HOST=127.0.0.1</code>,{" "}
+        <code>DB_PORT={postgres.port}</code>, <code>DB_USERNAME=postgres</code>{" "}
+        değerlerini kendi <code>.env</code> dosyanızda tanımlarsınız; F4Box
+        yazmaz. PHP <code>pgsql</code> / <code>pdo_pgsql</code> uzantılarını PHP
+        sekmesinden açın. Komut: <code>f4box postgres install|start|stop</code>.
       </p>
     </section>
   );
