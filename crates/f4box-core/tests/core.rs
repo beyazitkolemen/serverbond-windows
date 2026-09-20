@@ -636,11 +636,8 @@ fn project_jobs_persist_and_reject_invalid_workers() {
         reopened.read_project_schedule_log(&project.id).unwrap(),
         "Henüz günlük kaydı yok."
     );
-    assert!(reopened
-        .list_failed_jobs(&project.id)
-        .unwrap_err()
-        .to_string()
-        .contains("artisan"));
+    let failed = reopened.list_failed_jobs(&project.id).unwrap_err();
+    assert!(format!("{failed:#}").contains("artisan"), "{failed:#}");
     assert!(reopened.read_log("../queue").is_err());
 }
 

@@ -422,14 +422,21 @@ impl Manager {
     pub fn read_project_worker_log(&self, id: &str, worker_id: &str) -> Result<String> {
         let (project, worker) = self.project_worker(id, worker_id)?;
         let mut parts = Vec::new();
+        let mut empty = true;
         for index in 0..worker.processes.max(1) {
             let sid = queue_service_id(&project.id, &worker.id, index);
             let text = self.read_log(&sid)?;
+            if text != "Henüz günlük kaydı yok." {
+                empty = false;
+            }
             if worker.processes > 1 {
                 parts.push(format!("— süreç {} —\n{text}", index + 1));
             } else {
                 parts.push(text);
             }
+        }
+        if empty {
+            return Ok("Henüz günlük kaydı yok.".into());
         }
         Ok(parts.join("\n\n"))
     }
