@@ -1053,7 +1053,7 @@ export default function Settings({
                 void run("Klasör açılıyor…", () => call("open_home"))
               }
             >
-              <FolderOpen size={17} />
+              <FolderOpen size={16} />
               Klasörü aç
             </button>
             <p className="section-note">

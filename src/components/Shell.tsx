@@ -45,7 +45,7 @@ export function Shell({
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">
-            <Box size={25} strokeWidth={1.7} />
+            <Box size={24} strokeWidth={1.7} />
           </div>
           <div className="brand-copy">
             <span>F4Box</span>
@@ -62,10 +62,10 @@ export function Shell({
               aria-current={page === id ? "page" : undefined}
               onClick={() => onPage(id)}
             >
-              <Icon size={21} />
+              <Icon size={20} />
               <span>{title}</span>
               {page === id && (
-                <ChevronRight className="nav-chevron" size={15} />
+                <ChevronRight className="nav-chevron" size={16} />
               )}
             </button>
           ))}
@@ -85,7 +85,7 @@ export function Shell({
           ) : null}
         </div>
         <div className="sidebar-footer">
-          <Monitor size={17} />
+          <Monitor size={16} />
           <span>Windows x64</span>
           <span className="build-version">v{APP_VERSION}</span>
         </div>
@@ -96,9 +96,11 @@ export function Shell({
           {children}
         </main>
         <footer>
-          {desktop
-            ? `F4Box v${APP_VERSION}`
-            : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
+          <div className="content-rail">
+            {desktop
+              ? `F4Box v${APP_VERSION}`
+              : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
+          </div>
         </footer>
       </div>
     </div>

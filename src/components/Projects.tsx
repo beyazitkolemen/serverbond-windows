@@ -77,7 +77,7 @@ export default function Projects({
               });
             }}
           >
-            <FolderOpen size={17} />
+            <FolderOpen size={16} />
             Klasör tara
           </button>
           <button
@@ -88,7 +88,7 @@ export default function Projects({
               setModal(true);
             }}
           >
-            <Plus size={17} />
+            <Plus size={16} />
             Proje ekle
           </button>
         </div>

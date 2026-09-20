@@ -22,7 +22,7 @@ export default function EnvironmentSummary({ state }: { state: Snapshot }) {
     >
       <div className="environment-summary-copy">
         <div className="summary-symbol">
-          <Activity size={25} strokeWidth={1.6} />
+          <Activity size={24} strokeWidth={1.6} />
         </div>
         <div>
           <span className="summary-kicker">ORTAM DURUMU</span>
@@ -52,7 +52,7 @@ export default function EnvironmentSummary({ state }: { state: Snapshot }) {
           <dt>Proje</dt>
           <dd>
             {state.projects.length}
-            <ArrowUpRight size={17} aria-hidden="true" />
+            <ArrowUpRight size={16} aria-hidden="true" />
           </dd>
         </div>
       </dl>

@@ -185,9 +185,9 @@ export default function App() {
         <div className="workspace-toolbar">
           <div className="workspace-toolbar-inner">
             <div className="breadcrumb">
-              <Monitor size={15} />
+              <Monitor size={16} />
               <span>Yerel ortam</span>
-              <ChevronRight size={13} />
+              <ChevronRight size={16} />
               <strong>
                 {
                   {
@@ -224,7 +224,7 @@ export default function App() {
                     )
                   }
                 >
-                  <PanelBottomClose size={17} />
+                  <PanelBottomClose size={16} />
                 </button>
                 <button
                   className="icon-button"
@@ -237,7 +237,7 @@ export default function App() {
                     )
                   }
                 >
-                  <LogOut size={17} />
+                  <LogOut size={16} />
                 </button>
               </div>
             )}
@@ -341,7 +341,7 @@ export default function App() {
           {appUpdate ? (
             <div className="setup-banner update-banner">
               <div className="setup-icon">
-                <RefreshCw size={19} />
+                <RefreshCw size={16} />
               </div>
               <div>
                 <h2>F4Box {appUpdate.version} yayımlanmış</h2>
@@ -365,7 +365,7 @@ export default function App() {
           {page === "overview" && !installed ? (
             <div className="setup-banner">
               <div className="setup-icon">
-                <Check size={19} />
+                <Check size={16} />
               </div>
               <ol className="setup-steps">
                 <li>
