@@ -20,27 +20,15 @@ export default function GithubSettings({
   const showForm = pane !== "ops";
   return (
     <section className="settings-section">
-      <h2>{pane === "settings" ? "GitHub ayarları" : "GitHub hesabı"}</h2>
+      {pane !== "ops" ? (
+        <h2>{pane === "settings" ? "GitHub ayarları" : "GitHub hesabı"}</h2>
+      ) : null}
       {showOps ? (
-        <div className="tunnel-status">
-          <span className={`status-dot ${github.tokenSaved ? "on" : "off"}`} />
-          <div>
-            <strong>
-              {github.tokenSaved
-                ? github.login
-                  ? `Bağlı: ${github.login}`
-                  : "GitHub jetonu kayıtlı"
-                : "GitHub jetonu yok"}
-            </strong>
-            <p className="section-note">
-              {github.tokenSaved
-                ? "Özel depolar için bir kez kaydedilir. Jeton Windows hesabınıza bağlı olarak şifrelenir; komut satırına yazılmaz."
-                : pane === "ops"
-                  ? "Jeton kaydedilmedi. Ayarlar’dan kişisel erişim jetonunu yapıştırın."
-                  : "Özel depolar için bir kez kaydedilir. Jeton Windows hesabınıza bağlı olarak şifrelenir; komut satırına yazılmaz."}
-            </p>
-          </div>
-        </div>
+        <p className="section-note">
+          {github.tokenSaved
+            ? "Jeton Windows DPAPI ile şifrelenir; komut satırına yazılmaz. Değiştirmek için Ayarlar’ı kullanın."
+            : "Jeton kaydedilmedi. Ayarlar’dan kişisel erişim jetonunu yapıştırın."}
+        </p>
       ) : null}
       {showForm ? (
         <>

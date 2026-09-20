@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, Square, Download, Eye, EyeOff, Copy } from "lucide-react";
+import { Eye, EyeOff, Copy } from "lucide-react";
 import { call } from "../api";
 import type { PostgresState, Run } from "../types";
 import ServiceRepair from "./ServiceRepair";
@@ -17,63 +17,10 @@ export default function PostgresSettings({
   const [nextPassword, setNextPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNext, setShowNext] = useState(false);
-  const action = (name: string, message: string) =>
-    void run(message, () => call("postgres", { action: name }));
   return (
     <section className="settings-section">
-      <h2>PostgreSQL servisi</h2>
-      <div className="tunnel-status">
-        <span className={`status-dot ${postgres.running ? "on" : "off"}`} />
-        <div>
-          <strong>
-            {postgres.running
-              ? `PostgreSQL çalışıyor · PID ${postgres.pid ?? "-"}`
-              : postgres.installed
-                ? "PostgreSQL durdu"
-                : postgres.repairable
-                  ? "Kurulum eksik"
-                  : "PostgreSQL kurulu değil"}
-          </strong>
-          <p className="section-note">
-            PostgreSQL {postgres.version} · 127.0.0.1:{postgres.port} ·
-            kullanıcı <code>postgres</code>
-          </p>
-        </div>
-      </div>
-      {postgres.issue && postgres.installed ? (
-        <p role="alert" className="settings-feedback">
-          {postgres.issue}
-        </p>
-      ) : null}
+      <h3>Parola</h3>
       <div className="settings-actions">
-        {!postgres.installed && !postgres.repairable ? (
-          <button
-            type="button"
-            className="button secondary"
-            disabled={busy}
-            onClick={() => action("install", "PostgreSQL indiriliyor…")}
-          >
-            <Download size={16} />
-            PostgreSQL kur
-          </button>
-        ) : postgres.installed ? (
-          <button
-            type="button"
-            className="button secondary"
-            disabled={busy}
-            onClick={() =>
-              action(
-                postgres.running ? "stop" : "start",
-                postgres.running
-                  ? "PostgreSQL durduruluyor…"
-                  : "PostgreSQL başlatılıyor…",
-              )
-            }
-          >
-            {postgres.running ? <Square size={16} /> : <Play size={16} />}
-            {postgres.running ? "Durdur" : "Başlat"}
-          </button>
-        ) : null}
         <button
           type="button"
           className="button secondary"

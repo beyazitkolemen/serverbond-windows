@@ -12,6 +12,10 @@ import type {
   PackageStatus,
 } from "../types";
 import ServiceRepair from "./ServiceRepair";
+import ServiceConsole, {
+  type ConsoleAction,
+  type ConsoleKind,
+} from "./ServiceConsole";
 import MailActions from "./MailActions";
 import PostgresSettings from "./PostgresSettings";
 import RedisActions from "./RedisActions";
@@ -205,6 +209,265 @@ export default function Services({
         };
     }
   };
+  const serviceConsole = (
+    id: ServiceId,
+  ): {
+    kind: ConsoleKind;
+    title: string;
+    detail: string;
+    issue: string | null;
+    actions: ConsoleAction[];
+  } => {
+    const power = (
+      installed: boolean,
+      repairable: boolean,
+      isRunning: boolean,
+      command: string,
+      start: string,
+      stop: string,
+    ): ConsoleAction[] => {
+      if (!installed && !repairable) {
+        return [
+          {
+            id: "install",
+            label: "Kur",
+            tone: "primary",
+            icon: "install",
+            disabled: busy,
+            onClick: () =>
+              void run(`${start} indiriliyor…`, () =>
+                call(command, { action: "install" }),
+              ),
+          },
+        ];
+      }
+      if (!installed) return [];
+      return [
+        {
+          id: isRunning ? "stop" : "start",
+          label: isRunning ? "Durdur" : "Başlat",
+          tone: isRunning ? "secondary" : "primary",
+          icon: isRunning ? "stop" : "play",
+          disabled: busy,
+          onClick: () =>
+            void run(isRunning ? `${stop}…` : `${start} başlatılıyor…`, () =>
+              call(command, { action: isRunning ? "stop" : "start" }),
+            ),
+        },
+      ];
+    };
+    const kind = (
+      installed: boolean,
+      repairable: boolean,
+      isRunning: boolean,
+    ): ConsoleKind =>
+      isRunning
+        ? "running"
+        : installed
+          ? "stopped"
+          : repairable
+            ? "repair"
+            : "missing";
+    const title = (
+      name: string,
+      installed: boolean,
+      repairable: boolean,
+      isRunning: boolean,
+      pid: number | null,
+    ) =>
+      isRunning
+        ? `${name} çalışıyor · PID ${pid ?? "-"}`
+        : installed
+          ? `${name} durdu`
+          : repairable
+            ? "Kurulum eksik"
+            : `${name} kurulu değil`;
+    switch (id) {
+      case "pma": {
+        const enabled = settings.phpmyadmin.enabled;
+        const url = settings.web.https
+          ? `https://phpmyadmin.f4box.localhost:${settings.web.httpsPort}`
+          : `http://phpmyadmin.f4box.localhost:${settings.webPort}`;
+        return {
+          kind: (enabled
+            ? running
+              ? "ready"
+              : "stopped"
+            : "off") satisfies ConsoleKind,
+          title: enabled ? "Web erişimi açık" : "Web erişimi kapalı",
+          detail: url,
+          issue: phpmyadmin?.installed ? phpmyadmin.issue : null,
+          actions: [
+            {
+              id: "open",
+              label: "Aç",
+              tone: "primary" as const,
+              icon: "open" as const,
+              disabled: busy || !enabled || !running,
+              title: !enabled
+                ? "Ayarlar’dan phpMyAdmin erişimini açın"
+                : running
+                  ? "phpMyAdmin'i tarayıcıda aç"
+                  : "Önce ortamı başlatın",
+              onClick: () =>
+                void run("phpMyAdmin açılıyor…", () => call("open_phpmyadmin")),
+            },
+          ],
+        };
+      }
+      case "mail":
+        return {
+          kind: kind(mail.installed, mail.repairable, mail.running),
+          title: title(
+            "Mailpit",
+            mail.installed,
+            mail.repairable,
+            mail.running,
+            mail.pid,
+          ),
+          detail: `Mailpit ${mail.version} · SMTP 127.0.0.1:${mail.smtpPort} · http://127.0.0.1:${mail.webPort}`,
+          issue: mail.installed ? mail.issue : null,
+          actions: [
+            ...power(
+              mail.installed,
+              mail.repairable,
+              mail.running,
+              "mail",
+              "Mailpit",
+              "Mailpit durduruluyor",
+            ),
+            ...(mail.installed
+              ? [
+                  {
+                    id: "open",
+                    label: "Gelen kutusu",
+                    tone: "secondary" as const,
+                    icon: "open" as const,
+                    disabled: busy || !mail.running,
+                    title: mail.running
+                      ? "Gelen kutusunu tarayıcıda aç"
+                      : "Önce Mailpit'i başlatın",
+                    onClick: () =>
+                      void run("Gelen kutusu açılıyor…", () =>
+                        call("mail", { action: "open" }),
+                      ),
+                  },
+                ]
+              : []),
+          ],
+        };
+      case "postgres":
+        return {
+          kind: kind(postgres.installed, postgres.repairable, postgres.running),
+          title: title(
+            "PostgreSQL",
+            postgres.installed,
+            postgres.repairable,
+            postgres.running,
+            postgres.pid,
+          ),
+          detail: `PostgreSQL ${postgres.version} · 127.0.0.1:${postgres.port} · kullanıcı postgres`,
+          issue: postgres.installed ? postgres.issue : null,
+          actions: power(
+            postgres.installed,
+            postgres.repairable,
+            postgres.running,
+            "postgres",
+            "PostgreSQL",
+            "PostgreSQL durduruluyor",
+          ),
+        };
+      case "redis":
+        return {
+          kind: kind(redis.installed, redis.repairable, redis.running),
+          title: title(
+            "Redis",
+            redis.installed,
+            redis.repairable,
+            redis.running,
+            redis.pid,
+          ),
+          detail: `Redis ${redis.version} · 127.0.0.1:${redis.port} · loopback, parola yok`,
+          issue: redis.installed ? redis.issue : null,
+          actions: power(
+            redis.installed,
+            redis.repairable,
+            redis.running,
+            "redis",
+            "Redis",
+            "Redis durduruluyor",
+          ),
+        };
+      case "github":
+        return {
+          kind: github.tokenSaved ? "ready" : "off",
+          title: github.tokenSaved
+            ? github.login
+              ? `Bağlı: ${github.login}`
+              : "GitHub jetonu kayıtlı"
+            : "GitHub jetonu yok",
+          detail: github.tokenSaved
+            ? "Özel depolar için bir kez kaydedilir. Jeton Windows hesabınıza bağlıdır."
+            : "Jeton kaydedilmedi. Ayarlar’dan kişisel erişim jetonunu yapıştırın.",
+          issue: null,
+          actions: [] as ConsoleAction[],
+        };
+      case "tunnel":
+        return {
+          kind: kind(tunnel.installed, tunnel.repairable, tunnel.running),
+          title: title(
+            "Tünel",
+            tunnel.installed,
+            tunnel.repairable,
+            tunnel.running,
+            tunnel.pid,
+          ),
+          detail: tunnel.tokenSaved
+            ? `Cloudflared ${tunnel.version} · jeton kayıtlı`
+            : `Cloudflared ${tunnel.version} · jeton yok`,
+          issue: tunnel.installed ? tunnel.issue : null,
+          actions: [
+            ...(!tunnel.installed && !tunnel.repairable
+              ? power(
+                  false,
+                  false,
+                  false,
+                  "tunnel",
+                  "Cloudflared",
+                  "Tünel durduruluyor",
+                )
+              : tunnel.installed
+                ? [
+                    {
+                      id: tunnel.running ? "stop" : "start",
+                      label: tunnel.running ? "Durdur" : "Başlat",
+                      tone: tunnel.running
+                        ? ("secondary" as const)
+                        : ("primary" as const),
+                      icon: tunnel.running
+                        ? ("stop" as const)
+                        : ("play" as const),
+                      disabled: busy || !tunnel.tokenSaved,
+                      title: tunnel.tokenSaved
+                        ? undefined
+                        : "Önce jetonu Ayarlar’dan kaydedin.",
+                      onClick: () =>
+                        void run(
+                          tunnel.running
+                            ? "Tünel durduruluyor…"
+                            : "Tünel açılıyor…",
+                          () =>
+                            call("tunnel", {
+                              action: tunnel.running ? "stop" : "start",
+                            }),
+                        ),
+                    },
+                  ]
+                : []),
+          ],
+        };
+    }
+  };
   return (
     <div className="settings-layout">
       {!selected ? (
@@ -277,6 +540,9 @@ export default function Services({
               </button>
             ) : null}
           </div>
+          {!settingsOpen ? (
+            <ServiceConsole {...serviceConsole(service as ServiceId)} />
+          ) : null}
           {settingsOpen &&
           (service === "pma" ||
             service === "mail" ||
@@ -352,7 +618,6 @@ export default function Services({
             <>
               {service === "pma" ? (
                 <PmaActions
-                  settings={settings}
                   phpmyadmin={phpmyadmin}
                   busy={busy}
                   running={running}
@@ -393,56 +658,18 @@ export default function Services({
 }
 
 function PmaActions({
-  settings,
   phpmyadmin,
   busy,
   running,
   run,
 }: {
-  settings: Values;
   phpmyadmin?: PackageStatus;
   busy: boolean;
   running: boolean;
   run: Run;
 }) {
-  const url = settings.web.https
-    ? `https://phpmyadmin.f4box.localhost:${settings.web.httpsPort}`
-    : `http://phpmyadmin.f4box.localhost:${settings.webPort}`;
   return (
     <section className="settings-section">
-      <h2>phpMyAdmin</h2>
-      <div className="tunnel-status">
-        <span
-          className={`status-dot ${settings.phpmyadmin.enabled ? "on" : "off"}`}
-        />
-        <div>
-          <strong>
-            {settings.phpmyadmin.enabled
-              ? "Web erişimi açık"
-              : "Web erişimi kapalı"}
-          </strong>
-          <p className="section-note">{url}</p>
-        </div>
-      </div>
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="button secondary"
-          disabled={busy || !settings.phpmyadmin.enabled || !running}
-          title={
-            !settings.phpmyadmin.enabled
-              ? "Ayarlar’dan phpMyAdmin erişimini açın"
-              : running
-                ? "phpMyAdmin'i tarayıcıda aç"
-                : "Önce ortamı başlatın"
-          }
-          onClick={() =>
-            void run("phpMyAdmin açılıyor…", () => call("open_phpmyadmin"))
-          }
-        >
-          Aç
-        </button>
-      </div>
       <ServiceRepair
         name="phpMyAdmin"
         installed={Boolean(phpmyadmin?.installed)}

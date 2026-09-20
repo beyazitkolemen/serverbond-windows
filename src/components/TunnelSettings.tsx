@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Globe,
-  Play,
-  Square,
-  Download,
-  Trash2,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Globe, Play, Trash2, Eye, EyeOff } from "lucide-react";
 import { call } from "../api";
 import type { Run, TunnelState } from "../types";
 import ServiceRepair from "./ServiceRepair";
@@ -43,12 +35,15 @@ export default function TunnelSettings({
   const showSettings = pane !== "ops";
   return (
     <section className="settings-section">
-      <h2>{pane === "settings" ? "Tünel ayarları" : "Cloudflare tüneli"}</h2>
+      {pane !== "ops" ? (
+        <h2>{pane === "settings" ? "Tünel ayarları" : "Cloudflare tüneli"}</h2>
+      ) : null}
       {showOps ? (
         <p className="section-note">
           Cloudflared {tunnel.version} yerel projelerinizi Cloudflare üzerinden
           dış bir adrese açar. Hangi adresin hangi porta gittiğini Cloudflare
-          Zero Trust panelindeki tünel yapılandırması belirler.
+          Zero Trust panelindeki tünel yapılandırması belirler. Kurulum ve
+          başlat/durdur üstteki denetim şeridindedir.
         </p>
       ) : (
         <p className="section-note">
@@ -56,78 +51,35 @@ export default function TunnelSettings({
           şifreler; günlüklere yazılmaz.
         </p>
       )}
-      <div className="tunnel-status">
-        <span className={`status-dot ${tunnel.running ? "on" : "off"}`} />
-        <div>
-          <strong>
-            {tunnel.running
-              ? `Tünel çalışıyor · PID ${tunnel.pid ?? "-"}`
-              : tunnel.installed
-                ? "Cloudflared kurulu · tünel durdu"
-                : tunnel.repairable
-                  ? "Kurulum eksik"
-                  : "Cloudflared henüz kurulmadı"}
-          </strong>
-          <p className="section-note">
-            {tunnel.tokenSaved
-              ? "Jeton Windows hesabınıza bağlı olarak şifrelenmiş halde saklanıyor."
-              : showSettings
-                ? "Jeton kaydedilmedi. Aşağıya yapıştırıp kaydedin."
-                : "Jeton kaydedilmedi. Ayarlar’dan yapıştırın."}
-          </p>
-        </div>
-      </div>
-      {tunnel.issue && tunnel.installed ? (
-        <p role="alert" className="settings-feedback">
-          {tunnel.issue}
+      {showSettings && !showOps ? (
+        <p className="section-note">
+          {tunnel.tokenSaved
+            ? "Jeton Windows hesabınıza bağlı olarak şifrelenmiş halde saklanıyor."
+            : "Jeton kaydedilmedi. Aşağıya yapıştırıp kaydedin."}
         </p>
       ) : null}
 
       {showOps ? (
-        <>
-          <h3>1. Cloudflared</h3>
-          <p className="section-note">
-            Sabit Windows x64 paketi SHA-256 ile doğrulanarak F4Box klasörüne
-            iner. Ortamın çalışması için gerekli değildir.
-          </p>
-          {!tunnel.installed && !tunnel.repairable ? (
-            <div className="settings-actions">
-              <button
-                type="button"
-                className="button secondary"
-                disabled={busy}
-                onClick={() =>
-                  void run("Cloudflared indiriliyor…", () =>
-                    call("tunnel", { action: "install" }),
-                  )
-                }
-              >
-                <Download size={16} />
-                Cloudflared kur
-              </button>
-            </div>
-          ) : null}
-          <ServiceRepair
-            name="Cloudflared"
-            installed={tunnel.installed}
-            repairable={tunnel.repairable}
-            running={tunnel.running}
-            issue={tunnel.issue}
-            busy={busy}
-            run={run}
-            keeps={[
-              "Kayıtlı tünel jetonu",
-              "Otomatik başlatma tercihi",
-              "Proje .env dosyaları",
-            ]}
-            action={() => call("tunnel", { action: "repair" })}
-          />
-        </>
+        <ServiceRepair
+          name="Cloudflared"
+          installed={tunnel.installed}
+          repairable={tunnel.repairable}
+          running={tunnel.running}
+          issue={tunnel.issue}
+          busy={busy}
+          run={run}
+          keeps={[
+            "Kayıtlı tünel jetonu",
+            "Otomatik başlatma tercihi",
+            "Proje .env dosyaları",
+          ]}
+          action={() => call("tunnel", { action: "repair" })}
+        />
       ) : null}
 
       {showSettings ? (
         <>
-          <h3>2. Tünel jetonu</h3>
+          <h3>Tünel jetonu</h3>
           <label htmlFor="tunnel-token">Cloudflare bağlayıcı jetonu</label>
           <div className="input-with-button">
             {visible ? (
@@ -209,35 +161,6 @@ export default function TunnelSettings({
         </>
       ) : null}
 
-      {showOps ? (
-        <>
-          <h3>3. Çalıştırma</h3>
-          <div className="settings-actions">
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy || !tunnel.tokenSaved}
-              title={
-                tunnel.tokenSaved
-                  ? undefined
-                  : "Önce jetonu kaydedin. Cloudflared yoksa başlatırken kurulur."
-              }
-              onClick={() =>
-                void run(
-                  tunnel.running ? "Tünel durduruluyor…" : "Tünel açılıyor…",
-                  () =>
-                    call("tunnel", {
-                      action: tunnel.running ? "stop" : "start",
-                    }),
-                )
-              }
-            >
-              {tunnel.running ? <Square size={16} /> : <Play size={16} />}
-              {tunnel.running ? "Tüneli durdur" : "Tüneli başlat"}
-            </button>
-          </div>
-        </>
-      ) : null}
       {showSettings ? (
         <label className="setting-toggle">
           <input
