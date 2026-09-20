@@ -12,7 +12,7 @@ use f4box_core::{
         DiscoveredProject, Project, ProjectRelease, ProjectSchedule, QueueWorker, Settings,
         Snapshot,
     },
-    Manager, ProjectGitStatus, ReleaseRecord,
+    Manager, ProjectEnv, ProjectGitStatus, ReleaseRecord,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -396,6 +396,23 @@ async fn list_project_releases(
     blocking(state.clone(), move || state.list_project_releases(&id)).await
 }
 #[tauri::command]
+async fn read_project_env(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<ProjectEnv, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.read_project_env(&id)).await
+}
+#[tauri::command]
+async fn save_project_env(
+    state: tauri::State<'_, State>,
+    id: String,
+    content: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.save_project_env(&id, content)).await
+}
+#[tauri::command]
 async fn project_git_status(
     state: tauri::State<'_, State>,
     id: String,
@@ -724,6 +741,8 @@ fn main() {
             read_project_worker_log,
             read_project_schedule_log,
             read_project_log,
+            read_project_env,
+            save_project_env,
             save_project_release,
             deploy_project,
             list_project_releases,

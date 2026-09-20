@@ -856,6 +856,38 @@ fn github_import_rejects_bad_repos_and_existing_folders() {
 }
 
 #[test]
+fn project_env_is_read_and_saved_only_when_asked() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let path = home.path().join("www/shop");
+    fs::create_dir_all(path.join("public")).unwrap();
+    fs::write(path.join("public/index.php"), "<?php").unwrap();
+    fs::write(path.join(".env.example"), "APP_NAME=Example\n").unwrap();
+    let project = manager.add_project("shop".into(), path.clone()).unwrap();
+    let missing = manager.read_project_env(&project.id).unwrap();
+    assert!(!missing.exists && missing.content.is_empty());
+    assert_eq!(missing.example.as_deref(), Some("APP_NAME=Example\n"));
+    manager
+        .save_project_env(&project.id, "APP_KEY=from-ui\nAPP_DEBUG=false\n".into())
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(path.join(".env")).unwrap(),
+        "APP_KEY=from-ui\nAPP_DEBUG=false\n"
+    );
+    let saved = manager.read_project_env(&project.id).unwrap();
+    assert!(saved.exists);
+    assert_eq!(saved.content, "APP_KEY=from-ui\nAPP_DEBUG=false\n");
+    assert!(manager
+        .save_project_env(&project.id, "bad\0key=1\n".into())
+        .is_err());
+    assert_eq!(
+        fs::read_to_string(path.join(".env")).unwrap(),
+        "APP_KEY=from-ui\nAPP_DEBUG=false\n"
+    );
+    assert!(manager.read_project_env("missing").is_err());
+}
+
+#[test]
 fn node_stays_out_of_the_project_terminal_until_it_is_installed() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

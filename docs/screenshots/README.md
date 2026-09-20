@@ -18,7 +18,7 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Projeler, kuyruk ve zamanlama
 
-Proje listesi ve sekmeli detay: Özet, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
+Proje listesi ve sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 
@@ -27,6 +27,12 @@ Proje listesi ve sekmeli detay: Özet, Zamanlama, Kuyruklar, Sürüm, Günlükle
 Forge benzeri üretim sürümü aynı Windows makinesinde: git pull, Composer, `migrate --force`, `optimize:clear`, ek Artisan satırları ve kuyruk/zamanlayıcı yeniden başlatma. Uzak sunucu yoktur; `.env` yazılmaz.
 
 ![Proje sürüm tarifi ve geçmişi](10-proje-surum.png)
+
+## Proje .env
+
+Proje detayındaki Ortam sekmesi kök `.env` dosyasını gösterir ve yalnızca Kaydet ile yazar. F4Box başka işlemlerde `.env` değiştirmez.
+
+![Proje .env editörü](14-proje-env.png)
 
 ## Proje günlükleri
 

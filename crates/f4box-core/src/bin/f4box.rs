@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -88,6 +88,16 @@ fn main() -> Result<()> {
             "untrust" => manager.untrust_https()?,
             _ => bail!("Kullanım: https trust|untrust"),
         },
+        "env" => {
+            let name = args.get(1).context("Proje adı gerekli.")?;
+            let snapshot = manager.snapshot()?;
+            let project = snapshot
+                .projects
+                .iter()
+                .find(|p| p.project.name == *name)
+                .context("Proje bulunamadı.")?;
+            print!("{}", manager.read_project_env(&project.project.id)?.content);
+        }
         "project" => {
             let action = args.get(1).map(String::as_str).unwrap_or("");
             if action != "release" {

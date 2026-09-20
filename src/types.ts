@@ -226,6 +226,11 @@ export interface Snapshot {
   recoveryIssue: string | null;
   restartRequired: boolean;
 }
+export interface ProjectEnv {
+  exists: boolean;
+  content: string;
+  example: string | null;
+}
 export interface Requirement {
   id: string;
   label: string;

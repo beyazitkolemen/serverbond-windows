@@ -1,3 +1,4 @@
+mod envfile;
 mod github;
 pub mod https;
 pub mod install;
@@ -21,6 +22,7 @@ mod storage;
 mod terminal;
 pub mod tunnel;
 
+pub use envfile::ProjectEnv;
 pub use release::{ProjectGitStatus, ReleaseRecord};
 
 use anyhow::{bail, Context, Result};

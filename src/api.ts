@@ -176,6 +176,7 @@ export async function call<T = void>(
         "discover_projects",
         "list_project_releases",
         "project_git_status",
+        "read_project_env",
       ].includes(command)
     ) {
       return invoke<T>(command, args);
@@ -255,6 +256,24 @@ export async function call<T = void>(
       present: true,
       branch: "main",
       sha: "6f12c4a",
+    } as T;
+  if (command === "read_project_env")
+    return {
+      exists: true,
+      content: [
+        "APP_NAME=Magaza",
+        "APP_ENV=production",
+        "APP_DEBUG=false",
+        "APP_URL=http://magaza.localhost:8088",
+        "",
+        "DB_CONNECTION=mysql",
+        "DB_HOST=127.0.0.1",
+        "DB_PORT=13306",
+        "DB_DATABASE=magaza",
+        "DB_USERNAME=root",
+        "DB_PASSWORD=",
+      ].join("\n"),
+      example: "APP_NAME=Laravel\nAPP_ENV=local\n",
     } as T;
   if (command === "list_project_releases")
     return [

@@ -13,9 +13,11 @@ import { databaseName, projectUrl } from "../version";
 import { QueueSection, ScheduleSection, useProjectJobs } from "./ProjectJobs";
 import ProjectLogs from "./ProjectLogs";
 import ReleasePane, { SummaryGit } from "./ProjectRelease";
+import ProjectEnv from "./ProjectEnv";
 
 const tabs = [
   { id: "summary", label: "Özet" },
+  { id: "env", label: "Ortam" },
   { id: "schedule", label: "Zamanlama" },
   { id: "queue", label: "Kuyruklar" },
   { id: "release", label: "Sürüm" },
@@ -122,6 +124,9 @@ export default function ProjectDetail({
           </button>
         ))}
       </nav>
+      {tab === "env" ? (
+        <ProjectEnv project={project} busy={busy} run={run} />
+      ) : null}
       {tab === "summary" ? (
         <SummaryPane
           project={project}
@@ -232,6 +237,18 @@ function SummaryPane({
             </button>
           </dd>
         </div>
+        <div>
+          <dt>.env</dt>
+          <dd>
+            <button
+              type="button"
+              className="section-link"
+              onClick={() => onOpenTab("env")}
+            >
+              Düzenle
+            </button>
+          </dd>
+        </div>
         <SummaryGit project={project} onOpen={() => onOpenTab("release")} />
       </dl>
       <ProjectPhp
@@ -274,7 +291,7 @@ function DatabasePane({
     <div className="project-pane">
       <p className="section-note">
         Veritabanı adı proje adından türetilir. F4Box proje <code>.env</code>{" "}
-        dosyasına yazmaz; Laravel bağlantısını siz tanımlarsınız.
+        dosyasına kendiliğinden yazmaz. Ortam sekmesinden düzenleyebilirsiniz.
       </p>
       <dl className="project-facts">
         <div>

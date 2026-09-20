@@ -38,6 +38,6 @@ bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 
 ## Dokunulmaması gerekenler
 
-- Mevcut Laravel `.env` otomatik değiştirilmez
+- Mevcut Laravel `.env` otomatik değiştirilmez; kullanıcı Ortam sekmesinden Kaydet ile yazar
 - Herd/Laragon/Docker kurulumlarına dokunulmaz
 - DPAPI parolası ve GitHub jetonu Windows kullanıcısına bağlıdır; taşıma SQL yedeği iledir

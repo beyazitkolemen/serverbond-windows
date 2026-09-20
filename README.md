@@ -35,6 +35,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png) |
 | GitHub hesabı | GitHub’dan proje |
 | ![GitHub hesabı](docs/screenshots/12-github.png) | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png) |
+| Proje .env |  |
+| ![Proje .env editörü](docs/screenshots/14-proje-env.png) |  |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -87,6 +89,10 @@ Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur.
 ### Yerel sürüm
 
 Proje detayındaki **Sürüm** sekmesi Laravel Forge Deployments’ın bu Windows makinesindeki karşılığıdır. Uzak VPS, SSH ve serbest kabuk scripti yoktur. Tarif işaret kutularıdır: `git pull` (isteğe bağlı dal), `composer install --prefer-dist` (isteğe bağlı `--no-dev`), `php artisan migrate --force`, `optimize:clear`, ek Artisan satırları (`a-z0-9:_-` + `--bayrak`) ve kayıtlı kuyruk/zamanlayıcı süreçlerinin yeniden başlatılması. `.env` yazılmaz. Çıktı birleştirilir (`--- git ---`); tavan 10 dakikadır; son 20 kayıt `logs/release-{proje}.jsonl` dosyasına yazılır. `git` PATH’te yoksa işlem Türkçe hata ile durur. Komut satırı: `f4box project release <ad>`. Karşılaştırma: [docs/herd-forge-karsilastirma.md](docs/herd-forge-karsilastirma.md).
+
+### Proje .env
+
+Proje detayındaki **Ortam** sekmesi kök `.env` dosyasını açar. F4Box kurulum, proje ekleme, sürüm veya veritabanı işlemlerinde `.env` yazmaz; yalnızca bu sekmede **Kaydet** yazdırır. 256 KB ve UTF-8 sınırı vardır. `.env.example` varsa **Örnekten doldur** taslağı doldurur. İçerik günlüğe yazılmaz. PHP veya kuyruk açıksa kayıttan sonra süreçleri yeniden başlatın. Komut: `f4box env <ad>`.
 
 ### Proje günlükleri
 
