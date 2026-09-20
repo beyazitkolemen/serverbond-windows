@@ -241,6 +241,7 @@ pub struct Snapshot {
     pub projects: Vec<ProjectStatus>,
     pub tunnel: crate::tunnel::TunnelState,
     pub mail: crate::mail::MailState,
+    pub node: crate::node::NodeState,
     pub permissions: crate::permissions::PermissionState,
     pub logs: Vec<String>,
     pub home: PathBuf,

@@ -121,6 +121,11 @@ export interface MailState {
   relayPhpMail: boolean;
   issue: string | null;
 }
+export interface NodeState {
+  version: string;
+  installed: boolean;
+  directory: string | null;
+}
 export interface TunnelState {
   version: string;
   installed: boolean;
@@ -145,6 +150,7 @@ export interface Snapshot {
   projects: Project[];
   tunnel: TunnelState;
   mail: MailState;
+  node: NodeState;
   permissions: PermissionState;
   logs: string[];
   home: string;

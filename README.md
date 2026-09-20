@@ -27,8 +27,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | Bileşen yönetimi | Kuyruk ve zamanlama |
 | --- | --- |
 | ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
-| Yerel e-posta yakalama | Windows izinleri |
-| ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Windows izinleri](docs/screenshots/06-windows-izinleri.png) |
+| Yerel e-posta yakalama | Node.js ve Windows izinleri |
+| ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -47,6 +47,7 @@ Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `
 | phpMyAdmin | 5.2.3, tüm diller | Tarayıcıdan MySQL yönetimi |
 | Cloudflared | 2026.9.1 | İsteğe bağlı Cloudflare tüneli |
 | Mailpit | 1.31.2 | İsteğe bağlı yerel e-posta yakalama |
+| Node.js | 24.21.0 LTS | İsteğe bağlı npm / npx |
 
 Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklarından indirilir. Windows x64 Visual C++ 2015–2022 Redistributable ve WebView2 Runtime gerekir. Bu bilgisayarda ikisi de mevcuttur. Başka bir bilgisayarda PHP/MySQL başlatılamıyorsa önce [Microsoft Visual C++ Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) kurulmalıdır. Tauri kurulum paketi WebView2 gereksinimini yönetir.
 
@@ -72,6 +73,10 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 
 Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek sınırından çıkan işçi otomatik yeniden başlamaz; **Başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir.
 
+### Node.js, npm ve npx
+
+**Ayarlar → Sistem → Node.js** sabit Node.js LTS paketini kurar. Özet resmî `SHASUMS256.txt` dosyasından alınır. Kurulumdan sonra proje kartındaki **Terminal** penceresinde `node`, `npm` ve `npx` projenin PHP sürümüyle birlikte hazır olur; `npm install` ve `npm run dev` doğrudan çalışır. Sistem PATH'i değiştirilmez, bu yüzden bilgisayarınızdaki başka bir Node kurulumu etkilenmez. Açık terminalleri kurulumdan sonra kapatıp yeniden açın. Komut satırından: `f4box node install|repair|status`.
+
 ### Yerel e-posta yakalama
 
 **Ayarlar → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.
@@ -96,7 +101,7 @@ SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en
 
 F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. **Ayarlar → Sistem → Windows izinleri** tek bir Windows onay penceresiyle şunları bir kez uygular:
 
-- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared` ve `mailpit`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
+- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`, `mailpit` ve `node`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
 - Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
 - İsteğe bağlı kutu işaretlenirse Microsoft Defender'da veri klasörü istisnası. Bu seçenek varsayılan olarak kapalıdır: Composer ve PHP hızlanır, ancak o klasörde tarama koruması kalkar.
 
@@ -228,9 +233,9 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 
 ## İlk sürümün sınırları
 
-- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Node.js, Redis ve otomatik HTTPS bu sürümde yoktur.
+- Windows x64, proje başına seçilebilir PHP 7.4–8.5 ve katalogdaki MySQL sürümü desteklenir. Redis ve otomatik HTTPS bu sürümde yoktur. Node.js tek sabit LTS paketiyle sunulur; sürümler arasında geçiş yoktur.
 - Ortam yerel geliştirme içindir; ağdan erişime açılmaz. Her proje tek bir PHP FastCGI süreci kullanır.
-- Yeni Laravel oluşturma PHP bağımlılıklarını kurar; frontend bağımlılıkları/Vite derlemesi ayrıca proje içinde yapılır.
+- Yeni Laravel oluşturma PHP bağımlılıklarını kurar; frontend bağımlılıkları ve Vite derlemesi proje terminalinden `npm` ile yapılır.
 - MySQL sürüm yükseltmesi, otomatik veri taşıma ve yedekten geri yükleme henüz yoktur. Veri klasörünü başka MySQL sürümüyle açmayın.
 - DPAPI parolası Windows kullanıcısına bağlıdır; veri dizininin başka bilgisayara kopyalanması tek başına taşınabilir kurulum sağlamaz. Taşıma için SQL yedeği kullanın.
 - Kurulum paketi kod imzalı değildir. Mevcut Herd/Laragon/Docker kurulumları ve proje `.env` dosyaları değiştirilmez.

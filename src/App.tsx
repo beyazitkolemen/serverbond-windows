@@ -451,6 +451,7 @@ export default function App() {
               run={run}
               tunnel={state.tunnel}
               mail={state.mail}
+              node={state.node}
               permissions={state.permissions}
               appUpdate={appUpdate}
               onAppUpdate={setAppUpdate}

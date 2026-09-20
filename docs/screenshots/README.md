@@ -34,11 +34,11 @@ Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte
 
 ![Cloudflare tüneli ayarları](05-tunel.png)
 
-## Windows izinleri
+## Sistem: Node.js ve Windows izinleri
 
-Güvenlik duvarı kuralları, veri klasörü yetkisi ve isteğe bağlı Microsoft Defender istisnası için tek seferlik izin.
+İsteğe bağlı Node.js LTS kurulumu; güvenlik duvarı kuralları, veri klasörü yetkisi ve isteğe bağlı Microsoft Defender istisnası için tek seferlik izin.
 
-![Windows izinleri](06-windows-izinleri.png)
+![Node.js kurulumu ve Windows izinleri](06-sistem.png)
 
 ## PHP ayarları
 

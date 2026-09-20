@@ -2,6 +2,7 @@ pub mod install;
 mod jobs;
 pub mod mail;
 pub mod model;
+pub mod node;
 pub mod permissions;
 mod phpmyadmin;
 pub mod preferences;
@@ -309,6 +310,7 @@ impl Manager {
             .collect();
         let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
         let mail = self.mail_state_with(&processes, &config.settings.mail);
+        let node = self.node_state();
         Ok(Snapshot {
             packages,
             php_versions: php_versions()
@@ -398,6 +400,7 @@ impl Manager {
                 .collect(),
             tunnel,
             mail,
+            node,
             permissions: self.permission_state(),
             logs: self
                 .logs

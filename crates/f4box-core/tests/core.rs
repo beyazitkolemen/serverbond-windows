@@ -625,6 +625,17 @@ fn mail_catcher_reports_its_ports_and_rejects_port_collisions() {
 }
 
 #[test]
+fn node_stays_out_of_the_project_terminal_until_it_is_installed() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().node;
+    assert!(!state.installed && state.directory.is_none());
+    assert_eq!(state.version, "24.21.0");
+    // The terminal script needs an installed PHP, so a missing package is the error.
+    assert!(manager.project_terminal_script("nope").is_err());
+}
+
+#[test]
 fn the_mail_form_owns_the_php_smtp_directives() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

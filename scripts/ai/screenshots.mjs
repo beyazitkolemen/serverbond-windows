@@ -28,10 +28,10 @@ const shots = [
   { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1300 },
   { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1250 },
   {
-    file: "06-windows-izinleri.png",
+    file: "06-sistem.png",
     nav: "Ayarlar",
     tab: "Sistem",
-    height: 1400,
+    height: 1880,
   },
   { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1500 },
 ];

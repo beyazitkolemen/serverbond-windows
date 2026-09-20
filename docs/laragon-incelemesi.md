@@ -16,7 +16,7 @@
 | HTTPS | Yerel HTTPS, sertifika yönetimi ve sertifikayı güven deposuna ekleme bulunur. [Auto SSL](https://laragon.org/docs/auto-ssl) | Henüz yok. HTTPS portu, sertifika yenileme, güven ekleme/kaldırma yaşam döngüsü birlikte tasarlanmalı. Sadece bir anahtar eklemek yeterli değil. |
 | Hızlı proje oluşturma | `sites.conf` ile proje tarifleri, otomatik veritabanı oluşturma ve paket önbelleği yönetilir. [Quick-app](https://laragon.org/docs/quick-app) | Laravel 12 Composer kurulumu ve mevcut Laravel projesi ekleme var. Veritabanı oluşturma ayrı işlem. WordPress/Symfony tarifleri ve kullanıcı tanımlı komut kataloğu yok. |
 | Paket ekleme | `packages.conf` içindeki indirme adresleri değiştirilebilir; toplu ekleme vardır. [Quick-add](https://laragon.org/docs/quick-add) | Sabit sürüm + SHA-256 doğrulamalı beş bileşen, PHP sürüm kataloğu, toplu kurulum ve onarım. Kullanıcının keyfî indirme adresi eklemesi desteklenmez. |
-| Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer ve çalışma diziniyle PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
+| Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer, kuruluysa Node.js ve çalışma diziniyle PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
 | Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
 | E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Ayarlar → E-posta bölümünde sabit `mailpit` paketi: SMTP ve arayüz portu, saklama sınırı, ortamla otomatik başlatma, tepsiden gelen kutusu ve isteğe bağlı PHP `mail()` yönlendirmesi. Laravel `.env` dosyası F4Box tarafından yazılmaz; değerler kartta gösterilir. |
 | Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Ayarlar → Tünel bölümünde Cloudflare Tunnel: sabit `cloudflared` paketi, DPAPI ile şifrelenen jeton, başlat/durdur ve ortamla otomatik başlatma. Ngrok ve bölge seçimi yok; genel adres eşlemesi Cloudflare panelinde yapılır. |
@@ -55,7 +55,7 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 ## Öncelikli devam işleri
 
 - Yerel HTTPS ve sertifika yaşam döngüsü.
-- Node.js / npm kurulumu ve sürüm yönetimi.
+- Node.js sürümleri arasında geçiş (v1.1: tek sabit LTS paketi).
 - Terminal/editör seçimi.
 - Proje bazlı queue/scheduler süreçleri (v1.1: `queue:work` ve `schedule:work`).
 - Dış paylaşım (v1.1: Cloudflare Tunnel bağlayıcısı; genel adres eşlemesi Cloudflare panelinde).

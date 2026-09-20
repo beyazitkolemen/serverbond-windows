@@ -285,6 +285,11 @@
     "relayPhpMail": true,
     "issue": null
   },
+  "node": {
+    "version": "24.21.0",
+    "installed": true,
+    "directory": "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0"
+  },
   "permissions": {
     "granted": true,
     "appliedAt": "2026-09-20 21:15",
@@ -293,6 +298,7 @@
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe",
       "Klasör yetkisi: C:\\Users\\dev\\F4Box"
     ],
     "failed": [],
@@ -300,7 +306,8 @@
       "C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
       "C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
       "C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe"
+      "C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
+      "C:\\Users\\dev\\F4Box\\bin\\node\\24.21.0\\node.exe"
     ],
     "defenderExclusion": false,
     "pending": []

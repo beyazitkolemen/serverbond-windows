@@ -9,12 +9,14 @@ import type {
   Run,
   TunnelState,
   MailState,
+  NodeState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
 import TunnelSettings from "./TunnelSettings";
 import MailActions from "./MailActions";
+import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
 
@@ -116,6 +118,7 @@ export default function Settings({
   run,
   tunnel,
   mail,
+  node,
   permissions,
   appUpdate,
   onAppUpdate,
@@ -129,6 +132,7 @@ export default function Settings({
   run: Run;
   tunnel: TunnelState;
   mail: MailState;
+  node: NodeState;
   permissions: PermissionState;
   appUpdate: UpdateInfo | null;
   onAppUpdate: (update: UpdateInfo | null) => void;
@@ -795,6 +799,7 @@ export default function Settings({
       )}
       {section === "Sistem" && (
         <>
+          <NodeSettings node={node} busy={busy} run={run} />
           <PermissionSettings permissions={permissions} busy={busy} run={run} />
           <Requirements busy={busy} run={run} />
           <section className="settings-section">

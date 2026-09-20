@@ -5,7 +5,7 @@ use std::{path::PathBuf, time::Duration};
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|forget\n  mail install|start|stop|open\n  permissions grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("F4Box CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  queue <name> start|stop [worker]\n  schedule <name> start|stop|list\n  tunnel install|start|stop|token <jeton>|forget\n  mail install|start|stop|open\n  node install|repair\n  permissions grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/F4Box (F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -109,6 +109,15 @@ fn main() -> Result<()> {
                 serde_json::to_string_pretty(&manager.snapshot()?.mail)?
             ),
             _ => bail!("Kullanım: mail install|start|stop|open|status"),
+        },
+        "node" => match args.get(1).map(String::as_str).unwrap_or("status") {
+            "install" => manager.install_node()?,
+            "repair" => manager.repair_node()?,
+            "status" => println!(
+                "{}",
+                serde_json::to_string_pretty(&manager.snapshot()?.node)?
+            ),
+            _ => bail!("Kullanım: node install|repair|status"),
         },
         "permissions" => match args.get(1).map(String::as_str).unwrap_or("status") {
             "grant" => println!(

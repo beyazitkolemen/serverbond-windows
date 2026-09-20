@@ -33,7 +33,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 - Ad: 1–48 karakter, `[a-z0-9-]` (kenarda tire yok), Windows ayrılmış adları yok (`con`, `com0`, `lpt0`, …)
 - Yeni Laravel 12: `php_supports_laravel12` → PHP ≥ 8.2
 - `public/index.php` şart; kaldırmak klasörü/SQL’i silmez
-- Terminal, projenin PHP’sini `PATH`/`php`/`composer` sarmalayıcısıyla verir
+- Terminal, projenin PHP’sini `PATH`/`php`/`composer` sarmalayıcısıyla verir; `node` kuruluysa dizini de `PATH`’e girer (`node.rs`, servis değil)
 
 ## Ayarlar
 

@@ -12,14 +12,15 @@ Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her
 | phpMyAdmin | [Resmî 5.2.3 all-languages ZIP SHA-256](https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip.sha256) |
 | MySQL | `https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.10-winx64.zip`, resmî HTTPS kaynağından indirilen 280672277 baytlık dosyanın yerelde hesaplanan SHA-256 özeti |
 
-İsteğe bağlı araçlar `crates/f4box-core/tools.json` içindedir ve ortamın çalışması için gerekmez. İki kayıt vardır; her ikisinin özeti de GitHub sürüm varlığından indirilen dosyanın yerelde hesaplanan SHA-256'sıdır, çünkü bu projeler yayımladıkları özet dosyası sunmuyor.
+İsteğe bağlı araçlar `crates/f4box-core/tools.json` içindedir ve ortamın çalışması için gerekmez.
 
-| Araç | Dosya / sürüm | Kurulum yeri |
-| --- | --- | --- |
-| Cloudflare Tunnel bağlayıcısı | `cloudflared-windows-amd64.exe` 2026.9.1, 54976432 bayt | Ayarlar → Tünel |
-| Mailpit | `mailpit-windows-amd64.zip` 1.31.2, 10479883 bayt | Ayarlar → E-posta |
+| Araç | Dosya / sürüm | Özet kaynağı | Kurulum yeri |
+| --- | --- | --- | --- |
+| Cloudflare Tunnel bağlayıcısı | `cloudflared-windows-amd64.exe` 2026.9.1, 54976432 bayt | yerelde hesaplandı | Ayarlar → Tünel |
+| Mailpit | `mailpit-windows-amd64.zip` 1.31.2, 10479883 bayt | yerelde hesaplandı | Ayarlar → E-posta |
+| Node.js | `node-v24.21.0-win-x64.zip` | resmî [`SHASUMS256.txt`](https://nodejs.org/dist/v24.21.0/SHASUMS256.txt) | Ayarlar → Sistem |
 
-MySQL, cloudflared ve Mailpit özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
+Cloudflared ve Mailpit yayımlanmış bir özet dosyası sunmadığı için bu iki kaydın SHA-256'sı indirilen dosyadan yerelde hesaplanmıştır. MySQL, cloudflared ve Mailpit özetleri bağımsız imza doğrulaması değildir; resmî HTTPS indirmesini sabitler. Uygulama her kurulumda önbellek dahil dosyayı katalog özetiyle karşılaştırır. Geçici dosyalar tamamlanıp doğrulanmadan kurulum klasörüne taşınmaz. Arşiv yolları hedef klasörü aşamaz; sembolik bağlantılar ve Windows alternatif veri akışı yolları reddedilir.
 
 ## Sürüm güncelleme
 

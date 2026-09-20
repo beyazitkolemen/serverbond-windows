@@ -14,5 +14,13 @@
     "sha256": "42c20e5c3254125ea7489847811f10d70e39de573fe41d03a61412c87913e995",
     "archive": true, "prefix": "", "executable": "mailpit.exe",
     "license": "MIT", "source": "https://github.com/axllent/mailpit/releases"
+  },
+  {
+    "id": "node", "name": "Node.js", "version": "24.21.0",
+    "description": "Node.js LTS · proje terminalinde npm ve npx sağlar.",
+    "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip",
+    "sha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
+    "archive": true, "prefix": "node-v24.21.0-win-x64", "executable": "node.exe",
+    "license": "MIT", "source": "https://nodejs.org/dist/v24.21.0/SHASUMS256.txt"
   }
 ]

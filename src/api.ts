@@ -113,6 +113,11 @@ const preview: Snapshot = {
     relayPhpMail: true,
     issue: null,
   },
+  node: {
+    version: toolVersion("node"),
+    installed: false,
+    directory: null,
+  },
   permissions: {
     granted: false,
     appliedAt: null,
