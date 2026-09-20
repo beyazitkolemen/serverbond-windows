@@ -450,6 +450,7 @@ export default function App() {
               running={running}
               run={run}
               tunnel={state.tunnel}
+              mail={state.mail}
               permissions={state.permissions}
               appUpdate={appUpdate}
               onAppUpdate={setAppUpdate}

@@ -98,9 +98,28 @@ export interface Settings {
   tunnel: {
     autoStart: boolean;
   };
+  mail: MailSettings;
   projectsDir: string;
   backupsDir: string;
   startOnLaunch: boolean;
+}
+export interface MailSettings {
+  smtpPort: number;
+  webPort: number;
+  autoStart: boolean;
+  relayPhpMail: boolean;
+  maxMessages: number;
+}
+export interface MailState {
+  version: string;
+  installed: boolean;
+  running: boolean;
+  pid: number | null;
+  smtpPort: number;
+  webPort: number;
+  autoStart: boolean;
+  relayPhpMail: boolean;
+  issue: string | null;
 }
 export interface TunnelState {
   version: string;
@@ -125,6 +144,7 @@ export interface Snapshot {
   phpVersions: PackageStatus[];
   projects: Project[];
   tunnel: TunnelState;
+  mail: MailState;
   permissions: PermissionState;
   logs: string[];
   home: string;

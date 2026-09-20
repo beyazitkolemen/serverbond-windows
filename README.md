@@ -2,7 +2,7 @@
 
 Windows x64 üzerinde PHP, MySQL, Caddy ve Composer indirip kuran; Laravel projelerini ve yerel servisleri yöneten Rust + Tauri masaüstü uygulaması.
 
-PHP sürümü seçimi, projeye özel çalışma ortamları, kuyruk ve zamanlama süreçleri, phpMyAdmin, Cloudflare tüneli, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
+PHP sürümü seçimi, projeye özel çalışma ortamları, kuyruk ve zamanlama süreçleri, phpMyAdmin, yerel e-posta yakalama, Cloudflare tüneli, sistem tepsisi menüsü ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
 ## İndir — v1.1
 
@@ -27,8 +27,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | Bileşen yönetimi | Kuyruk ve zamanlama |
 | --- | --- |
 | ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
-| Cloudflare tüneli | Windows izinleri |
-| ![Cloudflare tüneli ayarları](docs/screenshots/04-tunel.png) | ![Windows izinleri](docs/screenshots/05-windows-izinleri.png) |
+| Yerel e-posta yakalama | Windows izinleri |
+| ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Windows izinleri](docs/screenshots/06-windows-izinleri.png) |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -46,6 +46,7 @@ Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `
 | Composer | 2.10.3 | Laravel proje kurulumu |
 | phpMyAdmin | 5.2.3, tüm diller | Tarayıcıdan MySQL yönetimi |
 | Cloudflared | 2026.9.1 | İsteğe bağlı Cloudflare tüneli |
+| Mailpit | 1.31.2 | İsteğe bağlı yerel e-posta yakalama |
 
 Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklarından indirilir. Windows x64 Visual C++ 2015–2022 Redistributable ve WebView2 Runtime gerekir. Bu bilgisayarda ikisi de mevcuttur. Başka bir bilgisayarda PHP/MySQL başlatılamıyorsa önce [Microsoft Visual C++ Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) kurulmalıdır. Tauri kurulum paketi WebView2 gereksinimini yönetir.
 
@@ -71,6 +72,16 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 
 Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek sınırından çıkan işçi otomatik yeniden başlamaz; **Başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir.
 
+### Yerel e-posta yakalama
+
+**Ayarlar → E-posta** bölümü Mailpit'i yönetir: yerel bir SMTP sunucusu projelerinizin gönderdiği e-postaları yakalar ve tarayıcıdaki gelen kutusunda gösterir. Hiçbir ileti gerçek alıcıya iletilmez. Paket sabit sürümdür, SHA-256 doğrulanarak indirilir ve ortamın çalışması için gerekli değildir.
+
+SMTP portu (varsayılan 1025), arayüz portu (varsayılan 8025) ve saklanacak en fazla e-posta sayısı ayarlanabilir; portlar diğer bileşenlerin portlarından farklı olmak zorundadır. Laravel tarafında `.env` dosyasına `MAIL_MAILER=smtp`, `MAIL_HOST=127.0.0.1` ve `MAIL_PORT=1025` yazın; kullanıcı adı ve parola gerekmez. F4Box `.env` dosyanızı değiştirmez.
+
+**PHP mail() çağrılarını Mailpit'e yönlendir** açıkken üretilen `php.ini` dosyasına `SMTP` ve `smtp_port` anahtarları yazılır, böylece Laravel dışındaki kodun `mail()` çağrıları da yakalanır. Bu anahtarlar bu formdan yönetildiği için PHP sekmesindeki ek ayarlar alanına yazılamaz; değişiklik PHP yeniden başladığında geçerli olur.
+
+**Ortam başlatıldığında Mailpit'i de başlat** açıkken **Ortamı başlat** gelen kutusunu da açar. Mailpit başlatılamazsa ortam çalışmaya devam eder; hata e-posta kartında ve **Günlükler → mailpit** bölümünde görünür. Yakalanan e-postalar veri klasöründeki `data/mailpit/mailpit.db` dosyasında tutulur. Tepsi menüsündeki **Gelen kutusunu aç** ve komut satırındaki `f4box mail install|start|stop|open|status` aynı işi yapar.
+
 ### Cloudflare tüneli
 
 **Ayarlar → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi F4Box klasörüne kurulur ve ortamın çalışması için gerekli değildir.
@@ -85,7 +96,7 @@ Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur.
 
 F4Box gündelik işini yönetici yetkisi olmadan yapar: PHP, MySQL ve Caddy yalnızca `127.0.0.1` üzerinde dinler, dosyalar kendi veri klasörüne yazılır ve `.localhost` adresleri hosts dosyası gerektirmez. **Ayarlar → Sistem → Windows izinleri** tek bir Windows onay penceresiyle şunları bir kez uygular:
 
-- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
+- F4Box'ın çalıştırdığı programlar (kurulu PHP sürümleri, `mysqld`, `caddy`, varsa `cloudflared` ve `mailpit`) için güvenlik duvarında özel ve etki alanı profillerinde gelen/giden izin kuralı.
 - Veri klasöründe Windows kullanıcınıza tam erişim (`icacls`).
 - İsteğe bağlı kutu işaretlenirse Microsoft Defender'da veri klasörü istisnası. Bu seçenek varsayılan olarak kapalıdır: Composer ve PHP hızlanır, ancak o klasörde tarama koruması kalkar.
 

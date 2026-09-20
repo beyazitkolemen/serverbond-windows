@@ -25,6 +25,7 @@ Kaynak: `crates/f4box-core/catalog.json`, `crates/f4box-core/php-versions.json`,
 | phpMyAdmin | files.phpmyadmin.net all-languages ZIP SHA-256 |
 | MySQL | Resmî HTTPS ZIP’in yerelde hesaplanan SHA-256’sı (imza değil) |
 | Cloudflared | GitHub release `cloudflared-windows-amd64.exe` dosyasının yerelde hesaplanan SHA-256’sı |
+| Mailpit | GitHub release `mailpit-windows-amd64.zip` dosyasının yerelde hesaplanan SHA-256’sı |
 
 7.4–8.1 arşiv dizininden, 8.2–8.5 `releases/` dizininden iner. 404/410 olursa `install::archive_fallback` aynı dosya adını `archives/` altında arar.
 

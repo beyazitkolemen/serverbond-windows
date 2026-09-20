@@ -178,6 +178,13 @@
       "loginSeconds": 1440
     },
     "tunnel": { "autoStart": true },
+    "mail": {
+      "smtpPort": 1025,
+      "webPort": 8025,
+      "autoStart": true,
+      "relayPhpMail": true,
+      "maxMessages": 500
+    },
     "projectsDir": "",
     "backupsDir": "",
     "startOnLaunch": true
@@ -267,6 +274,17 @@
     "autoStart": true,
     "issue": null
   },
+  "mail": {
+    "version": "1.31.2",
+    "installed": true,
+    "running": true,
+    "pid": 17920,
+    "smtpPort": 1025,
+    "webPort": 8025,
+    "autoStart": true,
+    "relayPhpMail": true,
+    "issue": null
+  },
   "permissions": {
     "granted": true,
     "appliedAt": "2026-09-20 21:15",
@@ -274,13 +292,15 @@
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
       "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
+      "Güvenlik duvarı kuralı: C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe",
       "Klasör yetkisi: C:\\Users\\dev\\F4Box"
     ],
     "failed": [],
     "programs": [
       "C:\\Users\\dev\\F4Box\\bin\\php\\8.4.25\\php-cgi.exe",
       "C:\\Users\\dev\\F4Box\\bin\\mysql\\8.4.10\\bin\\mysqld.exe",
-      "C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe"
+      "C:\\Users\\dev\\F4Box\\bin\\caddy\\2.11.4\\caddy.exe",
+      "C:\\Users\\dev\\F4Box\\bin\\mailpit\\1.31.2\\mailpit.exe"
     ],
     "defenderExclusion": false,
     "pending": []
@@ -293,6 +313,7 @@
     "[21:15:04] caddy çalışıyor · 127.0.0.1:8088",
     "[21:15:05] magaza · default kuyruk işçisi 2 süreçle çalışıyor",
     "[21:15:06] magaza · zamanlayıcı çalışıyor (schedule:work)",
+    "[21:15:08] Mailpit çalışıyor. SMTP 127.0.0.1:1025 · arayüz http://127.0.0.1:8025",
     "[21:15:09] Cloudflare tüneli çalışıyor. Genel adres Cloudflare panelindeki tünel yapılandırmasına bağlıdır."
   ],
   "home": "C:\\Users\\dev\\AppData\\Local\\F4Box",

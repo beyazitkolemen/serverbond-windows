@@ -263,6 +263,19 @@ async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), St
     .await
 }
 #[tauri::command]
+async fn mail(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "install" => state.install_mail(),
+        "repair" => state.repair_mail(),
+        "start" => state.start_mail(),
+        "stop" => state.stop_mail(),
+        "open" => state.open_mail(),
+        _ => Err(anyhow::anyhow!("Bilinmeyen e-posta işlemi")),
+    })
+    .await
+}
+#[tauri::command]
 async fn save_tunnel_token(state: tauri::State<'_, State>, token: String) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || state.save_tunnel_token(&token)).await
@@ -459,6 +472,7 @@ fn main() {
             stop_project_schedule,
             list_project_schedule,
             tunnel,
+            mail,
             save_tunnel_token,
             save_tunnel_auto_start,
             grant_permissions

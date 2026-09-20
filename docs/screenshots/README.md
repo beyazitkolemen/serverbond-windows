@@ -22,20 +22,26 @@ Proje kartından PHP sürümü seçimi; kart içindeki panelden Laravel `schedul
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
 
+## Yerel e-posta yakalama
+
+Mailpit'in SMTP ve arayüz portları, saklama sınırı, PHP `mail()` yönlendirmesi ve servis durumu.
+
+![E-posta ayarları ve Mailpit servisi](04-eposta.png)
+
 ## Cloudflare tüneli
 
 Cloudflared kurulumu, jeton kaydı, tünelin başlatılması ve ortamla birlikte otomatik başlatma tercihi.
 
-![Cloudflare tüneli ayarları](04-tunel.png)
+![Cloudflare tüneli ayarları](05-tunel.png)
 
 ## Windows izinleri
 
 Güvenlik duvarı kuralları, veri klasörü yetkisi ve isteğe bağlı Microsoft Defender istisnası için tek seferlik izin.
 
-![Windows izinleri](05-windows-izinleri.png)
+![Windows izinleri](06-windows-izinleri.png)
 
 ## PHP ayarları
 
 PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi.
 
-![PHP ayarları](06-php-ayarlari.png)
+![PHP ayarları](07-php-ayarlari.png)

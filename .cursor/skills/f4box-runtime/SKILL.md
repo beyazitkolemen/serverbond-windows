@@ -20,9 +20,11 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 
 `crates/f4box-core/src/jobs.rs`. İşçi: `queue-{projectUuid}-{workerUuid}-{n}` → `php artisan queue:work`. Zamanlayıcı: `schedule-{projectUuid}` → `schedule:work` (crontab’daki dakikalık `schedule:run`). En fazla 8 işçi, işçi başına 8 süreç. `artisan` yoksa başlatma reddedilir. `.env` yazılmaz. Ortam `start("php"|"all")` sonrası `autoStart` olanlar açılır; `stop` hepsini kapatır. Beklenmedik çıkışta otomatik yeniden başlama yok.
 
-## Cloudflare tüneli ve Windows izinleri
+## Cloudflare tüneli, Mailpit ve Windows izinleri
 
 `tunnel.rs`: servis `cloudflared`, isteğe bağlı paket `tools.json` içinde. Jeton `config/cloudflared-token.dpapi` (DPAPI), sürece `TUNNEL_TOKEN` ortam değişkeniyle geçer; komut satırına yazılmaz. Hazır olma ölçütü günlükteki `Registered tunnel connection` (`spawn_watched`). `start("all")` sonunda `autoStart` açıksa denenir; hata ortamı düşürmez, `service_errors` dolar.
+
+`mail.rs`: servis `mailpit`, isteğe bağlı paket `tools.json` içinde. Portlar `settings.mail` altında; `Settings::validate` bunları web/mysql/php portlarıyla birlikte tekilleştirir. Hazır olma ölçütü arayüz portunun dinlenmesi (`spawn_service`). `relayPhpMail` açıkken `PhpSettings::render` üretilen php.ini’ye `SMTP`/`smtp_port`/`sendmail_from` yazar; bu anahtarlar `extra_ini` içinde reddedilir. `start("all")` sonunda `autoStart` açıksa denenir; hata ortamı düşürmez.
 
 `permissions.rs`: tek yükseltilmiş PowerShell betiği (netsh güvenlik duvarı kuralları, `icacls`, isteğe bağlı `Add-MpPreference`). Betik metni saf fonksiyonla üretilir ve testlidir; yollar tek tırnak içinde kaçırılır. Sonuç `config/permissions.json`. Uygulamanın kendisi hiçbir zaman yükseltilmez.
 

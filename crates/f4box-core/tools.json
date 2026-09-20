@@ -6,5 +6,13 @@
     "sha256": "2837888cc0f5d58f15b6dc478376de90b4d3ba5241c7947455d1e0a0df429712",
     "archive": false, "prefix": "", "executable": "cloudflared.exe",
     "license": "Apache-2.0", "source": "https://github.com/cloudflare/cloudflared/releases"
+  },
+  {
+    "id": "mailpit", "name": "Mailpit", "version": "1.31.2",
+    "description": "Yerel SMTP yakalayıcı · gönderilen e-postaları tarayıcıda gösterir.",
+    "url": "https://github.com/axllent/mailpit/releases/download/v1.31.2/mailpit-windows-amd64.zip",
+    "sha256": "42c20e5c3254125ea7489847811f10d70e39de573fe41d03a61412c87913e995",
+    "archive": true, "prefix": "", "executable": "mailpit.exe",
+    "license": "MIT", "source": "https://github.com/axllent/mailpit/releases"
   }
 ]

@@ -25,14 +25,15 @@ const shots = [
     expand: ".project-jobs-toggle",
     height: 1620,
   },
-  { file: "04-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1250 },
+  { file: "04-eposta.png", nav: "Ayarlar", tab: "E-posta", height: 1300 },
+  { file: "05-tunel.png", nav: "Ayarlar", tab: "Tünel", height: 1250 },
   {
-    file: "05-windows-izinleri.png",
+    file: "06-windows-izinleri.png",
     nav: "Ayarlar",
     tab: "Sistem",
     height: 1400,
   },
-  { file: "06-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1500 },
+  { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1500 },
 ];
 
 const types = {

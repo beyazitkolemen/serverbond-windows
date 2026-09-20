@@ -127,8 +127,10 @@ impl Manager {
                 programs.push(path);
             }
         }
-        if let Ok(path) = self.tool_executable(crate::tunnel::ID) {
-            programs.push(path);
+        for tool in [crate::tunnel::ID, crate::mail::ID] {
+            if let Ok(path) = self.tool_executable(tool) {
+                programs.push(path);
+            }
         }
         programs
     }

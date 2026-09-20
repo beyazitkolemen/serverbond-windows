@@ -585,6 +585,62 @@ fn tunnel_rejects_bad_tokens_and_reports_a_missing_client() {
 }
 
 #[test]
+fn mail_catcher_reports_its_ports_and_rejects_port_collisions() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let state = manager.snapshot().unwrap().mail;
+    assert!(!state.installed && !state.running);
+    assert_eq!((state.smtp_port, state.web_port), (1025, 8025));
+    assert!(state.relay_php_mail && !state.auto_start);
+
+    let mut settings = available_settings(Settings::default());
+    settings.mail.smtp_port = settings.web_port;
+    assert!(manager.save_settings(settings.clone()).is_err());
+
+    settings.mail.smtp_port = 1125;
+    settings.mail.web_port = 1125;
+    assert!(manager.save_settings(settings.clone()).is_err());
+
+    settings.mail.web_port = 8125;
+    settings.mail.max_messages = 250_000;
+    assert!(manager.save_settings(settings.clone()).is_err());
+
+    settings.mail.max_messages = 50;
+    manager.save_settings(settings).unwrap();
+    let saved = manager.snapshot().unwrap().mail;
+    assert_eq!((saved.smtp_port, saved.web_port), (1125, 8125));
+
+    // Without the package the environment still starts; only the mail card reports it.
+    assert!(manager
+        .start_mail()
+        .unwrap_err()
+        .to_string()
+        .contains("Mailpit kurulu değil"));
+    assert!(manager.stop_mail().is_ok());
+    assert!(manager.open_mail().is_err());
+    assert_eq!(
+        manager.read_log("mailpit").unwrap(),
+        "Henüz günlük kaydı yok."
+    );
+}
+
+#[test]
+fn the_mail_form_owns_the_php_smtp_directives() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let mut settings = available_settings(Settings::default());
+    for managed in ["smtp_port=2525", "sendmail_from=a@b.c", "sendmail_path=x"] {
+        settings.php.extra_ini = managed.into();
+        assert!(
+            manager.save_settings(settings.clone()).is_err(),
+            "{managed}"
+        );
+    }
+    settings.php.extra_ini = "default_socket_timeout=30".into();
+    manager.save_settings(settings).unwrap();
+}
+
+#[test]
 fn granting_windows_permissions_needs_installed_programs() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();

@@ -1,5 +1,6 @@
 pub mod install;
 mod jobs;
+pub mod mail;
 pub mod model;
 pub mod permissions;
 mod phpmyadmin;
@@ -307,6 +308,7 @@ impl Manager {
             })
             .collect();
         let tunnel = self.tunnel_state_with(&processes, config.settings.tunnel.auto_start);
+        let mail = self.mail_state_with(&processes, &config.settings.mail);
         Ok(Snapshot {
             packages,
             php_versions: php_versions()
@@ -395,6 +397,7 @@ impl Manager {
                 })
                 .collect(),
             tunnel,
+            mail,
             permissions: self.permission_state(),
             logs: self
                 .logs
@@ -513,6 +516,13 @@ impl Manager {
         }
         for port in [settings.web_port, settings.mysql_port, settings.php_port] {
             services::port_free(port)?;
+        }
+        // The mail catcher only binds when it is started, so a busy port is worth
+        // reporting here only when the environment will start it on its own.
+        if settings.mail.auto_start {
+            for port in [settings.mail.smtp_port, settings.mail.web_port] {
+                services::port_free(port)?;
+            }
         }
         let mut config = self
             .config

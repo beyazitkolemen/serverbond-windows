@@ -139,6 +139,29 @@ pub struct TunnelSettings {
     pub auto_start: bool,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct MailSettings {
+    pub smtp_port: u16,
+    pub web_port: u16,
+    pub auto_start: bool,
+    /// Points PHP's mail() at the catcher. Laravel reads its own .env instead.
+    pub relay_php_mail: bool,
+    pub max_messages: u32,
+}
+
+impl Default for MailSettings {
+    fn default() -> Self {
+        Self {
+            smtp_port: 1025,
+            web_port: 8025,
+            auto_start: false,
+            relay_php_mail: true,
+            max_messages: 500,
+        }
+    }
+}
+
 fn range(value: u32, min: u32, max: u32, name: &str) -> Result<()> {
     if !(min..=max).contains(&value) {
         bail!("{name}: {min}–{max} arasında olmalı.");
@@ -203,6 +226,9 @@ impl PhpSettings {
             "cgi.fix_pathinfo",
             "fastcgi.impersonate",
             "session.save_path",
+            "smtp_port",
+            "sendmail_from",
+            "sendmail_path",
         ];
         let mut result = Vec::new();
         let mut seen = std::collections::HashSet::new();
@@ -234,7 +260,8 @@ impl PhpSettings {
         Ok(result)
     }
 
-    pub(crate) fn render(&self, ext: &Path) -> Result<String> {
+    /// `mail` is set when the local catcher should receive PHP's mail() calls.
+    pub(crate) fn render(&self, ext: &Path, mail: Option<&MailSettings>) -> Result<String> {
         self.validate()?;
         let on = |b| if b { "On" } else { "Off" };
         let mut text = format!("; F4Box tarafından üretilir. Kalıcı değişiklikleri Ayarlar ekranından yapın.\n[PHP]\nextension_dir=\"${{F4BOX_PHP_EXT}}\"\ndate.timezone={}\nmemory_limit={}\nupload_max_filesize={}M\npost_max_size={}M\nmax_execution_time={}\nmax_input_time={}\nmax_input_vars={}\ndisplay_errors={}\nlog_errors={}\nvariables_order=EGPCS\nerror_reporting=E_ALL\ncgi.fix_pathinfo=1\nfastcgi.impersonate=0\nexpose_php=Off\n", self.timezone, if self.memory_mb == -1 { "-1".into() } else { format!("{}M", self.memory_mb) }, self.upload_mb, self.post_mb, self.execution_seconds, self.input_seconds, self.input_vars, on(self.display_errors), on(self.log_errors));
@@ -252,6 +279,12 @@ impl PhpSettings {
         // Since PHP 8.5 OPcache is built in. Configure it without loading a DLL;
         // explicitly disable it too when the user's switch is off.
         text.push_str(&format!("opcache.enable={}\nopcache.enable_cli={}\nopcache.memory_consumption={}\nopcache.validate_timestamps=1\nopcache.revalidate_freq=0\n", u8::from(self.opcache), u8::from(self.opcache), self.opcache_mb));
+        if let Some(mail) = mail.filter(|mail| mail.relay_php_mail) {
+            text.push_str(&format!(
+                "SMTP=127.0.0.1\nsmtp_port={}\nsendmail_from=f4box@localhost\n",
+                mail.smtp_port
+            ));
+        }
         for (key, value) in self.extra_lines()? {
             text.push_str(&format!("{key}={value}\n"));
         }
@@ -363,6 +396,12 @@ impl Settings {
             86400,
             "phpMyAdmin oturum süresi",
         )?;
+        range(
+            self.mail.max_messages,
+            0,
+            100000,
+            "Saklanacak e-posta sayısı",
+        )?;
         for path in [&self.projects_dir, &self.backups_dir] {
             if !path.is_empty()
                 && (!Path::new(path).is_absolute() || path.chars().any(char::is_control))
@@ -382,7 +421,7 @@ impl Manager {
         }
         let mut ini = tempfile::NamedTempFile::new_in(self.home.join("config"))?;
         use std::io::Write;
-        ini.write_all(settings.render(&root.join("ext"))?.as_bytes())?;
+        ini.write_all(settings.render(&root.join("ext"), None)?.as_bytes())?;
         ini.flush()?;
         let required = serde_json::to_string(&settings.extensions)?;
         let extra_keys: Vec<_> = settings
@@ -475,3 +514,31 @@ impl Manager {
 }
 
 pub type PhpProfiles = BTreeMap<String, PhpSettings>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn php_mail_reaches_the_catcher_only_while_the_relay_is_on() {
+        let php = PhpSettings::default();
+        let empty = Path::new("");
+        let mut mail = MailSettings {
+            smtp_port: 1325,
+            ..MailSettings::default()
+        };
+
+        let relayed = php.render(empty, Some(&mail)).unwrap();
+        assert!(relayed.contains("SMTP=127.0.0.1\nsmtp_port=1325\n"));
+        assert!(relayed.contains("sendmail_from=f4box@localhost"));
+
+        mail.relay_php_mail = false;
+        for ini in [
+            php.render(empty, Some(&mail)).unwrap(),
+            php.render(empty, None).unwrap(),
+        ] {
+            assert!(!ini.contains("SMTP="));
+            assert!(!ini.contains("smtp_port="));
+        }
+    }
+}

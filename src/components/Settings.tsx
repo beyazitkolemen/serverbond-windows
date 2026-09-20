@@ -8,11 +8,13 @@ import type {
   PermissionState,
   Run,
   TunnelState,
+  MailState,
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
 import TunnelSettings from "./TunnelSettings";
+import MailActions from "./MailActions";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
 
@@ -22,6 +24,7 @@ const sections = [
   "MySQL",
   "Web sunucusu",
   "phpMyAdmin",
+  "E-posta",
   "Tünel",
   "Yedek ve aktarım",
   "Sistem",
@@ -112,6 +115,7 @@ export default function Settings({
   running,
   run,
   tunnel,
+  mail,
   permissions,
   appUpdate,
   onAppUpdate,
@@ -124,6 +128,7 @@ export default function Settings({
   running: boolean;
   run: Run;
   tunnel: TunnelState;
+  mail: MailState;
   permissions: PermissionState;
   appUpdate: UpdateInfo | null;
   onAppUpdate: (update: UpdateInfo | null) => void;
@@ -600,6 +605,65 @@ export default function Settings({
               </p>
             </section>
           )}
+          {section === "E-posta" && (
+            <section className="settings-section">
+              <h2>Yerel e-posta yakalama</h2>
+              <p className="section-note">
+                Mailpit, projelerinizin gönderdiği e-postaları yerel bir SMTP
+                sunucusunda tutar ve tarayıcıda gösterir. Hiçbir ileti gerçek
+                alıcıya iletilmez.
+              </p>
+              <div className="settings-grid">
+                <NumberField
+                  label="SMTP portu"
+                  value={values.mail.smtpPort}
+                  min={1}
+                  max={65535}
+                  onChange={(v) =>
+                    change("mail", { ...values.mail, smtpPort: v })
+                  }
+                />
+                <NumberField
+                  label="Arayüz portu"
+                  value={values.mail.webPort}
+                  min={1}
+                  max={65535}
+                  onChange={(v) =>
+                    change("mail", { ...values.mail, webPort: v })
+                  }
+                />
+                <NumberField
+                  label="Saklanacak e-posta (0: sınırsız)"
+                  value={values.mail.maxMessages}
+                  min={0}
+                  max={100000}
+                  onChange={(v) =>
+                    change("mail", { ...values.mail, maxMessages: v })
+                  }
+                />
+              </div>
+              <Toggle
+                label="Ortam başlatıldığında Mailpit'i de başlat"
+                value={values.mail.autoStart}
+                onChange={(v) =>
+                  change("mail", { ...values.mail, autoStart: v })
+                }
+              />
+              <Toggle
+                label="PHP mail() çağrılarını Mailpit'e yönlendir"
+                value={values.mail.relayPhpMail}
+                onChange={(v) =>
+                  change("mail", { ...values.mail, relayPhpMail: v })
+                }
+              />
+              <p className="section-note">
+                Yönlendirme php.ini içindeki SMTP ayarlarını üretir; bu yüzden
+                aynı anahtarlar PHP sekmesindeki ek ayarlar alanına yazılamaz.
+                Laravel kendi <code>.env</code> dosyasını okur, bu anahtarları
+                kullanmaz. Değişiklik PHP yeniden başladığında geçerli olur.
+              </p>
+            </section>
+          )}
           {section === "Yedek ve aktarım" && (
             <section className="settings-section">
               <h2>Veritabanı yedekleri</h2>
@@ -723,6 +787,9 @@ export default function Settings({
           </div>
         )}
       </form>
+      {section === "E-posta" && (
+        <MailActions mail={mail} busy={busy} run={run} />
+      )}
       {section === "Tünel" && (
         <TunnelSettings tunnel={tunnel} busy={busy} run={run} />
       )}

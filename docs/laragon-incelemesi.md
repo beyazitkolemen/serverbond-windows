@@ -18,7 +18,7 @@
 | Paket ekleme | `packages.conf` içindeki indirme adresleri değiştirilebilir; toplu ekleme vardır. [Quick-add](https://laragon.org/docs/quick-add) | Sabit sürüm + SHA-256 doğrulamalı beş bileşen, PHP sürüm kataloğu, toplu kurulum ve onarım. Kullanıcının keyfî indirme adresi eklemesi desteklenmez. |
 | Terminal | Cmder tabanlı, sekmeli ve izole PATH kullanan terminal sunar. [Terminal](https://laragon.org/docs/terminal) | Projeye ait PHP/Composer ve çalışma diziniyle PowerShell açılır. Sistem PATH'i değiştirilmez. Terminal uygulaması/editör tercihi henüz yok. |
 | Başlangıç / süreçler | Procfile; `autorun`, çalışma dizini ve env dosyası seçenekleriyle özel süreçler yönetilebilir. [Easy-to-Extend](https://laragon.org/docs/easy-to-extend) | Windows oturum açılışında F4Box, tepside açılış ve uygulama açılışında servisleri başlatma ayrı tercihlerdir. Proje kartında Laravel `queue:work` işçileri ve `schedule:work` zamanlayıcısı yönetilir. Genel Procfile yok. |
-| E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Henüz paket/servis yok. Eklendiğinde SMTP ve web portları ile otomatik başlangıç ayarları birlikte sunulmalı. |
+| E-posta | Mailpit yerel SMTP yakalama ve web arayüzü sağlar; PHP mail() entegrasyonu açıklanır. [Mailpit](https://laragon.org/docs/mailpit) | Ayarlar → E-posta bölümünde sabit `mailpit` paketi: SMTP ve arayüz portu, saklama sınırı, ortamla otomatik başlatma, tepsiden gelen kutusu ve isteğe bağlı PHP `mail()` yönlendirmesi. Laravel `.env` dosyası F4Box tarafından yazılmaz; değerler kartta gösterilir. |
 | Paylaşım | Ngrok tabanlı dış paylaşım, token ve bölge seçenekleri bulunur. [Quick-share](https://laragon.org/docs/quick-share) | Ayarlar → Tünel bölümünde Cloudflare Tunnel: sabit `cloudflared` paketi, DPAPI ile şifrelenen jeton, başlat/durdur ve ortamla otomatik başlatma. Ngrok ve bölge seçimi yok; genel adres eşlemesi Cloudflare panelinde yapılır. |
 | Taşınabilirlik | Laragon klasörünün başka sürücü/bilgisayara taşınması belgelenir. [Portable](https://laragon.org/docs/portable) | Programlar özel klasörde tutulur. F4Box parolaları Windows DPAPI ile mevcut hesaba bağlıdır; farklı bilgisayara klasör kopyalamak tam taşınabilirlik sağlamaz. Taşıma/export için ayrı tasarım gerekir. |
 | Hızlı erişim | Sistem tepsisi menüsü servis, günlük ve terminal işlemlerini toplar. [Context Menu](https://laragon.org/docs/context-menu) | Windows tepsisinde başlat/durdur/yeniden başlat, servis alt menüleri, phpMyAdmin, ayarlar, günlükler, veri klasörü ve çıkış var. Tepsiye küçültme ve ikinci açılışta mevcut pencereyi gösterme desteklenir. Proje/terminal işlemleri ana pencerede. |
@@ -34,6 +34,8 @@
 **Web:** proje alan adı kalıbı, FastCGI bağlantı ve yanıt süreleri, Gzip/Zstandard sıkıştırma, erişim günlükleri. HTTP ve loopback bağlantısı korunur. `.localhost` dışında DNS/hosts yönetimi uygulanmadığından diğer son ekler kabul edilmez. Proje adresi değişikliği `.env` içindeki `APP_URL` değerini otomatik değiştirmez.
 
 **phpMyAdmin:** web erişimini aç/kapat, varsayılan dil, sayfa başına satır, cookie/oturum süresi. PHP limitleri varsayılan PHP profilinden alınır. Oturum veya tarayıcı tercihleri varsayılan dilin önüne geçebilir. Kapatmak program dosyalarını ya da MySQL verilerini silmez.
+
+**E-posta:** Mailpit SMTP portu, arayüz portu, saklanacak en fazla e-posta sayısı, ortamla otomatik başlatma ve PHP `mail()` yönlendirmesi. Yönlendirme açıkken `SMTP` ve `smtp_port` anahtarları üretilen php.ini'ye yazılır; bu yüzden aynı anahtarlar ek PHP ayarları alanında reddedilir. Yakalanan e-postalar `data/mailpit/mailpit.db` dosyasında tutulur ve gerçek alıcıya iletilmez.
 
 **Yedek ve aktarım:** yeni SQL yedekleri için mevcut klasör seçimi; tercihlerin JSON olarak dışa/içe aktarımı; önceki tercihler ve varsayılanları taslağa alma. Aktarım F4Box tarafından saklanan MySQL yönetici parolasını, proje listesini, SQL verilerini ve paketleri kapsamaz.
 
@@ -53,10 +55,11 @@ Uygulanan direktifler için birincil kaynaklar: [PHP ini](https://www.php.net/ma
 ## Öncelikli devam işleri
 
 - Yerel HTTPS ve sertifika yaşam döngüsü.
-- Node.js / npm ve Mailpit kurulumu, sürüm ve port yönetimi.
+- Node.js / npm kurulumu ve sürüm yönetimi.
 - Terminal/editör seçimi.
 - Proje bazlı queue/scheduler süreçleri (v1.1: `queue:work` ve `schedule:work`).
 - Dış paylaşım (v1.1: Cloudflare Tunnel bağlayıcısı; genel adres eşlemesi Cloudflare panelinde).
+- Yerel e-posta yakalama (v1.1: Mailpit; dışa giden gerçek SMTP aktarımı yok).
 - MySQL veri taşıma, parola değiştirme, yedekten geri yükleme ve zamanlanmış yedek.
 - Tepsi menüsü ve kullanıcı tercihiyle Windows açılışında başlama.
 - Otomatik proje keşfi ve özel vhost/web kökü yönetimi.

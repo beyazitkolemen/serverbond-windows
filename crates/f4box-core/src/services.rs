@@ -61,14 +61,15 @@ impl Manager {
     pub(crate) fn write_php_config_for(&self, version: &str) -> Result<std::path::PathBuf> {
         crate::model::php_package(version)?;
         let extensions = self.home.join("bin/php").join(version).join("ext");
-        let profile = self
-            .config
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .settings
-            .php_for(version);
+        let (profile, mail) = {
+            let config = self.config.lock().unwrap_or_else(|e| e.into_inner());
+            (
+                config.settings.php_for(version),
+                config.settings.mail.clone(),
+            )
+        };
         self.validate_php_profile(version, &profile)?;
-        let config = profile.render(&extensions)?;
+        let config = profile.render(&extensions, Some(&mail))?;
         let path = self.home.join("config/php").join(version).join("php.ini");
         fs::create_dir_all(path.parent().unwrap())?;
         crate::storage::atomic_write(&path, config)?;
@@ -296,12 +297,14 @@ impl Manager {
                 if outcome.is_err() {
                     self.rollback_new_services(&before);
                 } else {
+                    self.start_mail_autostart();
                     self.start_tunnel_autostart();
                 }
                 outcome
             }
             "mysql" => self.start_mysql(),
             crate::tunnel::ID => self.start_tunnel_inner(),
+            crate::mail::ID => self.start_mail_inner(),
             "php" => self.start_php(),
             "caddy" => {
                 let before = self
@@ -573,7 +576,7 @@ impl Manager {
     }
 
     pub(crate) fn stop_service(&self, id: &str) -> Result<()> {
-        if !["caddy", "php", "mysql", crate::tunnel::ID].contains(&id)
+        if !["caddy", "php", "mysql", crate::tunnel::ID, crate::mail::ID].contains(&id)
             && !Self::is_project_service_id(id)
             && !Self::is_job_service_id(id)
         {

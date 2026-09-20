@@ -154,6 +154,7 @@ pub struct Settings {
     pub web: crate::preferences::WebSettings,
     pub phpmyadmin: crate::preferences::PmaSettings,
     pub tunnel: crate::preferences::TunnelSettings,
+    pub mail: crate::preferences::MailSettings,
     pub projects_dir: String,
     pub backups_dir: String,
     pub start_on_launch: bool,
@@ -171,6 +172,7 @@ impl Default for Settings {
             web: Default::default(),
             phpmyadmin: Default::default(),
             tunnel: Default::default(),
+            mail: Default::default(),
             projects_dir: String::new(),
             backups_dir: String::new(),
             start_on_launch: false,
@@ -180,14 +182,19 @@ impl Default for Settings {
 
 impl Settings {
     pub fn validate(&self) -> Result<()> {
-        let ports = [self.web_port, self.mysql_port, self.php_port];
+        let ports = [
+            self.web_port,
+            self.mysql_port,
+            self.php_port,
+            self.mail.smtp_port,
+            self.mail.web_port,
+        ];
         if ports.contains(&0) {
             bail!("Portlar 1–65535 arasında olmalı.");
         }
-        if self.web_port == self.mysql_port
-            || self.web_port == self.php_port
-            || self.mysql_port == self.php_port
-        {
+        let mut unique = ports;
+        unique.sort_unstable();
+        if unique.windows(2).any(|pair| pair[0] == pair[1]) {
             bail!("Her bileşen için farklı bir port seçin.");
         }
         self.validate_preferences()
@@ -233,6 +240,7 @@ pub struct Snapshot {
     pub settings: Settings,
     pub projects: Vec<ProjectStatus>,
     pub tunnel: crate::tunnel::TunnelState,
+    pub mail: crate::mail::MailState,
     pub permissions: crate::permissions::PermissionState,
     pub logs: Vec<String>,
     pub home: PathBuf,

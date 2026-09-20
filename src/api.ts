@@ -4,6 +4,9 @@ import catalog from "../crates/f4box-core/catalog.json";
 import phpVersions from "../crates/f4box-core/php-versions.json";
 import tools from "../crates/f4box-core/tools.json";
 
+const toolVersion = (id: string) =>
+  tools.find((tool) => tool.id === id)?.version ?? "";
+
 export const desktop = isTauri();
 
 // Browser preview is explicitly read-only; installation always runs in the Rust desktop process.
@@ -79,17 +82,35 @@ const preview: Snapshot = {
     },
     phpmyadmin: { enabled: true, language: "tr", rows: 25, loginSeconds: 1440 },
     tunnel: { autoStart: false },
+    mail: {
+      smtpPort: 1025,
+      webPort: 8025,
+      autoStart: false,
+      relayPhpMail: true,
+      maxMessages: 500,
+    },
     projectsDir: "",
     backupsDir: "",
     startOnLaunch: false,
   },
   tunnel: {
-    version: tools[0].version,
+    version: toolVersion("cloudflared"),
     installed: false,
     running: false,
     pid: null,
     tokenSaved: false,
     autoStart: false,
+    issue: null,
+  },
+  mail: {
+    version: toolVersion("mailpit"),
+    installed: false,
+    running: false,
+    pid: null,
+    smtpPort: 1025,
+    webPort: 8025,
+    autoStart: false,
+    relayPhpMail: true,
     issue: null,
   },
   permissions: {

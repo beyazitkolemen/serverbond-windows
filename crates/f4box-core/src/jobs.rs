@@ -320,6 +320,7 @@ impl Manager {
             "caddy",
             "composer",
             crate::tunnel::ID,
+            crate::mail::ID,
         ]
         .contains(&id)
         {

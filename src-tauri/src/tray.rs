@@ -17,6 +17,7 @@ pub struct TrayMenu {
     stop: MenuItem<Wry>,
     restart: MenuItem<Wry>,
     pma: MenuItem<Wry>,
+    mail: MenuItem<Wry>,
     quit: MenuItem<Wry>,
     autostart: CheckMenuItem<Wry>,
     close: CheckMenuItem<Wry>,
@@ -32,6 +33,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
     let stop = item("stop", "Tümünü durdur")?;
     let restart = item("restart", "Tümünü yeniden başlat")?;
     let pma = item("pma", "phpMyAdmin'i aç")?;
+    let mail = item("mail", "Gelen kutusunu aç")?;
     let settings = item("settings", "Ayarlar / Özellikler")?;
     let update = item("update", "Güncellemeleri denetle")?;
     let logs = item("logs", "Günlükleri göster")?;
@@ -78,6 +80,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
             &services_menu,
             &separator()?,
             &pma,
+            &mail,
             &settings,
             &update,
             &logs,
@@ -122,6 +125,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
         stop,
         restart,
         pma,
+        mail,
         quit,
         autostart,
         close,
@@ -188,6 +192,8 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
                 .iter()
                 .any(|p| p.package.id == "phpmyadmin" && p.installed),
     )?;
+    menu.mail
+        .set_enabled(!busy && healthy && snapshot.mail.running)?;
     menu.autostart
         .set_enabled(!desktop.quitting && desktop.autostart.is_some())?;
     menu.autostart
@@ -224,6 +230,7 @@ fn dispatch(app: &AppHandle, id: &str) {
                     "stop" => manager.stop("all"),
                     "restart" => manager.restart(),
                     "pma" => manager.open_phpmyadmin(),
+                    "mail" => manager.open_mail(),
                     "folder" => manager.open_home(),
                     "autostart" | "close-to-tray" => {
                         let desktop = app.state::<Desktop>();
