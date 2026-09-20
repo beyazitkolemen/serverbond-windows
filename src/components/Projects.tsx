@@ -66,104 +66,106 @@ export default function Projects({
         <div className="project-list">
           {projects.map((project) => (
             <article className="project-row" key={project.id}>
-              <div className="project-icon">
-                <Folder size={24} />
+              <div className="project-head">
+                <div className="project-icon">
+                  <Folder size={24} />
+                </div>
+                <div className="project-info">
+                  <h3>{project.name}</h3>
+                  <p className="project-url">
+                    http://{project.host}:{webPort}
+                  </p>
+                  <p className="project-path" title={project.path}>
+                    {project.path.replace(/^\\\\\?\\/, "")}
+                  </p>
+                  <ProjectPhp
+                    project={project}
+                    versions={phpVersions}
+                    busy={busy}
+                    run={run}
+                    anyRunning={anyRunning}
+                  />
+                </div>
+                <div className="project-actions">
+                  <button
+                    className="button secondary small"
+                    disabled={busy || !webRunning || !project.running}
+                    title={
+                      webRunning
+                        ? "Projeyi tarayıcıda aç"
+                        : "Önce web sunucusunu başlatın"
+                    }
+                    onClick={() =>
+                      void run("Proje açılıyor…", () =>
+                        call("open_project", { id: project.id }),
+                      )
+                    }
+                  >
+                    <ExternalLink size={15} />
+                    Aç
+                  </button>
+                  <button
+                    className="button secondary small"
+                    disabled={busy}
+                    aria-label={`${project.name} terminalini aç`}
+                    onClick={() =>
+                      void run("Proje terminali açılıyor…", () =>
+                        call("open_project_terminal", { id: project.id }),
+                      )
+                    }
+                  >
+                    <Terminal size={15} /> Terminal
+                  </button>
+                  <button
+                    className="button secondary small"
+                    disabled={busy || !mysqlRunning}
+                    title={
+                      mysqlRunning
+                        ? "Proje adıyla veritabanı oluştur"
+                        : "Önce MySQL'i başlatın"
+                    }
+                    onClick={() =>
+                      void run("Veritabanı oluşturuluyor…", () =>
+                        call("database", {
+                          name: project.name,
+                          action: "create",
+                        }),
+                      )
+                    }
+                  >
+                    <Database size={15} />
+                    Veritabanı
+                  </button>
+                  <button
+                    className="button secondary small"
+                    disabled={busy || !mysqlRunning}
+                    title={
+                      mysqlRunning ? "SQL yedeği al" : "Önce MySQL'i başlatın"
+                    }
+                    onClick={() =>
+                      void run("Yedek alınıyor…", () =>
+                        call("database", {
+                          name: project.name,
+                          action: "backup",
+                        }),
+                      )
+                    }
+                  >
+                    <Archive size={15} />
+                    Yedek
+                  </button>
+                  <button
+                    className="icon-button danger"
+                    disabled={busy}
+                    title="Listeden kaldır"
+                    aria-label={`${project.name} listeden kaldır`}
+                    onClick={() => setRemove(project)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
               </div>
-              <div className="project-info">
-                <h3>{project.name}</h3>
-                <p className="project-url">
-                  http://{project.host}:{webPort}
-                </p>
-                <p className="project-path" title={project.path}>
-                  {project.path.replace(/^\\\\\?\\/, "")}
-                </p>
-                <ProjectPhp
-                  project={project}
-                  versions={phpVersions}
-                  busy={busy}
-                  run={run}
-                  anyRunning={anyRunning}
-                />
-                <ProjectJobs project={project} busy={busy} run={run} />
-              </div>
-              <div className="project-actions">
-                <button
-                  className="button secondary small"
-                  disabled={busy || !webRunning || !project.running}
-                  title={
-                    webRunning
-                      ? "Projeyi tarayıcıda aç"
-                      : "Önce web sunucusunu başlatın"
-                  }
-                  onClick={() =>
-                    void run("Proje açılıyor…", () =>
-                      call("open_project", { id: project.id }),
-                    )
-                  }
-                >
-                  <ExternalLink size={15} />
-                  Aç
-                </button>
-                <button
-                  className="button secondary small"
-                  disabled={busy}
-                  aria-label={`${project.name} terminalini aç`}
-                  onClick={() =>
-                    void run("Proje terminali açılıyor…", () =>
-                      call("open_project_terminal", { id: project.id }),
-                    )
-                  }
-                >
-                  <Terminal size={15} /> Terminal
-                </button>
-                <button
-                  className="button secondary small"
-                  disabled={busy || !mysqlRunning}
-                  title={
-                    mysqlRunning
-                      ? "Proje adıyla veritabanı oluştur"
-                      : "Önce MySQL'i başlatın"
-                  }
-                  onClick={() =>
-                    void run("Veritabanı oluşturuluyor…", () =>
-                      call("database", {
-                        name: project.name,
-                        action: "create",
-                      }),
-                    )
-                  }
-                >
-                  <Database size={15} />
-                  Veritabanı
-                </button>
-                <button
-                  className="button secondary small"
-                  disabled={busy || !mysqlRunning}
-                  title={
-                    mysqlRunning ? "SQL yedeği al" : "Önce MySQL'i başlatın"
-                  }
-                  onClick={() =>
-                    void run("Yedek alınıyor…", () =>
-                      call("database", {
-                        name: project.name,
-                        action: "backup",
-                      }),
-                    )
-                  }
-                >
-                  <Archive size={15} />
-                  Yedek
-                </button>
-                <button
-                  className="icon-button danger"
-                  disabled={busy}
-                  title="Listeden kaldır"
-                  aria-label={`${project.name} listeden kaldır`}
-                  onClick={() => setRemove(project)}
-                >
-                  <Trash2 size={17} />
-                </button>
-              </div>
+              <ProjectJobs project={project} busy={busy} run={run} />
             </article>
           ))}
         </div>

@@ -15,7 +15,7 @@ export default function PermissionSettings({
   const [defender, setDefender] = useState(false);
   const pending = permissions.pending.length;
   return (
-    <section className="settings-section">
+    <section className="settings-section permission-section">
       <h2>Windows izinleri</h2>
       <p className="section-note">
         F4Box gündelik işini yönetici yetkisi olmadan yapar: servisler yalnızca

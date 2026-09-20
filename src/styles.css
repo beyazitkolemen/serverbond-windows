@@ -610,11 +610,14 @@ td:first-child {
   overflow: hidden;
 }
 .project-row {
+  display: grid;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.project-head {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
 }
 .project-row:last-child {
   border-bottom: 0;
@@ -651,7 +654,10 @@ td:first-child {
   gap: 6px;
   align-items: center;
   justify-content: flex-end;
-  max-width: 420px;
+  max-width: 460px;
+}
+.project-actions > .icon-button.danger {
+  margin-left: 6px;
 }
 .modal {
   width: min(540px, calc(100vw - 32px));
@@ -967,9 +973,11 @@ td:first-child {
     max-width: 170px;
   }
   .project-row {
+    padding: 15px;
+  }
+  .project-head {
     align-items: flex-start;
     flex-wrap: wrap;
-    padding: 15px;
   }
   .project-icon {
     display: none;
@@ -1124,6 +1132,17 @@ td:first-child {
 .project-jobs-panel {
   display: grid;
   gap: 12px;
+  margin-bottom: 2px;
+  padding: 15px 16px 16px;
+  border: 1px solid #e3eae5;
+  border-radius: 10px;
+  background: #fafcfb;
+}
+.project-jobs-panel > .section-note {
+  margin-top: 0;
+}
+.project-jobs-panel > .button {
+  justify-self: start;
 }
 .project-worker-more {
   font-size: 12px;
@@ -1148,15 +1167,36 @@ td:first-child {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 10px 20px;
+}
+.project-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.project-jobs-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 .project-worker {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   display: grid;
+  gap: 11px;
+}
+.project-worker-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+  font-size: 13px;
 }
 .project-worker-grid {
   display: grid;
@@ -1378,6 +1418,12 @@ td:first-child {
   min-height: 44px;
   font-weight: 500;
 }
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+}
 .setting-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -1458,6 +1504,21 @@ td:first-child {
 }
 .permission-list.error {
   color: #8a2a24;
+}
+.permission-section > p,
+.permission-section > ul,
+.permission-section > label,
+.permission-section > button {
+  margin-top: 14px;
+}
+.permission-section > .setting-toggle {
+  max-width: 620px;
+  align-items: flex-start;
+  line-height: 1.55;
+  font-size: 13px;
+}
+.permission-section > .setting-toggle input[type="checkbox"] {
+  margin-top: 1px;
 }
 @media (max-width: 700px) {
   .settings-grid {
@@ -1717,6 +1778,9 @@ tbody tr:hover {
 }
 .settings-section > h2 {
   font-size: 18px;
+}
+.settings-section > h2 + :not(.section-note) {
+  margin-top: 14px;
 }
 .settings-section > .section-note {
   margin-bottom: 15px;

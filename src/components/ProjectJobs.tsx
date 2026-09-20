@@ -127,54 +127,59 @@ export default function ProjectJobs({
               />
               <span>Ortamla başlat</span>
             </label>
-            <span
-              className={`service-status ${project.scheduleRunning ? "running" : ""}`}
-            >
-              {project.scheduleRunning ? "Çalışıyor" : "Durdu"}
-            </span>
-            <button
-              type="button"
-              className="button secondary small"
-              disabled={busy || !schedule.enabled}
-              onClick={() =>
-                void run(
-                  project.scheduleRunning
-                    ? "Zamanlayıcı durduruluyor…"
-                    : "Zamanlayıcı başlatılıyor…",
-                  () =>
-                    call(
-                      project.scheduleRunning
-                        ? "stop_project_schedule"
-                        : "start_project_schedule",
-                      { id: project.id },
+            <div className="project-job-actions">
+              <span
+                className={`service-status ${project.scheduleRunning ? "running" : ""}`}
+              >
+                <span
+                  className={`status-dot ${project.scheduleRunning ? "green" : ""}`}
+                />
+                {project.scheduleRunning ? "Çalışıyor" : "Durdu"}
+              </span>
+              <button
+                type="button"
+                className="button secondary small"
+                disabled={busy || !schedule.enabled}
+                onClick={() =>
+                  void run(
+                    project.scheduleRunning
+                      ? "Zamanlayıcı durduruluyor…"
+                      : "Zamanlayıcı başlatılıyor…",
+                    () =>
+                      call(
+                        project.scheduleRunning
+                          ? "stop_project_schedule"
+                          : "start_project_schedule",
+                        { id: project.id },
+                      ),
+                  )
+                }
+              >
+                {project.scheduleRunning ? (
+                  <Square size={14} />
+                ) : (
+                  <Play size={14} />
+                )}
+                {project.scheduleRunning ? "Durdur" : "Başlat"}
+              </button>
+              <button
+                type="button"
+                className="button secondary small"
+                disabled={busy}
+                onClick={() =>
+                  void run("Zamanlanmış görevler okunuyor…", async () =>
+                    setTasks(
+                      await call<string>("list_project_schedule", {
+                        id: project.id,
+                      }),
                     ),
-                )
-              }
-            >
-              {project.scheduleRunning ? (
-                <Square size={14} />
-              ) : (
-                <Play size={14} />
-              )}
-              {project.scheduleRunning ? "Durdur" : "Başlat"}
-            </button>
-            <button
-              type="button"
-              className="button secondary small"
-              disabled={busy}
-              onClick={() =>
-                void run("Zamanlanmış görevler okunuyor…", async () =>
-                  setTasks(
-                    await call<string>("list_project_schedule", {
-                      id: project.id,
-                    }),
-                  ),
-                )
-              }
-            >
-              <ListTodo size={14} />
-              Görevler
-            </button>
+                  )
+                }
+              >
+                <ListTodo size={14} />
+                Görevler
+              </button>
+            </div>
           </div>
           {project.scheduleIssue && (
             <p className="project-job-issue">{project.scheduleIssue}</p>
@@ -187,6 +192,52 @@ export default function ProjectJobs({
             const running = (state?.running ?? 0) > 0;
             return (
               <div className="project-worker" key={worker.id}>
+                <div className="project-worker-head">
+                  <strong>{worker.name.trim() || "İşçi"}</strong>
+                  <div className="project-job-actions">
+                    <span
+                      className={`service-status ${running ? "running" : ""}`}
+                    >
+                      <span
+                        className={`status-dot ${running ? "green" : ""}`}
+                      />
+                      {running
+                        ? `${state?.running ?? 0}/${worker.processes} çalışıyor`
+                        : "Durdu"}
+                    </span>
+                    <button
+                      type="button"
+                      className="button secondary small"
+                      disabled={busy}
+                      onClick={() =>
+                        void run(
+                          running ? "İşçi durduruluyor…" : "İşçi başlatılıyor…",
+                          () =>
+                            call(
+                              running
+                                ? "stop_project_worker"
+                                : "start_project_worker",
+                              { id: project.id, workerId: worker.id },
+                            ),
+                        )
+                      }
+                    >
+                      {running ? <Square size={14} /> : <Play size={14} />}
+                      {running ? "Durdur" : "Başlat"}
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button danger"
+                      disabled={busy || running}
+                      aria-label={`${worker.name} işçisini sil`}
+                      onClick={() =>
+                        setWorkers((list) => list.filter((_, i) => i !== index))
+                      }
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
                 <div className="project-worker-grid">
                   <label>
                     Ad
@@ -274,44 +325,6 @@ export default function ProjectJobs({
                     />
                     <span>Ortamla başlat</span>
                   </label>
-                  <span
-                    className={`service-status ${running ? "running" : ""}`}
-                  >
-                    {running
-                      ? `${state?.running ?? 0}/${worker.processes} çalışıyor`
-                      : "Durdu"}
-                  </span>
-                  <button
-                    type="button"
-                    className="button secondary small"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(
-                        running ? "İşçi durduruluyor…" : "İşçi başlatılıyor…",
-                        () =>
-                          call(
-                            running
-                              ? "stop_project_worker"
-                              : "start_project_worker",
-                            { id: project.id, workerId: worker.id },
-                          ),
-                      )
-                    }
-                  >
-                    {running ? <Square size={14} /> : <Play size={14} />}
-                    {running ? "Durdur" : "Başlat"}
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button danger"
-                    disabled={busy || running}
-                    aria-label={`${worker.name} işçisini sil`}
-                    onClick={() =>
-                      setWorkers((list) => list.filter((_, i) => i !== index))
-                    }
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
                 {state?.issue && (
                   <p className="project-job-issue">{state.issue}</p>
@@ -319,7 +332,7 @@ export default function ProjectJobs({
               </div>
             );
           })}
-          <div className="project-job-row">
+          <div className="project-jobs-footer">
             <button
               type="button"
               className="button secondary small"

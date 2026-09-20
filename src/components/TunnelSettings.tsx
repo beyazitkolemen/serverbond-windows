@@ -92,8 +92,6 @@ export default function TunnelSettings({
             Jetonu sil
           </button>
         )}
-      </div>
-      <div className="settings-actions">
         {!tunnel.installed ? (
           <button
             type="button"
