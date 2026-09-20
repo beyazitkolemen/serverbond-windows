@@ -107,6 +107,34 @@ pub struct ProjectSchedule {
     pub auto_start: bool,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectRelease {
+    pub git_pull: bool,
+    pub branch: String,
+    pub composer: bool,
+    pub composer_no_dev: bool,
+    pub migrate: bool,
+    pub optimize_clear: bool,
+    pub extra_artisan: Vec<String>,
+    pub restart_jobs: bool,
+}
+
+impl Default for ProjectRelease {
+    fn default() -> Self {
+        Self {
+            git_pull: true,
+            branch: String::new(),
+            composer: true,
+            composer_no_dev: true,
+            migrate: true,
+            optimize_clear: true,
+            extra_artisan: Vec::new(),
+            restart_jobs: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
@@ -120,6 +148,8 @@ pub struct Project {
     pub workers: Vec<QueueWorker>,
     #[serde(default)]
     pub schedule: ProjectSchedule,
+    #[serde(default)]
+    pub release: ProjectRelease,
 }
 
 #[derive(Clone, Serialize)]

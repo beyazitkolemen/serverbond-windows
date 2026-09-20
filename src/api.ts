@@ -159,6 +159,8 @@ export async function call<T = void>(
         "settings_defaults",
         "desktop_status",
         "discover_projects",
+        "list_project_releases",
+        "project_git_status",
       ].includes(command)
     ) {
       return invoke<T>(command, args);
@@ -233,6 +235,36 @@ export async function call<T = void>(
   if (command === "list_project_schedule")
     return "  * * * * *  php artisan inspire  Next Due: 1 minute from now" as T;
   if (command === "list_failed_jobs") return "Başarısız kuyruk işi yok." as T;
+  if (command === "project_git_status")
+    return {
+      present: true,
+      branch: "main",
+      sha: "6f12c4a",
+    } as T;
+  if (command === "list_project_releases")
+    return [
+      {
+        startedAt: "2026-09-20 21:18:04",
+        durationMs: 18420,
+        branch: "main",
+        sha: "6f12c4a",
+        success: true,
+        output: [
+          "--- git ---",
+          "Already up to date.",
+          "--- composer ---",
+          "Nothing to install, update or remove",
+          "--- migrate ---",
+          "Nothing to migrate.",
+          "--- optimize ---",
+          "Cached events cleared successfully.",
+          "--- config:cache ---",
+          "Configuration cached successfully.",
+          "--- jobs ---",
+          "Yeniden başlatıldı: kuyruk: default, zamanlayıcı",
+        ].join("\n"),
+      },
+    ] as T;
   throw new Error(
     "Bu işlem için F4Box masaüstü uygulamasını açın. Tarayıcı görünümü yalnızca önizlemedir.",
   );

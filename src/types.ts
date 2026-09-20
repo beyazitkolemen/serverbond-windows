@@ -31,6 +31,39 @@ export interface ProjectSchedule {
   enabled: boolean;
   autoStart: boolean;
 }
+export interface ProjectRelease {
+  gitPull: boolean;
+  branch: string;
+  composer: boolean;
+  composerNoDev: boolean;
+  migrate: boolean;
+  optimizeClear: boolean;
+  extraArtisan: string[];
+  restartJobs: boolean;
+}
+export interface ReleaseRecord {
+  startedAt: string;
+  durationMs: number;
+  branch: string;
+  sha: string;
+  success: boolean;
+  output: string;
+}
+export interface ProjectGitStatus {
+  present: boolean;
+  branch: string;
+  sha: string;
+}
+export const defaultRelease = (): ProjectRelease => ({
+  gitPull: true,
+  branch: "",
+  composer: true,
+  composerNoDev: true,
+  migrate: true,
+  optimizeClear: true,
+  extraArtisan: [],
+  restartJobs: true,
+});
 export interface DiscoveredProject {
   name: string;
   path: string;
@@ -53,6 +86,7 @@ export interface Project {
   issue: string | null;
   workers: QueueWorker[];
   schedule: ProjectSchedule;
+  release?: ProjectRelease;
   workerStates: WorkerState[];
   scheduleRunning: boolean;
   schedulePid: number | null;

@@ -282,7 +282,7 @@ pub fn assign_worker_ids(workers: Vec<QueueWorker>) -> Result<Vec<QueueWorker>> 
     Ok(assigned)
 }
 
-fn artisan_file(project: &Project) -> Result<&Path> {
+pub(crate) fn artisan_file(project: &Project) -> Result<&Path> {
     let artisan = project.path.join("artisan");
     if !artisan.is_file() {
         bail!(
@@ -565,7 +565,7 @@ impl Manager {
         false
     }
 
-    fn project(&self, id: &str) -> Result<Project> {
+    pub(crate) fn project(&self, id: &str) -> Result<Project> {
         self.config
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -587,7 +587,7 @@ impl Manager {
         Ok((project, worker))
     }
 
-    fn artisan_output(&self, project: &Project, args: &[String]) -> Result<String> {
+    pub(crate) fn artisan_output(&self, project: &Project, args: &[String]) -> Result<String> {
         artisan_file(project)?;
         let mut cmd = self.project_php_command(project)?;
         cmd.args(args);
@@ -730,7 +730,29 @@ impl Manager {
         Ok(())
     }
 
-    fn project_php_command(&self, project: &Project) -> Result<Command> {
+    pub(crate) fn restart_enabled_jobs(&self, project: &Project) -> Result<String> {
+        artisan_file(project)?;
+        let mut restarted = Vec::new();
+        for worker in &project.workers {
+            if worker.enabled {
+                self.stop_queue_worker(&project.id, worker)?;
+                self.spawn_queue_worker(project, worker)?;
+                restarted.push(format!("kuyruk: {}", worker.name));
+            }
+        }
+        if project.schedule.enabled {
+            self.stop_service(&schedule_service_id(&project.id))?;
+            self.spawn_schedule(project)?;
+            restarted.push("zamanlayıcı".into());
+        }
+        if restarted.is_empty() {
+            Ok("Yeniden başlatılacak etkin işçi veya zamanlayıcı yok.".into())
+        } else {
+            Ok(format!("Yeniden başlatıldı: {}", restarted.join(", ")))
+        }
+    }
+
+    pub(crate) fn project_php_command(&self, project: &Project) -> Result<Command> {
         let package = php_package(&project.php_version)?;
         let directory = self.home.join("bin/php").join(&project.php_version);
         install::validate_installation(&directory, &package).with_context(|| {

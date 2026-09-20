@@ -8,8 +8,11 @@ use std::sync::atomic::Ordering;
 use tauri::Manager as _;
 
 use f4box_core::{
-    model::{DiscoveredProject, Project, ProjectSchedule, QueueWorker, Settings, Snapshot},
-    Manager,
+    model::{
+        DiscoveredProject, Project, ProjectRelease, ProjectSchedule, QueueWorker, Settings,
+        Snapshot,
+    },
+    Manager, ProjectGitStatus, ReleaseRecord,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -364,6 +367,42 @@ async fn read_project_log(
     let state = state.inner().clone();
     blocking(state.clone(), move || state.read_project_log(&id, &source)).await
 }
+#[tauri::command]
+async fn save_project_release(
+    state: tauri::State<'_, State>,
+    id: String,
+    release: ProjectRelease,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.save_project_release(&id, release)
+    })
+    .await
+}
+#[tauri::command]
+async fn deploy_project(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<ReleaseRecord, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.deploy_project(&id)).await
+}
+#[tauri::command]
+async fn list_project_releases(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<Vec<ReleaseRecord>, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.list_project_releases(&id)).await
+}
+#[tauri::command]
+async fn project_git_status(
+    state: tauri::State<'_, State>,
+    id: String,
+) -> Result<ProjectGitStatus, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.project_git_status(&id)).await
+}
 
 #[tauri::command]
 async fn tunnel(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
@@ -629,6 +668,10 @@ fn main() {
             read_project_worker_log,
             read_project_schedule_log,
             read_project_log,
+            save_project_release,
+            deploy_project,
+            list_project_releases,
+            project_git_status,
             tunnel,
             mail,
             node,

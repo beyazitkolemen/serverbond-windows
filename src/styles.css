@@ -596,6 +596,16 @@ td:first-child {
 .status-dot.green {
   background: var(--success);
 }
+.status-dot.red {
+  background: var(--danger);
+}
+.service-status.issue {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
 .actions-heading {
   text-align: center;
   width: 130px;
@@ -872,6 +882,109 @@ td:first-child {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.project-release {
+  gap: 20px;
+}
+.release-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.release-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.release-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.release-steps legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.release-branch,
+.release-extra {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.release-extra textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+}
+.release-console,
+.release-history {
+  display: grid;
+  gap: 8px;
+}
+.release-console header,
+.release-history h4,
+.release-console h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+}
+.release-console pre {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #10241c;
+  color: #d3ddd7;
+  font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.release-history ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.release-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+.release-history .ok {
+  color: var(--success);
+  font-weight: 650;
+}
+.release-history .fail {
+  color: var(--danger);
+  font-weight: 650;
 }
 .project-detail .project-jobs-panel,
 .project-detail .project-logs {

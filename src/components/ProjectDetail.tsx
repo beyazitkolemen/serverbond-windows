@@ -12,11 +12,13 @@ import type { PackageStatus, Project, Run } from "../types";
 import { databaseName, projectUrl } from "../version";
 import { QueueSection, ScheduleSection, useProjectJobs } from "./ProjectJobs";
 import ProjectLogs from "./ProjectLogs";
+import ReleasePane, { SummaryGit } from "./ProjectRelease";
 
 const tabs = [
   { id: "summary", label: "Özet" },
   { id: "schedule", label: "Zamanlama" },
   { id: "queue", label: "Kuyruklar" },
+  { id: "release", label: "Sürüm" },
   { id: "logs", label: "Günlükler" },
   { id: "database", label: "Veritabanı" },
 ] as const;
@@ -139,6 +141,9 @@ export default function ProjectDetail({
       {tab === "queue" ? (
         <QueueSection project={project} busy={busy} run={run} jobs={jobs} />
       ) : null}
+      {tab === "release" ? (
+        <ReleasePane project={project} busy={busy} run={run} />
+      ) : null}
       {tab === "logs" ? <ProjectLogs project={project} embedded /> : null}
       {tab === "database" ? (
         <DatabasePane
@@ -227,6 +232,7 @@ function SummaryPane({
             </button>
           </dd>
         </div>
+        <SummaryGit project={project} onOpen={() => onOpenTab("release")} />
       </dl>
       <ProjectPhp
         project={project}

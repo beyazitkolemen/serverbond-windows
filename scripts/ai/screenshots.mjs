@@ -47,6 +47,12 @@ const shots = [
     projectTab: "Günlükler",
     height: 1200,
   },
+  {
+    file: "10-proje-surum.png",
+    nav: "Projeler",
+    projectTab: "Sürüm",
+    height: 1480,
+  },
 ];
 
 const types = {

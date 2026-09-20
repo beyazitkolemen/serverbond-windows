@@ -18,9 +18,15 @@ Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sür
 
 ## Projeler, kuyruk ve zamanlama
 
-Proje listesi ve sekmeli detay: Özet, Zamanlama, Kuyruklar, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
+Proje listesi ve sekmeli detay: Özet, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
 
 ![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
+
+## Yerel sürüm
+
+Forge benzeri üretim sürümü aynı Windows makinesinde: git pull, Composer, `migrate --force`, `optimize:clear`, ek Artisan satırları ve kuyruk/zamanlayıcı yeniden başlatma. Uzak sunucu yoktur; `.env` yazılmaz.
+
+![Proje sürüm tarifi ve geçmişi](10-proje-surum.png)
 
 ## Proje günlükleri
 

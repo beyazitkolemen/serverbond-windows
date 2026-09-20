@@ -10,6 +10,7 @@ pub mod preferences;
 mod process;
 mod project_runtime;
 mod projects;
+mod release;
 pub mod requirements;
 mod resilience;
 mod secrets;
@@ -17,6 +18,8 @@ mod services;
 mod storage;
 mod terminal;
 pub mod tunnel;
+
+pub use release::{ProjectGitStatus, ReleaseRecord};
 
 use anyhow::{bail, Context, Result};
 use fs2::FileExt;

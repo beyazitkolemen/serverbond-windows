@@ -2,7 +2,7 @@ use f4box_core::{
     install::{extract_zip, verify_hash},
     model::{
         caddy_config, catalog, slug_from_folder, validate_mysql_password, validate_slug, Project,
-        QueueWorker, Settings,
+        ProjectRelease, QueueWorker, Settings,
     },
     Manager,
 };
@@ -79,6 +79,7 @@ fn caddy_routes_to_public_and_binds_loopback() {
         php_version: "8.4.25".into(),
         workers: Vec::new(),
         schedule: Default::default(),
+        release: Default::default(),
     };
     let config = caddy_config(
         &Settings::default(),
@@ -106,6 +107,7 @@ fn caddy_https_redirects_http_and_uses_internal_tls() {
         php_version: "8.4.25".into(),
         workers: Vec::new(),
         schedule: Default::default(),
+        release: Default::default(),
     };
     let mut settings = Settings::default();
     settings.web.https = true;
@@ -671,6 +673,41 @@ fn project_jobs_persist_and_reject_invalid_workers() {
     let failed = reopened.list_failed_jobs(&project.id).unwrap_err();
     assert!(format!("{failed:#}").contains("artisan"), "{failed:#}");
     assert!(reopened.read_log("../queue").is_err());
+}
+
+#[test]
+fn project_release_persists_and_rejects_injection() {
+    let home = tempfile::tempdir().unwrap();
+    let project_dir = tempfile::tempdir().unwrap();
+    fs::create_dir(project_dir.path().join("public")).unwrap();
+    fs::write(project_dir.path().join("public/index.php"), "<?php").unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let project = manager
+        .add_project("demo".into(), project_dir.path().into())
+        .unwrap();
+    assert!(project.release.git_pull);
+    assert!(project.release.composer_no_dev);
+    let mut release = ProjectRelease {
+        branch: "main".into(),
+        extra_artisan: vec!["config:cache".into()],
+        ..Default::default()
+    };
+    manager
+        .save_project_release(&project.id, release.clone())
+        .unwrap();
+    release.extra_artisan = vec!["migrate; rm".into()];
+    let before = fs::read(home.path().join("config.json")).unwrap();
+    assert!(manager.save_project_release(&project.id, release).is_err());
+    assert_eq!(fs::read(home.path().join("config.json")).unwrap(), before);
+    assert!(manager
+        .list_project_releases(&project.id)
+        .unwrap()
+        .is_empty());
+    drop(manager);
+    let reopened = Manager::new(home.path().into()).unwrap();
+    let saved = &reopened.snapshot().unwrap().projects[0].project.release;
+    assert_eq!(saved.branch, "main");
+    assert_eq!(saved.extra_artisan, ["config:cache"]);
 }
 
 #[test]

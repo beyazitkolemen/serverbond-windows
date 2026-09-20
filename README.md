@@ -31,6 +31,8 @@ Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi d
 | ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png) |
 | Yerel HTTPS | Proje günlükleri |
 | ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png) |
+| Yerel sürüm |  |
+| ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) |  |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -76,6 +78,10 @@ Her proje kartında Supervisor benzeri kuyruk işçileri ve Laravel zamanlayıc�
 **Laravel schedule (crontab)** `php artisan schedule:work` çalıştırır; bu, Linux crontab’daki `* * * * * php artisan schedule:run` karşılığıdır. Görevler `routes/console.php` veya `app/Console` içinde tanımlanır; F4Box `.env` dosyasını yazmaz. **Görevler** `schedule:list --next` çıktısını gösterir. **Günlük** işçi ve zamanlayıcı süreç kayıtlarını açar. **Başarısız kuyruk işleri** `queue:failed`, `queue:retry all` ve `queue:flush` komutlarını çalıştırır. `artisan` dosyası olmayan klasörlerde kuyruk başlatılmaz. Kapalı işçi veya zamanlayıcı başlatılamaz.
 
 Windows Görev Zamanlayıcısı kullanılmaz; süreçler F4Box kapanınca durur. Bellek, azami iş veya süre sınırından çıkan işçi otomatik yeniden başlamaz; **Yeniden başlat** ile açın. Redis bu sürümde F4Box tarafından kurulmaz; `database` veya `sync` bağlantısı yerel MySQL ile kullanılabilir. Komut satırı: `f4box queue <ad> start|stop|restart|failed|retry|flush|log [işçi|iş]`, `f4box schedule <ad> start|stop|restart|list|log` ve `f4box logs <ad> [php|schedule|işçi]`.
+
+### Yerel sürüm
+
+Proje detayındaki **Sürüm** sekmesi Laravel Forge Deployments’ın bu Windows makinesindeki karşılığıdır. Uzak VPS, SSH ve serbest kabuk scripti yoktur. Tarif işaret kutularıdır: `git pull` (isteğe bağlı dal), `composer install --prefer-dist` (isteğe bağlı `--no-dev`), `php artisan migrate --force`, `optimize:clear`, ek Artisan satırları (`a-z0-9:_-` + `--bayrak`) ve kayıtlı kuyruk/zamanlayıcı süreçlerinin yeniden başlatılması. `.env` yazılmaz. Çıktı birleştirilir (`--- git ---`); tavan 10 dakikadır; son 20 kayıt `logs/release-{proje}.jsonl` dosyasına yazılır. `git` PATH’te yoksa işlem Türkçe hata ile durur. Komut satırı: `f4box project release <ad>`. Karşılaştırma: [docs/herd-forge-karsilastirma.md](docs/herd-forge-karsilastirma.md).
 
 ### Proje günlükleri
 

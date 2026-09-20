@@ -191,6 +191,7 @@ impl Manager {
             php_version: original.php_version.clone(),
             workers: Vec::new(),
             schedule: Default::default(),
+            release: Default::default(),
         };
         if project.host == "phpmyadmin.f4box.localhost" {
             bail!("Bu adres phpMyAdmin için ayrılmış.");
@@ -291,6 +292,7 @@ impl Manager {
                 php_version: config.php_version.clone(),
                 workers: Vec::new(),
                 schedule: Default::default(),
+                release: Default::default(),
             };
             if project.host == "phpmyadmin.f4box.localhost" {
                 bail!("Bu adres phpMyAdmin için ayrılmış.");

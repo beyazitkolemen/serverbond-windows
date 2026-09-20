@@ -9,12 +9,12 @@ description: F4Box katmanları, veri dizini ve nereye kod yazılacağı. Mimari,
 
 | Yol | Görev |
 | --- | --- |
-| `crates/f4box-core` | Katalog, indirme, arşiv, süreç, MySQL, Caddy, projeler, kuyruk/zamanlayıcı, CLI |
+| `crates/f4box-core` | Katalog, indirme, arşiv, süreç, MySQL, Caddy, projeler, kuyruk/zamanlayıcı, yerel sürüm, CLI |
 | `src-tauri` | Tauri komutları, tepsi, Windows başlangıç, klasör seçimi |
 | `src` | React/TypeScript. Tek yazma yolu `call()` → IPC |
 | `crates/f4box-core/src/bin/f4box.rs` | Aynı `Manager` ile CLI |
 
-Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur.
+Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. Yerel sürüm tarifi `release.rs` + `Project.release`; uzak SSH yoktur.
 
 ## Veri dizini
 
