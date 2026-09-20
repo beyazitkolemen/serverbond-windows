@@ -19,6 +19,7 @@ import Projects from "./components/Projects";
 import Logs, { LogPreview } from "./components/Logs";
 import Settings from "./components/Settings";
 import EnvironmentSummary from "./components/EnvironmentSummary";
+import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<Page, [string, string]> = {
   overview: [
@@ -47,6 +48,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [connectionError, setConnectionError] = useState("");
   const [message, setMessage] = useState("");
+  const [appUpdate, setAppUpdate] = useState<UpdateInfo | null>(null);
+  const [openUpdates, setOpenUpdates] = useState(0);
   const inFlight = useRef(false);
   const requestNumber = useRef(0);
   const refresh = useCallback(async () => {
@@ -112,6 +115,17 @@ export default function App() {
       }
       cleanup.push(errors);
       navigate(await call<string | null>("desktop_navigation"));
+      const updates = await listen("desktop:check-update", () => {
+        if (active) {
+          setPage("settings");
+          setOpenUpdates((n) => n + 1);
+        }
+      });
+      if (!active) {
+        updates();
+        return;
+      }
+      cleanup.push(updates);
     };
     void connect().catch((error) => {
       if (active)
@@ -120,6 +134,20 @@ export default function App() {
     return () => {
       active = false;
       cleanup.forEach((remove) => remove());
+    };
+  }, []);
+  useEffect(() => {
+    if (!desktop) return;
+    let active = true;
+    void checkForAppUpdate()
+      .then((update) => {
+        if (active) setAppUpdate(update);
+      })
+      .catch(() => {
+        /* silent launch check; Ayarlar → Güncellemeler shows errors */
+      });
+    return () => {
+      active = false;
     };
   }, []);
   const run: Run = async (label, action) => {
@@ -312,6 +340,29 @@ export default function App() {
         </>
       ) : (
         <>
+          {appUpdate ? (
+            <div className="setup-banner update-banner">
+              <div className="setup-icon">
+                <RefreshCw size={19} />
+              </div>
+              <div>
+                <h2>F4Box {appUpdate.version} yayımlanmış</h2>
+                <p>
+                  Kurulu sürüm v{appUpdate.currentVersion}. Güncelleme GitHub
+                  üzerinden indirilir; onayınız olmadan kurulmaz.
+                </p>
+              </div>
+              <button
+                className="button banner-button"
+                onClick={() => {
+                  setPage("settings");
+                  setOpenUpdates((n) => n + 1);
+                }}
+              >
+                Güncellemeyi gör
+              </button>
+            </div>
+          ) : null}
           {page === "overview" && <EnvironmentSummary state={state} />}
           {page === "overview" && !installed ? (
             <div className="setup-banner">
@@ -392,6 +443,9 @@ export default function App() {
               busy={disabled}
               running={running}
               run={run}
+              appUpdate={appUpdate}
+              onAppUpdate={setAppUpdate}
+              openUpdates={openUpdates}
             />
           ) : null}
         </>

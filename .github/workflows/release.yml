@@ -1,7 +1,11 @@
-name: Windows checks
-on: [push, pull_request, workflow_dispatch]
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -26,21 +30,30 @@ jobs:
         run: cargo test --workspace --locked
       - name: Rust checks
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Real Windows environment tests
-        if: github.event_name == 'workflow_dispatch'
-        run: cargo test -p f4box-core --tests --locked -- --ignored --nocapture --test-threads=1
-      - name: Desktop executable and installer
-        run: npm run desktop:build:unsigned
-      - name: Package versioned artifacts
+      - name: Signed Windows installer and updater manifest
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: F4Box v__VERSION__
+          releaseBody: |
+            Windows x64 kurulum paketi ve otomatik güncelleme bildirimi (`latest.json`).
+
+            Ayrıntılar: docs/releases ve docs/updates.md
+          releaseDraft: false
+          prerelease: false
+          updaterJsonPreferNsis: true
+      - name: Versioned checksums
         shell: pwsh
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          Copy-Item target/release/f4box-desktop.exe "artifacts/F4Box_${version}_x64.exe"
-          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $setup) {
-            throw "NSIS kurulum paketi bulunamadı."
-          }
+          $exe = Get-ChildItem target/release/f4box-desktop.exe | Select-Object -First 1
+          Copy-Item $exe.FullName "artifacts/F4Box_${version}_x64.exe"
+          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           Copy-Item $setup.FullName "artifacts/F4Box_${version}_x64-setup.exe"
           Get-ChildItem artifacts/*.exe | ForEach-Object {
             "$(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()  $($_.Name)"
@@ -48,5 +61,5 @@ jobs:
           Get-Content artifacts/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: F4Box-Windows-x64
+          name: F4Box-Windows-x64-release
           path: artifacts/*

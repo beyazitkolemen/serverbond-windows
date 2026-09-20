@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FolderOpen, Eye, EyeOff } from "lucide-react";
 import { call, chooseFolder } from "../api";
 import type {
@@ -9,6 +9,8 @@ import type {
 } from "../types";
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
+import UpdateSettings from "./UpdateSettings";
+import type { UpdateInfo } from "../updates";
 
 const sections = [
   "Genel",
@@ -18,6 +20,7 @@ const sections = [
   "phpMyAdmin",
   "Yedek ve aktarım",
   "Sistem",
+  "Güncellemeler",
 ] as const;
 const extensions = [
   "curl",
@@ -103,6 +106,9 @@ export default function Settings({
   busy,
   running,
   run,
+  appUpdate,
+  onAppUpdate,
+  openUpdates,
 }: {
   settings: Values;
   versions: PackageStatus[];
@@ -110,9 +116,15 @@ export default function Settings({
   busy: boolean;
   running: boolean;
   run: Run;
+  appUpdate: UpdateInfo | null;
+  onAppUpdate: (update: UpdateInfo | null) => void;
+  openUpdates: number;
 }) {
   const [values, setValues] = useState(() => structuredClone(settings));
   const [section, setSection] = useState<(typeof sections)[number]>("Genel");
+  useEffect(() => {
+    if (openUpdates) setSection("Güncellemeler");
+  }, [openUpdates]);
   const [version, setVersion] = useState("");
   const [password, setPassword] = useState("");
   const [note, setNote] = useState("");
@@ -676,7 +688,7 @@ export default function Settings({
             </section>
           )}
         </fieldset>
-        {section !== "Sistem" && (
+        {section !== "Sistem" && section !== "Güncellemeler" && (
           <div className="settings-save">
             <span>
               {dirty ? "Kaydedilmemiş değişiklikler var" : "Ayarlar güncel"}
@@ -751,6 +763,16 @@ export default function Settings({
             </p>
           </section>
         </>
+      )}
+      {section === "Güncellemeler" && (
+        <UpdateSettings
+          busy={busy}
+          running={running}
+          run={run}
+          available={appUpdate}
+          onAvailable={onAppUpdate}
+          openUpdates={openUpdates}
+        />
       )}
     </div>
   );

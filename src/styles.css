@@ -331,6 +331,40 @@ footer {
   line-height: 1.5;
   font-size: 14px;
 }
+.update-banner {
+  background: #eef4fb;
+  border-color: #c5d6ea;
+}
+.update-notes pre {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7f9f8;
+  white-space: pre-wrap;
+  font: inherit;
+  color: #2a3b34;
+}
+.update-progress-block {
+  margin: 14px 0 4px;
+}
+.update-progress {
+  height: 8px;
+  background: #e1e8e4;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.update-progress > span {
+  display: block;
+  height: 100%;
+  min-width: 8px;
+  background: #157557;
+}
+.update-progress-block p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .banner-button {
   margin-left: auto;
   border-color: #198859;

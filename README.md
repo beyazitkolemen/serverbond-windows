@@ -14,7 +14,9 @@ Uygulama sürümü **1.1.0**. Windows x64 paketleri CI tarafından `F4Box_1.1.0_
 
 v1.1 ikili paketi henüz yayımlanmadıysa son yayımlanan [v1.0](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0) kullanılabilir.
 
-Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir. Depo özel olduğu sürece indirme bağlantıları için depoya erişimi olan bir GitHub hesabıyla oturum açılmalıdır.
+Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir.
+
+Kurulu masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsünden GitHub’daki son sürümü denetler. Yeni paket siz onaylamadan kurulmaz. Bu kanalın çalışması için deponun herkese açık olması ve imzalı bir GitHub Release (`latest.json`) yayımlanmış olması gerekir. Ayrıntı: [docs/updates.md](docs/updates.md).
 
 ![F4Box genel bakış: gerçek PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
 
@@ -134,7 +136,7 @@ npm run desktop
 npm run desktop:build
 ```
 
-Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Windows CI aynı adımlarla `artifacts/F4Box_<sürüm>_x64.exe`, `F4Box_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
+Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Yerel veya CI imzasız paketi `npm run desktop:build:unsigned` ile üretilir. İmzalı güncelleme paketi ve `latest.json` için `TAURI_SIGNING_PRIVATE_KEY` ile `npm run desktop:build` veya `.github/workflows/release.yml` kullanılır. Windows CI imzasız `F4Box_<sürüm>_x64.exe`, `F4Box_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
 
 ### Doğrulama
 
@@ -214,7 +216,7 @@ Elektrik kesintisi, işletim sisteminin süreci zorla kapatması veya bellek tü
 
 ## Kullanıcı tarafından yönetilen ayarlar
 
-Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, phpMyAdmin, Yedek ve aktarım, Sistem bölümlerine ayrılır. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
+Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, phpMyAdmin, Yedek ve aktarım, Sistem, Güncellemeler bölümlerine ayrılır. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
 
 Yeni proje ve SQL yedek klasörleri seçilebilir. Adres kalıbı değişikliği tüm kayıtlı proje adreslerine uygulanır; `.env` dosyaları korunur. JSON içe aktarma, önceki ayarları getirme ve varsayılanlara dönme önce taslak oluşturur. Tercihlerin önceki sürümü `config/settings.previous.json` içinde saklanır. Onarımda kullanıcı tercihleri korunur.
 
@@ -228,7 +230,7 @@ cargo test -p f4box-core --test preferences_runtime -- --ignored --nocapture
 
 ## Windows masaüstü ve sistem tepsisi
 
-Saat yanındaki F4Box simgesine sol tıklamak pencereyi açar; sağ tıklamak hızlı menüyü açar. Simge Windows'un gizli simgeler bölümünde olabilir. Menüde tüm servisleri başlat/durdur/yeniden başlat, ayrı PHP/MySQL/web servisleri, phpMyAdmin, Ayarlar / Özellikler, günlükler, veri klasörü ve Çıkış bulunur. Menü durumu pencere gizliyken de güncellenir. Ana penceredeki **Hızlı menü** aynı Windows menüsünü açar.
+Saat yanındaki F4Box simgesine sol tıklamak pencereyi açar; sağ tıklamak hızlı menüyü açar. Simge Windows'un gizli simgeler bölümünde olabilir. Menüde tüm servisleri başlat/durdur/yeniden başlat, ayrı PHP/MySQL/web servisleri, phpMyAdmin, Ayarlar / Özellikler, **Güncellemeleri denetle**, günlükler, veri klasörü ve Çıkış bulunur. Menü durumu pencere gizliyken de güncellenir. Ana penceredeki **Hızlı menü** aynı Windows menüsünü açar.
 
 **Ayarlar → Genel → Windows ve sistem tepsisi** altında üç tercih vardır:
 

@@ -3,5 +3,10 @@
   "identifier": "default",
   "description": "F4Box ana penceresi ve klasör seçimi",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "updater:default",
+    "process:allow-restart"
+  ]
 }

@@ -21,14 +21,26 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     }
   },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "shortDescription": "Windows için Laravel geliştirme ortamı",
     "category": "DeveloperTool",
     "icon": ["icons/icon.ico", "icons/icon.png"]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4NjU2M0EwOEE3Qzc4QjMKUldTemVIeUtvR05sT0hYWm9SV3pOVzM5eXZvN3JVY2lvSXJXZjI2U0RTMEJEZmJCaXU2eVNiQWUK",
+      "endpoints": [
+        "https://github.com/beyazitkolemen/f4box-laravel/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

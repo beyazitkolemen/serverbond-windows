@@ -7,7 +7,7 @@ use std::sync::atomic::Ordering;
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager as _, Wry,
+    AppHandle, Emitter, Manager as _, Wry,
 };
 
 pub struct TrayMenu {
@@ -33,6 +33,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
     let restart = item("restart", "Tümünü yeniden başlat")?;
     let pma = item("pma", "phpMyAdmin'i aç")?;
     let settings = item("settings", "Ayarlar / Özellikler")?;
+    let update = item("update", "Güncellemeleri denetle")?;
     let logs = item("logs", "Günlükleri göster")?;
     let folder = item("folder", "Veri klasörünü aç")?;
     let quit = item("quit", "Çıkış — servisleri durdur")?;
@@ -78,6 +79,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
             &separator()?,
             &pma,
             &settings,
+            &update,
             &logs,
             &folder,
             &separator()?,
@@ -205,6 +207,10 @@ fn dispatch(app: &AppHandle, id: &str) {
     match id {
         "open" => desktop::show(app, None),
         "settings" => desktop::show(app, Some("settings")),
+        "update" => {
+            desktop::show(app, Some("settings"));
+            let _ = app.emit("desktop:check-update", ());
+        }
         "logs" => desktop::show(app, Some("logs")),
         "quit" => desktop::request_exit(app),
         "status" => {}

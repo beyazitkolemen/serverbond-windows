@@ -283,6 +283,8 @@ fn main() {
             }
         }))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let manager = Arc::new(Manager::open_recovering(launch_home()?)?);
             let desktop = desktop::Desktop::new(&manager.home);

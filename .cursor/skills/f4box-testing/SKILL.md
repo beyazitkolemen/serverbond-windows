@@ -10,6 +10,8 @@ description: F4Box test matrisi ve asistanların hangi komutu nerede çalıştı
 | `npm run test:ai` | Linux Cloud Agent | Vite/tsc, `f4box-core`, rustfmt, clippy |
 | `npm run test:core` | Her yer | `cargo test -p f4box-core` |
 | `npm run check` | Windows | Arayüz + tüm workspace clippy |
+| `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS/EXE |
+| `.github/workflows/release.yml` | tag `v*` | İmzalı güncelleme paketi |
 | `npm run test:integration` | Windows, uygulama kapalı | Gerçek paket + servis duman testi |
 | `cargo test -p f4box-core --tests -- --ignored` | Windows | php_matrix, environment, preferences_runtime |
 

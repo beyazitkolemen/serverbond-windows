@@ -11,7 +11,9 @@ tauri-build = { version = "2", features = [] }
 anyhow = "1"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 tempfile = "3"
 f4box-core = { path = "../crates/f4box-core" }

@@ -11,7 +11,11 @@ description: Tauri IPC, sistem tepsisi, Windows başlangıç ve masaüstü terci
 
 Komutlar `src-tauri/src/main.rs` içinde. Arayüz `src/api.ts` → `call()`. Okuma (`snapshot`, `read_log`, …) 10 sn UI zaman aşımına girebilir; yazma/kurulum zaman aşımıyla yeniden başlatılmaz.
 
-İzinler: `capabilities/default.json` — `core:default`, `dialog:allow-open`. Yeni dosya erişimi için yetki genişletmeden önce gerekçeyi yaz.
+İzinler: `capabilities/default.json` — `core:default`, `dialog:allow-open`, `updater:default`, `process:allow-restart`. Yeni dosya erişimi için yetki genişletmeden önce gerekçeyi yaz.
+
+## Güncelleyici
+
+`tauri-plugin-updater` + `tauri-plugin-process`. Uç nokta GitHub `releases/latest/download/latest.json`. Kullanıcı onayı olmadan kurma. Arayüz: `src/updates.ts`, `Ayarlar → Güncellemeler`, tepsi **Güncellemeleri denetle**. İmzasız CI: `npm run desktop:build:unsigned`. İmzalı sürüm: `.github/workflows/release.yml` ve `docs/updates.md`. Depo public olmalı; özel anahtar `TAURI_SIGNING_PRIVATE_KEY` sırrındadır, repoya yazılmaz.
 
 ## Pencere ve tepsi
 

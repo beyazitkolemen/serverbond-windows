@@ -17,6 +17,8 @@ Git kuralı: yalnızca `main`. Özellik dalı veya PR açılmaz; diğer dallarda
 | `npm run test:ai` | Linux Cloud Agent, yerel Linux/macOS | Vite/TypeScript derlemesi, `f4box-core` testleri, rustfmt, clippy |
 | `npm run test:core` | Her yer | Yalnızca `f4box-core` birim/entegrasyon testleri |
 | `npm run check` | Windows geliştirme | Arayüz + tüm workspace clippy (Tauri masaüstü dahil) |
+| `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS + EXE (`createUpdaterArtifacts` kapalı) |
+| `.github/workflows/release.yml` | GitHub tag `v*` | İmzalı kurulum, `latest.json`, otomatik güncelleme |
 | `npm run test:integration` | Windows, F4Box kapalı | Gerçek PHP/MySQL/Caddy duman testi |
 | `cargo test -p f4box-core --tests -- --ignored` | Windows | İndirme ve servis bütünleşme testleri |
 
