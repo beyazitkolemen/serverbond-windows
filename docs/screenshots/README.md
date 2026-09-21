@@ -2,6 +2,8 @@
 
 Güncel `main` arayüzü, 21 Eylül 2026. Görüntüler 1440 piksel genişlikte uygulamanın salt okunur tarayıcı önizlemesinden alınmıştır. Proje adları, portlar ve süreç bilgileri örnek veridir; Windows pencere çerçevesi dahil değildir. Yayımlanmış v1.2.0 paketi bu arayüz değişikliklerinin tamamını içermez.
 
+Kaynak sürüm: [`a14159c`](https://github.com/beyazitkolemen/serverbond-windows/tree/a14159c). Görüntüler `C:\ServerBond` veri klasörünü ve `C:\ServerBond\www` varsayılan proje yolunu gösterir; farklı konumdaki mevcut projeler de korunur.
+
 ## Genel bakış
 
 Sunucu durumu, bileşenler ve projeler.
