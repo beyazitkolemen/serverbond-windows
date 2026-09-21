@@ -1,0 +1,16 @@
+---
+description: Her tamamlanan Windows değişikliğini patch sürüm artışı, yeni build ve yayımlanmış release ile teslim et
+alwaysApply: true
+---
+
+# Değişiklik sonrası yayın zorunluluğu
+
+Kullanıcının kalıcı talimatı: Bundan sonraki her tamamlanan Windows değişikliği için yeniden build al ve GitHub Release yayımla. Aynı görevdeki düzenlemeleri tek sürümde topla. Yalnızca commit/push ile bitirme.
+
+Varsayılan artış patch sürümdür: `1.3.0 → 1.3.1 → 1.3.2`. Uzak yayın/etiketleri kontrol ederek sıradaki kullanılmamış sürümü seç; kullanıcı istemedikçe minor/major artırma, mevcut etiketi/paketi değiştirme.
+
+Sürüm dosyalarını ve kilit dosyalarını birlikte güncelle, sürüm notlarını yaz, gerekli testleri çalıştır, son kaynaklardan frontend ve Windows EXE/NSIS derle. `main` ve yeni etiketi gönder; EXE, kurulum paketi ve SHA256SUMS.txt ile release'i yayımla. İndirilen dosyaların özetlerini ve yayının görünürlüğünü doğrula.
+
+Yeni release için ayrıca onay isteme; bu talimat yetkidir. Hata varsa gider veya gerçek engeli açıkça bildir. Yerel test, CI ve yayın durumlarını birbirine karıştırma. İmzasız paket kullanılıyorsa elle kurulum gerektiğini belirt.
+
+Ayrıntılar: `AGENTS.md` içindeki “Her değişiklikten sonra build ve release” ve `docs/updates.md`.

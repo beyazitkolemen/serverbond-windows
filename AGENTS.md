@@ -6,6 +6,20 @@ Windows x64 üzerinde Laravel üretim ortamını (Forge hissi, uzak VPS yok) yö
 
 Her zaman `main`. `git fetch --prune`, `origin/main` fast-forward, commit ve `git push origin main`. **PR oluşturma yok** (`gh pr create`, ManagePullRequest, draft PR). Özellik dalı açılmaz. Başka dalda veya açık PR’da kalmış iş `main`'e merge edilir. Force-push yok.
 
+## Her değişiklikten sonra build ve release
+
+Kullanıcının kalıcı talimatı: Bundan sonraki her tamamlanan Windows değişikliği yeni bir build ve yayımlanmış GitHub Release ile teslim edilir. Yalnızca commit/push yapmak işi tamamlamaz. Aynı görev içindeki düzenlemeler tek sürümde toplanır; her dosya kaydında ayrı release açılmaz.
+
+- Varsayılan sürüm artışı **patch**: `1.3.0 → 1.3.1 → 1.3.2`. Kullanıcı istemedikçe minor/major artırılmaz. Başlamadan önce yerel sürümleri ve uzak etiket/yayınları kontrol et; mevcut etiketi veya yayımlanmış paketi değiştirme.
+- package.json, package-lock.json, iki Cargo.toml, Cargo.lock ve tauri.conf.json sürümlerini birlikte güncelle; sürüm notlarını hazırla.
+- Değişikliğe uygun testleri ve gerekli yayın kontrollerini çalıştır. Son kaynaklardan arayüzü ve Windows EXE/NSIS paketini yeniden derle; önceki sürümün binary dosyasını yeniden adlandırarak kullanma.
+- `main` commit/push ardından yeni sürüm etiketini ve release'i yayımla. EXE, kurulum paketi ve SHA256SUMS.txt dosyalarını yükle; yayımlanan sürümü ve indirilen dosyaların SHA-256 özetlerini doğrula.
+- İmza anahtarı yoksa mevcut imzasız yayın yöntemini kullan ve elle kurulum gerektiğini belirt. İmza üretildiğini veya otomatik güncellemenin doğrulandığını iddia etme.
+- Build/test/yayın başarısızsa hatayı gider. Çözülemeyen engeli ve henüz yayımlanmadığını açıkça bildir; işi release tamamlanmış gibi kapatma. Yerel doğrulama ile CI sonuçlarını ayrı raporla.
+- Bu talimat sonraki değişiklikler için build ve release yetkisidir; her seferinde yeniden onay isteme. Kullanıcı belirli bir görev için farklı talimat verirse onu uygula.
+
+Yayın akışı: [docs/updates.md](docs/updates.md). Cursor kuralı: [.cursor/rules/release-after-change.mdc](.cursor/rules/release-after-change.mdc).
+
 ## Kurulum
 
 ```bash
