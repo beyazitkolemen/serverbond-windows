@@ -17,6 +17,32 @@ enum Theme {
     Dark,
 }
 
+#[derive(Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct Preferences {
+    close_to_tray: bool,
+    start_minimized: bool,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Save {
+    preferences: Preferences,
+    autostart: bool,
+    confirm: bool,
+}
+pub(super) fn save(manager: &Manager, input: Save) -> Result<Value> {
+    ensure!(
+        input.confirm,
+        "Masaüstü tercihlerini değiştirmek için açık onay gerekli."
+    );
+    call(
+        manager,
+        "save",
+        json!({"preferences":input.preferences,"autostart":input.autostart}),
+    )?;
+    show(manager)
+}
+
 fn call(manager: &Manager, operation: &str, input: Value) -> Result<Value> {
     let host = manager
         .desktop_api()
@@ -47,6 +73,46 @@ mod tests {
     use crate::api::{DesktopApi, DesktopReply};
     use std::sync::{Arc, Mutex};
     struct Host(Mutex<String>);
+    struct PreferencesHost(Mutex<Value>);
+    impl DesktopApi for PreferencesHost {
+        fn call(&self, operation: &str, input: Value) -> Result<DesktopReply> {
+            let mut state = self.0.lock().unwrap();
+            match operation {
+                "save" => {
+                    state["preferences"] = input["preferences"].clone();
+                    state["autostart"] = input["autostart"].clone();
+                }
+                "status" => {}
+                "appearance-get" => return Ok(DesktopReply::immediate(json!({"theme":"system"}))),
+                _ => anyhow::bail!("Unexpected host operation"),
+            }
+            Ok(DesktopReply::immediate(state.clone()))
+        }
+    }
+    #[test]
+    fn desktop_preferences_forward_only_confirmed_typed_fields() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let host = Arc::new(PreferencesHost(Mutex::new(
+            json!({"preferences":{"closeToTray":true,"startMinimized":false},"autostart":false,"trayAvailable":true,"quitting":false,"issue":null}),
+        )));
+        manager.attach_desktop_api(host.clone());
+        let input = |confirm| Save {
+            preferences: Preferences {
+                close_to_tray: false,
+                start_minimized: true,
+            },
+            autostart: true,
+            confirm,
+        };
+        assert!(save(&manager, input(false)).is_err());
+        assert_eq!(host.0.lock().unwrap()["autostart"], false);
+        let result = save(&manager, input(true)).unwrap();
+        assert_eq!(result["autostart"], true);
+        assert_eq!(result["preferences"]["closeToTray"], false);
+        assert_eq!(result["preferences"]["startMinimized"], true);
+        assert!(serde_json::from_value::<Save>(json!({"preferences":{"closeToTray":true,"startMinimized":false,"unknown":true},"autostart":true,"confirm":true})).is_err());
+    }
     impl DesktopApi for Host {
         fn call(&self, operation: &str, input: Value) -> Result<DesktopReply> {
             let mut theme = self.0.lock().unwrap();

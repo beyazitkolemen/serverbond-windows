@@ -13,6 +13,7 @@ pub(super) struct ServiceLog {
 
 pub(super) const NAMES: &[&str] = &[
     "desktop.show",
+    "desktop.save",
     "desktop.appearance",
     "system.diagnostics",
     "services.log",
@@ -162,6 +163,8 @@ pub(super) struct Paths {
 pub(super) enum Operation {
     #[serde(rename = "desktop.show")]
     DesktopShow(Empty),
+    #[serde(rename = "desktop.save")]
+    DesktopSave(super::desktop::Save),
     #[serde(rename = "desktop.appearance")]
     DesktopAppearance(super::desktop::Appearance),
     #[serde(rename = "system.diagnostics")]
@@ -298,6 +301,7 @@ impl Operation {
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
             Self::DesktopShow(_) => return super::desktop::show(manager),
+            Self::DesktopSave(input) => return super::desktop::save(manager, input),
             Self::DesktopAppearance(input) => return super::desktop::appearance(manager, input),
             Self::Diagnostics(_) => {
                 let checks: Vec<Value> = manager.requirements().into_iter().map(|check| json!({"id":check.id,"label":check.label,"status":check.status,"detail":check.detail.chars().take(4000).collect::<String>()})).collect();
