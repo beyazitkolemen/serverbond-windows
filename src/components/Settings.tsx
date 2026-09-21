@@ -20,6 +20,7 @@ import NumberField from "./NumberField";
 import Toggle from "./Toggle";
 import { useDraft } from "../hooks/useDraft";
 import SaveBar from "./SaveBar";
+import CloudSettings from "./CloudSettings";
 
 const sections = [
   "Genel",
@@ -31,6 +32,7 @@ const sections = [
   "Yedek ve aktarım",
   "Sistem",
   "Güncellemeler",
+  "Cloud",
 ] as const;
 const sectionGroups = [
   { label: "Çalışma alanı", items: ["Genel", "Görünüm", "Windows"] },
@@ -40,7 +42,7 @@ const sectionGroups = [
   },
   {
     label: "Yönetim",
-    items: ["Yedek ve aktarım", "Sistem", "Güncellemeler"],
+    items: ["Yedek ve aktarım", "Sistem", "Güncellemeler", "Cloud"],
   },
 ] as const;
 const extensions = [
@@ -234,6 +236,7 @@ export default function Settings({
           </p>
         )}
         {section === "Windows" && <DesktopSettings busy={busy} run={run} />}
+        {section === "Cloud" && <CloudSettings />}
         {section === "Görünüm" && <AppearanceSettings />}
         <form
           onSubmit={(e) => {

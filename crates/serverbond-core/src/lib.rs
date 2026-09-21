@@ -4,6 +4,7 @@
 //! `impl Manager` blocks. Nothing here talks to a window or a terminal.
 
 pub mod api;
+pub mod cloud;
 mod domain;
 mod envfile;
 pub mod github;
@@ -68,6 +69,7 @@ pub struct Manager {
     shutting_down: AtomicBool,
     startup_issue: Mutex<Option<String>>,
     api: api::ApiState,
+    cloud: cloud::CloudState,
     github_runtime: github::GithubRuntime,
     _lock: File,
 }
@@ -168,6 +170,7 @@ impl Manager {
             shutting_down: AtomicBool::new(false),
             startup_issue: Mutex::new(startup_issue),
             api: api::ApiState::default(),
+            cloud: cloud::CloudState::default(),
             github_runtime: github::GithubRuntime::default(),
             _lock: lock,
         };

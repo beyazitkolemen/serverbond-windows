@@ -830,7 +830,7 @@ fn route(
     }
 }
 
-fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
+pub(crate) fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
     let id = canonical_service_id(id);
     if !service_actions(id).contains(&action) {
         bail!("Bu hizmet için işlem desteklenmiyor: {id}/{action}");
@@ -926,7 +926,7 @@ fn service_actions(id: &str) -> &'static [&'static str] {
     }
 }
 
-fn service_inventory(manager: &Manager) -> Result<Vec<Value>> {
+pub(crate) fn service_inventory(manager: &Manager) -> Result<Vec<Value>> {
     let snapshot = manager.snapshot()?;
     let mut items = vec![
         json!({"id":"all","name":"Sunucu","actions":service_actions("all"),"state":{"running":snapshot.any_running,"busy":snapshot.busy}}),

@@ -76,6 +76,9 @@
     "grant_permissions": ["POST /permissions/grant"]
   },
   "internal": {
+    "cloud_status": "Local Cloud pairing UI only; no HTTP equivalent to avoid exposing account-linking operations through the management API.",
+    "cloud_pair": "Local user must explicitly pair this computer; unavailable over management HTTP or MCP.",
+    "cloud_disconnect": "Local account-linking control; Cloud revocation uses the separate device-authenticated protocol.",
     "desktop_navigation": "Consumes an internal pending navigation event; the external operation is POST /desktop/navigate."
   },
   "plugins": {

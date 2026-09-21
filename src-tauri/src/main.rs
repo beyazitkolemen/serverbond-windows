@@ -27,6 +27,30 @@ use std::{path::PathBuf, sync::Arc};
 type State = Arc<Manager>;
 
 #[tauri::command]
+async fn cloud_status(
+    state: tauri::State<'_, State>,
+) -> Result<serverbond_core::cloud::CloudStatus, String> {
+    let manager = state.inner().clone();
+    blocking(manager.clone(), move || manager.cloud_status()).await
+}
+
+#[tauri::command]
+async fn cloud_pair(
+    state: tauri::State<'_, State>,
+    url: String,
+    code: String,
+) -> Result<(), String> {
+    let manager = state.inner().clone();
+    blocking(manager.clone(), move || manager.cloud_pair(&url, &code)).await
+}
+
+#[tauri::command]
+async fn cloud_disconnect(state: tauri::State<'_, State>) -> Result<(), String> {
+    let manager = state.inner().clone();
+    blocking(manager.clone(), move || manager.cloud_disconnect()).await
+}
+
+#[tauri::command]
 async fn app_update_open(state: tauri::State<'_, State>, url: String) -> Result<(), String> {
     blocking(state.inner().clone(), move || {
         serverbond_core::updates::open_release_link(&url)
@@ -819,6 +843,7 @@ fn main() {
             let manager = Arc::new(Manager::open_recovering(launch_home()?)?);
             let desktop = desktop::Desktop::new(&manager.home);
             app.manage(manager.clone());
+            manager.start_cloud();
             app.manage(desktop);
             app.manage(appearance::Appearance::new(&manager.home));
             manager.attach_desktop_api(Arc::new(api::Host::new(app.handle().clone())));
@@ -877,6 +902,9 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            cloud_status,
+            cloud_pair,
+            cloud_disconnect,
             app_update_open,
             app_update_check,
             snapshot,
