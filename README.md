@@ -140,6 +140,8 @@ Laravel tarafında `.env` dosyasına `REDIS_CLIENT=predis`, `REDIS_HOST=127.0.0.
 
 **Hizmetler → Tünel** bölümü Cloudflare Tunnel bağlayıcısını (`cloudflared`) yönetir. Sabit sürüm SHA-256 doğrulanarak indirilir; diğer bileşenler gibi ServerBond klasörüne kurulur ve ortamın çalışması için gerekli değildir.
 
+Cloudflared, kurulumdan sonraki ilk uygulama açılışında otomatik yüklenir; sonraki açılışlarda sağlıklı kurulum yeniden indirilmez. İndirme hatası uygulamayı kapatmaz ve sonraki açılışta yeniden denenir. Eksik/bozuk mevcut klasör korunur ve onarım istenir. Otomatik kurulum tünel bağlantısı açmaz; bağlantı için jeton ve başlatma tercihi gerekir.
+
 1. Cloudflare Zero Trust → Networks → Tunnels ekranında tünel oluşturun. **Install and run a connector** adımındaki jetonu veya tüm `cloudflared.exe service install …` satırını kopyalayın.
 2. **Hizmetler → Tünel** alanına yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI ile mevcut hesaba bağlı olarak şifreler; günlüklere ve komut satırına yazılmaz, sürece ortam değişkeni olarak verilir.
 3. **Kaydet ve tüneli başlat** Cloudflared’ı yoksa kurar, jetonu kaydeder ve bağlayıcıyı çalıştırır. Hangi genel adresin hangi porta gittiğini Cloudflare panelindeki tünel yapılandırması belirler.
@@ -310,9 +312,11 @@ Elektrik kesintisi, işletim sisteminin süreci zorla kapatması veya bellek tü
 
 ## Yönetim API'si
 
-Arayüzün ve CLI'nın yaptığı her iş `http://127.0.0.1:18800/api/v1` altındaki yerel HTTP API'den de yapılabilir: hizmetleri başlat/durdur, proje ekle veya Git'ten klonla, sürüm çalıştır, kuyruk ve zamanlayıcıyı yönet, `.env` ve ayarları oku/yaz. API varsayılan olarak kapalıdır; **Ayarlar → API** bölümünden açılır ve bir kez gösterilen `Authorization: Bearer` jetonu oluşturulur (diskte yalnızca SHA-256 özeti kalır). Komut satırı: `serverbond api serve|token|forget|status|routes`. Tüm yollar, gövdeler ve örnekler: [docs/api.md](docs/api.md).
+Arayüzün ve CLI'nın yaptığı her iş `http://127.0.0.1:18800/api/v1` altındaki yerel HTTP API'den de yapılabilir: hizmetleri başlat/durdur, proje ekle veya Git'ten klonla, sürüm çalıştır, kuyruk ve zamanlayıcıyı yönet, `.env` ve ayarları oku/yaz. API varsayılan olarak kapalıdır; **Sol menü → API** bölümünden açılır ve bir kez gösterilen `Authorization: Bearer` jetonu oluşturulur (diskte yalnızca SHA-256 özeti kalır). Komut satırı: `serverbond api serve|token|forget|status|routes`. Tüm yollar, gövdeler ve örnekler: [docs/api.md](docs/api.md).
 
 Masaüstü uygulamasında pencere, tepsi, Windows başlangıç tercihleri, tema, yeniden başlatma ve imzalı güncellemeler de API ile yönetilir. `GET /capabilities` host desteğini bildirir; CLI sunucusunda masaüstü işlemleri `501` döner. `GET /openapi.json` kimlik doğrulamalı OpenAPI 3.1 belgesini sunar. Jeton yenileme/iptal, yapılandırma doğrulama/kurtarma ve Windows izin işlemleri de desteklenir.
+
+Sol menüdeki **API** sayfası bağlantı/jeton yönetimini, aranabilir uç noktaları, gövde şemalarını ve OpenAPI indirmeyi bir araya getirir. `GET /services` hizmet durumlarıyla birlikte desteklenen işlemleri döndürür; `GET /services/{id}` tek hizmeti sorgular. API ayarları `PUT /api` ile diğer tercihlere dokunmadan kaydedilir. Masaüstü/API kapsam eşleşmesi otomatik testle korunur.
 
 ## Mimari
 
@@ -324,7 +328,7 @@ Masaüstü uygulamasında pencere, tepsi, Windows başlangıç tercihleri, tema,
 
 ## Kullanıcı tarafından yönetilen ayarlar
 
-Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, Yedek ve aktarım, Sistem, API, Güncellemeler bölümlerine ayrılır. Genel bölümündeki **Görünüm** sistem/açık/koyu temayı seçer. phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel **Hizmetler** sayfasında; port ve jeton her hizmetin **Ayarlar** düğmesindedir. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
+Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, Yedek ve aktarım, Sistem, Güncellemeler bölümlerine ayrılır. Genel bölümündeki **Görünüm** sistem/açık/koyu temayı seçer. phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel **Hizmetler** sayfasında; port ve jeton her hizmetin **Ayarlar** düğmesindedir. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
 
 Yeni proje ve SQL yedek klasörleri seçilebilir. Adres kalıbı değişikliği tüm kayıtlı proje adreslerine uygulanır; `.env` dosyaları korunur. JSON içe aktarma, önceki ayarları getirme ve varsayılanlara dönme önce taslak oluşturur. Tercihlerin önceki sürümü `config/settings.previous.json` içinde saklanır. Onarımda kullanıcı tercihleri korunur.
 

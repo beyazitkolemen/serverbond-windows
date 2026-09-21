@@ -25,13 +25,36 @@ fn fields(properties: Value, required: &[&str]) -> Value {
     json!({ "type": "object", "properties": properties, "required": required, "additionalProperties": false })
 }
 
+// These defaulted DTOs contain booleans, integers, strings, string arrays and
+// nested DTOs. Deriving their field shapes from the serialized defaults keeps
+// API names synchronized with serde. Manager validation remains authoritative
+// for cross-field rules such as port collisions and PHP option combinations.
+fn defaulted_shape(value: Value) -> Value {
+    let mut schema = match &value {
+        Value::Object(properties) => {
+            json!({"type":"object","additionalProperties":false,"properties":properties.iter().map(|(key,value)| (key.clone(), defaulted_shape(value.clone()))).collect::<Map<_,_>>()})
+        }
+        Value::Array(_) => json!({"type":"array","items":{"type":"string"}}),
+        Value::String(_) => json!({"type":"string"}),
+        Value::Bool(_) => json!({"type":"boolean"}),
+        Value::Number(n) => json!({"type":if n.is_i64() || n.is_u64() {"integer"} else {"number"}}),
+        Value::Null => json!({"type":"null"}),
+    };
+    schema["default"] = value;
+    schema
+}
+
+fn settings_schema() -> Value {
+    let mut schema = defaulted_shape(json!(crate::model::Settings::default()));
+    schema["properties"]["phpVersions"] = json!({"type":"object","additionalProperties":defaulted_shape(json!(crate::preferences::PhpSettings::default()))});
+    schema
+}
+
 fn body_schema(method: &str, path: &str) -> Option<Value> {
     let string = json!({"type":"string"});
     let boolean = json!({"type":"boolean"});
     Some(match (method, path) {
-        ("PUT", "/settings") | ("POST", "/settings/validate") => {
-            json!({"type":"object", "description":"Settings: GET /settings çıktısı. Doğrulama aynı Manager kurallarını kullanır.", "example":crate::model::Settings::default()})
-        }
+        ("PUT", "/settings") | ("POST", "/settings/validate") => settings_schema(),
         ("POST", "/projects") => fields(json!({"name":string,"path":string}), &["name", "path"]),
         ("POST", "/projects/create") => {
             fields(json!({"name":string,"parent":string}), &["name", "parent"])
@@ -39,6 +62,14 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
         ("POST", "/projects/import") => fields(
             json!({"url":string,"name":string,"branch":string}),
             &["url"],
+        ),
+        ("POST", "/github/import") => fields(
+            json!({"repository":string,"name":string,"branch":string}),
+            &["repository"],
+        ),
+        ("PUT", "/api") => fields(
+            json!({"enabled":boolean,"port":{"type":"integer","minimum":1024,"maximum":65535}}),
+            &["enabled", "port"],
         ),
         ("POST", "/projects/import-folders") => {
             fields(json!({"paths":{"type":"array","items":string}}), &["paths"])
@@ -48,11 +79,11 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
         }
         ("PUT", "/projects/{id}/env") => fields(json!({"content":string}), &["content"]),
         ("PUT", "/projects/{id}/jobs") => fields(
-            json!({"workers":{"type":"array","items":{"type":"object"}},"schedule":{"type":"object"}}),
+            json!({"workers":{"type":"array","items":defaulted_shape(json!(crate::model::QueueWorker::default()))},"schedule":defaulted_shape(json!(crate::model::ProjectSchedule::default()))}),
             &["workers", "schedule"],
         ),
         ("PUT", "/projects/{id}/release") => {
-            json!({"type":"object","description":"ProjectRelease: GET /projects/{id}/release çıktısı"})
+            defaulted_shape(json!(crate::model::ProjectRelease::default()))
         }
         ("POST", "/projects/{id}/failed-jobs/retry") => {
             fields(json!({"job":{"type":["string","null"]}}), &[])
@@ -77,7 +108,7 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
             &["preferences", "autostart"],
         ),
         ("POST", "/desktop/navigate") => fields(
-            json!({"page":{"type":"string","enum":["overview","packages","projects","logs","services","settings","updates"]}}),
+            json!({"page":{"type":"string","enum":["overview","packages","projects","logs","services","api","settings","updates"]}}),
             &["page"],
         ),
         ("POST", "/updates/install") => fields(

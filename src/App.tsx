@@ -26,6 +26,7 @@ import Packages from "./components/Packages";
 import Projects from "./components/Projects";
 import Logs, { LogPreview } from "./components/Logs";
 import Settings from "./components/Settings";
+import ApiPage from "./components/ApiPage";
 import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
 import QuickNavigation from "./components/QuickNavigation";
@@ -38,6 +39,7 @@ const headings: Record<AppPage, string> = {
   [Page.Projects]: "Projeler",
   [Page.Logs]: "Günlükler",
   [Page.Services]: "Hizmetler",
+  [Page.Api]: "API",
   [Page.Settings]: "Ayarlar",
 };
 
@@ -223,6 +225,7 @@ export default function App() {
                     projects: "Projeler",
                     logs: "Günlükler",
                     services: "Hizmetler",
+                    api: "API",
                     settings: "Ayarlar",
                   }[page]
                 }
@@ -311,7 +314,7 @@ export default function App() {
       </header>
       <Notice
         error={error || connectionError}
-        busy={busy}
+        busy={busy || (state?.busy ? "Arka planda işlem sürüyor…" : "")}
         message={message}
         dismiss={() => {
           setError("");
@@ -513,6 +516,9 @@ export default function App() {
               onAppUpdate={setAppUpdate}
               openUpdates={openUpdates}
             />
+          ) : null}
+          {page === Page.Api ? (
+            <ApiPage settings={state.settings.api} busy={disabled} run={run} />
           ) : null}
         </>
       )}

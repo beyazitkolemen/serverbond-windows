@@ -61,7 +61,7 @@ fn approved_install(body: Value) -> Result<Install> {
 fn page_valid(page: &str) -> bool {
     matches!(
         page,
-        "overview" | "packages" | "projects" | "logs" | "services" | "settings" | "updates"
+        "overview" | "packages" | "projects" | "logs" | "services" | "api" | "settings" | "updates"
     )
 }
 

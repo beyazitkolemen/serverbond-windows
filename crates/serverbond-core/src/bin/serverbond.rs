@@ -45,7 +45,7 @@ fn api_command(manager: Manager, args: &[String]) -> Result<()> {
             std::io::stdin().read_line(&mut line)?;
             manager.shutdown()?;
         }
-        _ => bail!("Kullanım: api serve [port]|token|forget|status|routes"),
+        _ => bail!("Kullanım: api serve [port]|token|forget|status|routes|schema"),
     }
     Ok(())
 }
@@ -53,7 +53,16 @@ fn api_command(manager: Manager, args: &[String]) -> Result<()> {
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("ServerBond CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  api serve|token|forget|status|routes\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/ServerBond (SERVERBOND_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("ServerBond CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  api serve|token|forget|status|routes|schema\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/ServerBond (SERVERBOND_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        return Ok(());
+    }
+    // Documentation export is read-only and must also work while the desktop
+    // process owns the data-directory lock, or before a data directory exists.
+    if args[0] == "api" && args.get(1).is_some_and(|arg| arg == "schema") {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serverbond_core::api::documentation()["document"])?
+        );
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;

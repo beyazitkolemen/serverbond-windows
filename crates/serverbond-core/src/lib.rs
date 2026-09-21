@@ -581,6 +581,22 @@ impl Manager {
 
     pub fn save_settings(&self, settings: Settings) -> Result<()> {
         let _guard = self.gate()?;
+        self.save_settings_inner(settings)
+    }
+
+    pub fn save_api_settings(&self, api: crate::preferences::ApiSettings) -> Result<()> {
+        let _guard = self.gate()?;
+        let mut settings = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .clone();
+        settings.api = api;
+        self.save_settings_inner(settings)
+    }
+
+    fn save_settings_inner(&self, settings: Settings) -> Result<()> {
         settings.validate()?;
         let current = self
             .config

@@ -157,6 +157,24 @@ async fn api_status(
     let state = state.inner().clone();
     blocking(state.clone(), move || Ok(state.api_status())).await
 }
+
+#[tauri::command]
+fn api_documentation() -> serde_json::Value {
+    serverbond_core::api::documentation()
+}
+
+#[tauri::command]
+async fn api_save(
+    state: tauri::State<'_, State>,
+    settings: serverbond_core::preferences::ApiSettings,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.save_api_settings(settings)?;
+        state.ensure_api()
+    })
+    .await
+}
 #[tauri::command]
 async fn api_token(state: tauri::State<'_, State>, action: String) -> Result<String, String> {
     let state = state.inner().clone();
@@ -761,6 +779,9 @@ fn main() {
                             );
                         }
                     }
+                    if let Err(error) = manager.contain(|| manager.prepare_launch_tools()) {
+                        manager.log(format!("Açılış araçları hazırlanamadı: {error:#}"));
+                    }
                 });
             }
             Ok(())
@@ -789,6 +810,8 @@ fn main() {
             desktop_navigation,
             recover_configuration,
             api_status,
+            api_documentation,
+            api_save,
             api_token,
             install,
             repair,

@@ -5,6 +5,7 @@ import {
   ScrollText,
   Settings,
   Server,
+  Braces,
   type LucideIcon,
 } from "lucide-react";
 import { Page, type Page as AppPage } from "../domain";
@@ -20,6 +21,7 @@ export const environmentNav: NavEntry[] = [
   { id: Page.Services, title: "Hizmetler", icon: Server },
 ];
 export const manageNav: NavEntry[] = [
+  { id: Page.Api, title: "API", icon: Braces },
   { id: Page.Settings, title: "Ayarlar", icon: Settings },
 ];
 export const navigation = [...workspaceNav, ...environmentNav, ...manageNav];

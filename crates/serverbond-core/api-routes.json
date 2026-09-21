@@ -1,0 +1,412 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/v1",
+    "description": "Yol listesi"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/openapi.json",
+    "description": "OpenAPI 3.1 sözleşmesi"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/capabilities",
+    "description": "Çalışan hostun yetenekleri"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/api",
+    "description": "API durumu"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/api",
+    "description": "Yalnızca API ayarlarını kaydet {enabled, port}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/services",
+    "description": "Hizmetlerin durumu ve desteklenen işlemleri"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/services/{id}",
+    "description": "Tek hizmetin durumu ve desteklenen işlemleri"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/php",
+    "description": "PHP sürümleri ve kurulum durumları"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/github",
+    "description": "GitHub bağlantı ve hesap durumu"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/github/import",
+    "description": "GitHub projesi aktar {repository, name?, branch?}; kullanıcı/depo kabul eder"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/api/token",
+    "description": "Jetonu yenile; yeni jetonu bir kez döndürür"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/api/token",
+    "description": "API jetonunu iptal et"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/settings/validate",
+    "description": "Settings nesnesini kaydetmeden doğrula"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/permissions",
+    "description": "Windows izin durumu"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/permissions/grant",
+    "description": "Windows izinlerini uygula {defender}; UAC gerekebilir"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/permissions/ensure",
+    "description": "Kayıtlı Windows izinlerini yeniden uygula"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/recovery",
+    "description": "Önceki geçerli yapılandırmayı kurtar"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/mysql/credentials",
+    "description": "MySQL bağlantı bilgileri; parola içerir"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/postgres/credentials",
+    "description": "PostgreSQL bağlantı bilgileri; parola içerir"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/system/open-home",
+    "description": "Veri klasörünü aç"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/system/runtime-download",
+    "description": "Visual C++ indirme sayfasını aç"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/tunnel/apply",
+    "description": "Tünel jetonunu kaydet ve başlat {token}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/php/repair",
+    "description": "Proje PHP sürümünü onar {version}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/open",
+    "description": "Projeyi tarayıcıda aç"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/terminal",
+    "description": "Proje terminalini aç"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/services/{id}/open",
+    "description": "phpmyadmin veya mail arayüzünü aç"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/desktop",
+    "description": "Masaüstü tercihleri ve tepsi durumu"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/desktop/appearance",
+    "description": "Tema tercihi; null henüz taşınmadı anlamına gelir"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/desktop/appearance",
+    "description": "Tema tercihi {theme: system|light|dark}"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/desktop",
+    "description": "Masaüstü tercihlerini kaydet {preferences, autostart}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/desktop/{show|hide|menu|exit|restart}",
+    "description": "Masaüstü işlemi; exit/restart yanıt sonrası uygulanır"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/desktop/navigate",
+    "description": "Sayfayı aç {page}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/updates",
+    "description": "İmzalı uygulama güncellemesini denetle"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/updates/status",
+    "description": "Güncelleme işlem durumu"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/updates/install",
+    "description": "Onaylanan sürümü indir, doğrula ve kur {version, confirm:true}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "description": "Sürüm ve durum özeti (jeton gerekmez)"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/status",
+    "description": "Tam durum görüntüsü (arayüzle aynı)"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/requirements",
+    "description": "Windows ön koşulları"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/logs/{id}",
+    "description": "Hizmet günlüğü"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/settings",
+    "description": "Ayarlar"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/settings",
+    "description": "Ayarları kaydet (gövde: Settings)"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/settings/defaults",
+    "description": "Varsayılan ayarlar"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/settings/previous",
+    "description": "Önceki ayarlar"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/services/{id}/{install|repair|start|stop|restart}",
+    "description": "Hizmet işlemi (all, php, mysql, caddy, composer, phpmyadmin, mail, postgres, redis, tunnel, node)"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/php/{version}/select",
+    "description": "Varsayılan PHP sürümünü seç"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/php/{version}/repair",
+    "description": "PHP sürümünü onar"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects",
+    "description": "Projeler"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects",
+    "description": "Mevcut klasörü ekle {name, path}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/create",
+    "description": "Yeni Laravel projesi {name, parent}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/import",
+    "description": "Git deposundan klonla {url, name?, branch?}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/discover",
+    "description": "Çalışma alanında Laravel kökleri"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/import-folders",
+    "description": "Klasörleri içe aktar {paths}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}",
+    "description": "Proje (id veya ad)"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/projects/{id}",
+    "description": "Projeyi listeden kaldır"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/php",
+    "description": "Proje PHP sürümü {version}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/deploy",
+    "description": "Sürüm çalıştır"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/releases",
+    "description": "Sürüm geçmişi"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/release",
+    "description": "Sürüm tarifi"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{id}/release",
+    "description": "Sürüm tarifini kaydet"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/git",
+    "description": "Git durumu"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/env",
+    "description": ".env içeriği"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{id}/env",
+    "description": ".env kaydet {content}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/jobs",
+    "description": "Kuyruk işçileri ve zamanlayıcı"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{id}/jobs",
+    "description": "Kaydet {workers, schedule}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/workers/{workerId}/{start|stop|restart}",
+    "description": "Kuyruk işçisi"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/schedule",
+    "description": "schedule:list çıktısı"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/schedule/{start|stop|restart}",
+    "description": "Zamanlayıcı"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/failed-jobs",
+    "description": "Başarısız işler"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/failed-jobs/retry",
+    "description": "Yeniden dene {job?}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/failed-jobs/flush",
+    "description": "Başarısızları temizle"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{id}/logs?source=php|schedule|worker:{id}",
+    "description": "Proje günlüğü"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/database/create",
+    "description": "MySQL veritabanı oluştur"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/database/backup",
+    "description": "SQL yedeği al"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{id}/database/restore",
+    "description": "SQL yedeğini yükle {path}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/mysql/password",
+    "description": "MySQL root parolası {password}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/postgres/password",
+    "description": "PostgreSQL parolası {password}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/tunnel/token",
+    "description": "Cloudflare jetonu {token}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/tunnel/token",
+    "description": "Cloudflare jetonunu sil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/tunnel/auto-start",
+    "description": "{autoStart}"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/github/token",
+    "description": "GitHub jetonu {token}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/github/token",
+    "description": "GitHub jetonunu sil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/https/{trust|untrust}",
+    "description": "Yerel HTTPS sertifikası"
+  }
+]

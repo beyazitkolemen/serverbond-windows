@@ -3,6 +3,7 @@ import type { Snapshot } from "./types";
 import catalog from "../crates/serverbond-core/catalog.json";
 import phpVersions from "../crates/serverbond-core/php-versions.json";
 import tools from "../crates/serverbond-core/tools.json";
+import apiRoutes from "../crates/serverbond-core/api-routes.json";
 
 const toolVersion = (id: string) =>
   tools.find((tool) => tool.id === id)?.version ?? "";
@@ -191,6 +192,7 @@ export async function call<T = void>(
         "settings_defaults",
         "desktop_status",
         "api_status",
+        "api_documentation",
         "discover_projects",
         "list_project_releases",
         "project_git_status",
@@ -284,6 +286,8 @@ export async function call<T = void>(
       tokenSaved: false,
       baseUrl: "http://127.0.0.1:18800/api/v1",
     } as T;
+  if (command === "api_documentation")
+    return { routes: apiRoutes, document: null } as T;
   if (command === "read_project_env")
     return {
       exists: true,

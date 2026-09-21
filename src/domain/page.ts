@@ -4,6 +4,7 @@ export const Page = {
   Projects: "projects",
   Logs: "logs",
   Services: "services",
+  Api: "api",
   Settings: "settings",
 } as const;
 

@@ -83,6 +83,31 @@ impl Manager {
         self.install_tool(ID)
     }
 
+    /// Desktop launch bootstrap. Installation never starts a tunnel or changes
+    /// its token. A damaged installation is preserved for explicit repair.
+    pub fn prepare_launch_tools(&self) -> Result<()> {
+        let _guard = self.gate()?;
+        if self.tool_health(ID).installed {
+            return Ok(());
+        }
+        self.log("Cloudflared açılışta kuruluyor…");
+        let result = self.install_tool(ID);
+        if let Err(error) = &result {
+            let message = format!("Cloudflared otomatik kurulamadı: {error:#}. Hizmetler → Tünel bölümünden yeniden deneyin.");
+            self.log(&message);
+            self.service_errors
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .insert(ID.into(), message);
+        } else {
+            self.service_errors
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .remove(ID);
+        }
+        result
+    }
+
     pub fn repair_tunnel(&self) -> Result<()> {
         let _guard = self.gate()?;
         self.stop_service(ID)?;
@@ -206,6 +231,57 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn launch_keeps_an_existing_installation_and_token_unchanged() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let package = tool_package(ID).unwrap();
+        let dir = crate::repository::DataDir::new(home.path()).package(ID, &package.version);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("installed.json"),
+            serde_json::to_vec(&package).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(dir.join(&package.executable), b"existing executable").unwrap();
+        std::fs::write(manager.tunnel_token_path(), b"preserve this token file").unwrap();
+        manager.prepare_launch_tools().unwrap();
+        manager.prepare_launch_tools().unwrap();
+        assert_eq!(
+            std::fs::read(dir.join(&package.executable)).unwrap(),
+            b"existing executable"
+        );
+        assert_eq!(
+            std::fs::read(manager.tunnel_token_path()).unwrap(),
+            b"preserve this token file"
+        );
+        assert!(!manager.snapshot().unwrap().tunnel.running);
+        assert_eq!(
+            std::fs::read_dir(home.path().join("cache"))
+                .unwrap()
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn launch_reports_an_incomplete_installation_without_replacing_it() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let package = tool_package(ID).unwrap();
+        let dir = crate::repository::DataDir::new(home.path()).package(ID, &package.version);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(&package.executable), b"preserve").unwrap();
+        assert!(manager.prepare_launch_tools().is_err());
+        assert_eq!(
+            std::fs::read(dir.join(&package.executable)).unwrap(),
+            b"preserve"
+        );
+        assert!(!manager.snapshot().unwrap().tunnel.installed);
+        assert!(manager.snapshot().unwrap().tunnel.issue.is_some());
+        assert!(!manager.is_busy());
+    }
 
     #[test]
     fn tokens_are_checked_before_they_are_stored() {

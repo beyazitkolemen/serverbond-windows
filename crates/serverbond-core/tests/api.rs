@@ -467,3 +467,258 @@ fn deferred_desktop_work_does_not_hold_the_http_response_open() {
     release.send(()).unwrap();
     assert!(done.recv_timeout(Duration::from_secs(5)).unwrap());
 }
+
+#[test]
+fn service_inventory_reports_supported_operations_and_normalizes_aliases() {
+    let api = start();
+    let (status, inventory) = api.get("/services");
+    assert_eq!(status, 200);
+    let items = inventory["data"].as_array().unwrap();
+    for id in [
+        "all",
+        "php",
+        "mysql",
+        "caddy",
+        "composer",
+        "phpmyadmin",
+        "mail",
+        "postgres",
+        "redis",
+        "tunnel",
+        "node",
+    ] {
+        assert!(items.iter().any(|item| item["id"] == id), "{id}");
+        assert_eq!(api.get(&format!("/services/{id}")).0, 200);
+    }
+    for (alias, id) in [("cloudflared", "tunnel"), ("mailpit", "mail")] {
+        assert_eq!(api.get(&format!("/services/{alias}")).1["data"]["id"], id);
+        assert_eq!(
+            api.send(
+                reqwest::Method::POST,
+                &format!("/services/{alias}/stop"),
+                Value::Null
+            )
+            .0,
+            200
+        );
+    }
+    for path in [
+        "/services/unknown/stop",
+        "/services/node/start",
+        "/services/composer/restart",
+        "/services/phpmyadmin/start",
+        "/services/all/repair",
+    ] {
+        assert_eq!(
+            api.send(reqwest::Method::POST, path, Value::Null).0,
+            400,
+            "{path}"
+        );
+    }
+    assert_eq!(api.get("/services/unknown").0, 404);
+    assert!(!api.get("/php").1["data"].as_array().unwrap().is_empty());
+    assert_eq!(api.get("/github").1["data"]["tokenSaved"], false);
+    // Invalid imports fail before any clone or network access.
+    let (status, body) = api.send(
+        reqwest::Method::POST,
+        "/github/import",
+        serde_json::json!({"repository":"not a repository"}),
+    );
+    assert_eq!(status, 400, "{body}");
+    assert!(!body["error"].as_str().unwrap().contains("Yol bulunamadı"));
+}
+
+#[test]
+fn api_settings_change_only_the_listener_and_keep_the_existing_token() {
+    let mut api = start();
+    let (_, settings) = api.get("/settings");
+    let old_port = api.port;
+    let new_port = free_port();
+    let (status, updated) = api.send(
+        reqwest::Method::PUT,
+        "/api",
+        serde_json::json!({"enabled":true,"port":new_port}),
+    );
+    assert_eq!(status, 200, "{updated}");
+    assert_eq!(updated["data"]["port"], new_port);
+    api.port = new_port;
+    assert!(api::wait_ready(new_port, Duration::from_secs(5)));
+    let (_, actual) = api.get("/settings");
+    let mut expected = settings;
+    expected["data"]["api"]["port"] = serde_json::json!(new_port);
+    assert_eq!(actual, expected);
+    assert_eq!(api.get("/api").1["data"]["tokenSaved"], true);
+    assert_ne!(old_port, api.port);
+    let before = api.get("/settings").1;
+    assert_eq!(
+        api.send(
+            reqwest::Method::PUT,
+            "/api",
+            serde_json::json!({"enabled":true,"port":0})
+        )
+        .0,
+        400
+    );
+    assert_eq!(api.get("/settings").1, before);
+}
+
+#[test]
+fn projects_env_jobs_and_release_recipes_are_manageable_end_to_end_over_http() {
+    let api = start();
+    let folder = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(folder.path().join("public")).unwrap();
+    std::fs::write(folder.path().join("public/index.php"), "<?php\n").unwrap();
+    std::fs::write(folder.path().join("artisan"), "<?php\n").unwrap();
+    std::fs::write(folder.path().join(".env"), "APP_NAME=Original\n").unwrap();
+    assert_eq!(
+        api.send(
+            reqwest::Method::POST,
+            "/projects",
+            serde_json::json!({"name":"api-proje","path":folder.path()})
+        )
+        .0,
+        200
+    );
+    let (_, env) = api.get("/projects/api-proje/env");
+    assert_eq!(env["data"]["content"], "APP_NAME=Original\n");
+    assert_eq!(
+        api.send(
+            reqwest::Method::PUT,
+            "/projects/api-proje/env",
+            serde_json::json!({"content":"APP_NAME=Updated\n"})
+        )
+        .0,
+        200
+    );
+    let jobs = serde_json::json!({"workers":[{"name":"mail","enabled":false,"autoStart":false}],"schedule":{"enabled":false,"autoStart":false}});
+    let (status, body) = api.send(reqwest::Method::PUT, "/projects/api-proje/jobs", jobs);
+    assert_eq!(status, 200, "{body}");
+    let (_, jobs) = api.get("/projects/api-proje/jobs");
+    let worker = jobs["data"]["workers"][0]["id"].as_str().unwrap();
+    assert!(!worker.is_empty());
+    assert_eq!(
+        api.get(&format!(
+            "/projects/api-proje/logs?source=worker%3A{worker}"
+        ))
+        .0,
+        200
+    );
+    assert_eq!(
+        api.send(
+            reqwest::Method::POST,
+            &format!("/projects/api-proje/workers/{worker}/stop"),
+            Value::Null
+        )
+        .0,
+        200
+    );
+    assert_eq!(
+        api.send(
+            reqwest::Method::POST,
+            "/projects/api-proje/schedule/stop",
+            Value::Null
+        )
+        .0,
+        200
+    );
+    let release = serde_json::json!({"gitPull":false,"branch":"main","composer":false,"migrate":false,"optimizeClear":false,"restartJobs":false});
+    assert_eq!(
+        api.send(reqwest::Method::PUT, "/projects/api-proje/release", release)
+            .0,
+        200
+    );
+    assert_eq!(
+        api.get("/projects/api-proje/release").1["data"]["branch"],
+        "main"
+    );
+    assert_eq!(
+        api.send(reqwest::Method::DELETE, "/projects/api-proje", Value::Null)
+            .0,
+        200
+    );
+    assert!(folder.path().join("public/index.php").exists());
+    assert_eq!(
+        std::fs::read_to_string(folder.path().join(".env")).unwrap(),
+        "APP_NAME=Updated\n"
+    );
+}
+
+#[test]
+fn http_import_and_deploy_use_a_real_local_git_repository() {
+    let api = start();
+    let upstream = tempfile::tempdir().unwrap();
+    let git = |args: &[&str]| {
+        let mut command = std::process::Command::new("git");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let output = command
+            .args(args)
+            .current_dir(upstream.path())
+            .env("GIT_AUTHOR_NAME", "API test")
+            .env("GIT_AUTHOR_EMAIL", "api@example.invalid")
+            .env("GIT_COMMITTER_NAME", "API test")
+            .env("GIT_COMMITTER_EMAIL", "api@example.invalid")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+    git(&["init", "-b", "main"]);
+    std::fs::create_dir_all(upstream.path().join("public")).unwrap();
+    std::fs::write(upstream.path().join("public/index.php"), "<?php\n").unwrap();
+    std::fs::write(upstream.path().join("artisan"), "<?php\n").unwrap();
+    std::fs::write(
+        upstream.path().join("composer.json"),
+        r#"{"require":{"laravel/framework":"^12.0"}}"#,
+    )
+    .unwrap();
+    git(&["add", "."]);
+    git(&["commit", "-m", "Initial project"]);
+    let url = reqwest::Url::from_directory_path(upstream.path())
+        .unwrap()
+        .to_string();
+    let (status, created) = api.send(
+        reqwest::Method::POST,
+        "/projects/import",
+        serde_json::json!({"url":url,"name":"git-api","branch":"main"}),
+    );
+    assert_eq!(status, 200, "{created}");
+    assert_eq!(api.get("/projects/git-api/git").1["data"]["present"], true);
+    let recipe = serde_json::json!({"gitPull":true,"branch":"main","composer":false,"migrate":false,"optimizeClear":false,"restartJobs":false});
+    assert_eq!(
+        api.send(reqwest::Method::PUT, "/projects/git-api/release", recipe)
+            .0,
+        200
+    );
+    std::fs::write(upstream.path().join("VERSION"), "2").unwrap();
+    git(&["add", "."]);
+    git(&["commit", "-m", "Next release"]);
+    let (status, deployed) = api.send(
+        reqwest::Method::POST,
+        "/projects/git-api/deploy",
+        Value::Null,
+    );
+    assert_eq!(status, 200, "{deployed}");
+    assert_eq!(deployed["data"]["success"], true);
+    assert_eq!(
+        api.get("/projects/git-api/releases").1["data"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let folder = std::path::Path::new(created["data"]["path"].as_str().unwrap());
+    assert_eq!(
+        std::fs::read_to_string(folder.join("VERSION")).unwrap(),
+        "2"
+    );
+    assert!(!folder.join(".env").exists());
+}

@@ -10,11 +10,13 @@ ServerBond'un servis, proje, yapılandırma ve masaüstü işlemleri yerel HTTP 
 - Yeni jeton oluşturmak eskisini anında geçersiz kılar. Jeton silinirse sağlık denetimi dışındaki istekler `401` alır. Jeton tüm yönetim işlemlerine yetki verir.
 - İstek gövdesi 1 MB ile sınırlıdır (`413`). Aynı anda en fazla 8 istek işlenir; fazlası `503` alır.
 - Her istek `Manager::contain` içinde çalışır: bir panik durumunda süreç çökmez, `500` döner ve uygulama "yeniden başlatma gerekli" durumuna geçer.
-- API varsayılan olarak **kapalıdır**. Ayarlar → API'den ya da `serverbond api serve` ile açılır.
+- API varsayılan olarak **kapalıdır**. Sol menü → API'den ya da `serverbond api serve` ile açılır.
 
 ## Açma ve jeton
 
-Arayüz: **Ayarlar → API** → "API'yi aç" anahtarı, port (varsayılan `18800`) ve **Jeton oluştur**. Kaydet düğmesi ayarı uygular; dinleyici ortam çalışırken de açılıp kapatılabilir.
+Arayüz: **Sol menü → API** → "API'yi aç" anahtarı, port (varsayılan `18800`) ve **Jeton oluştur**. Kaydet düğmesi ayarı uygular; dinleyici ortam çalışırken de açılıp kapatılabilir.
+
+API sayfası etkin bağlantı adresini, dinleyici/jeton durumunu, bağlantı örneğini ve tüm uç noktaları gösterir. Yol veya açıklamaya göre arama ve HTTP yöntemi filtresi kullanılabilir. Satırı açarak açıklamayı ve varsa JSON gövdesi şemasını inceleyin. **OpenAPI indir** dinleyici kapalıyken de sözleşmeyi verir; bu işlem jeton üretmez veya yenilemez. Tarayıcı önizlemesi aynı yol kataloğunu gösterir, yönetim işlemleri ve sözleşme indirme masaüstünde çalışır.
 
 Komut satırı (masaüstü uygulaması kapalıyken; veri klasörü kilidi tek süreçlidir):
 
@@ -23,6 +25,7 @@ serverbond api token          # yeni jeton üretir ve bir kez yazdırır
 serverbond api serve [port]   # API'yi açar, bu süreçte dinler; Enter durdurur
 serverbond api status         # enabled/port/listening/tokenSaved/baseUrl
 serverbond api routes         # yol listesi
+serverbond api schema         # OpenAPI JSON; masaüstü açıkken de çalışır, veri klasörünü açmaz
 serverbond api forget         # jetonu siler
 ```
 
@@ -62,6 +65,7 @@ Uzun işlemler (kurulum, `composer install`, sürüm) yanıt dönmeden önce tam
 | GET | `/openapi.json` | Kimlik doğrulamalı OpenAPI 3.1 sözleşmesi; doğrudan JSON belge |
 | GET | `/capabilities` | `desktop`, `apiVersion`, kimlik doğrulama ve istek sınırları |
 | GET | `/api` | Dinleyici ve jeton kayıt durumu |
+| PUT | `/api` | `{ "enabled": true, "port": 18800 }`; yalnızca API ayarlarını değiştirir, diğer tercihler korunur |
 | POST | `/api/token` | Yeni jetonu `{token}` olarak bir kez döndürür; mevcut jeton geçersiz olur |
 | DELETE | `/api/token` | Jetonu iptal eder; yeniden erişim için arayüz/CLI'dan jeton üretin |
 | GET | `/status` | Arayüzün kullandığı tam `Snapshot` |
@@ -94,7 +98,7 @@ Bu uçlar için `capabilities.data.desktop` değeri `true` olmalıdır.
 | POST | `/desktop/show` | Pencereyi gösterir |
 | POST | `/desktop/hide` | Pencereyi tepsiye gizler; tepsi yoksa hata döner |
 | POST | `/desktop/menu` | Tepsi menüsünü açar |
-| POST | `/desktop/navigate` | `{"page":"projects"}`; `overview`, `packages`, `projects`, `logs`, `services`, `settings`, `updates` |
+| POST | `/desktop/navigate` | `{"page":"projects"}`; `overview`, `packages`, `projects`, `logs`, `services`, `api`, `settings`, `updates` |
 | POST | `/desktop/exit` | `202`; servisleri durdurur ve uygulamadan çıkar |
 | POST | `/desktop/restart` | `202`; servisleri durdurur ve uygulamayı yeniden başlatır |
 | GET | `/updates` | İmzalı güncelleme kaynağını kontrol eder; `{available, currentVersion, version?, notes?}` |
@@ -122,11 +126,16 @@ Tema `config/appearance.json` dosyasında saklanır. İlk arayüz açılışı m
 
 | Yöntem | Yol | Açıklama |
 | --- | --- | --- |
+| GET | `/services` | `{id, name, actions, state}` nesneleri; desteklenen işlemleri `actions` üzerinden alın |
+| GET | `/services/{id}` | Tek hizmetin aynı biçimde durumu |
+| GET | `/php` | Katalogdaki tüm PHP sürümleri ve kurulum durumları |
 | POST | `/services/{id}/{action}` | `id`: `all`, `php`, `mysql`, `caddy`, `composer`, `phpmyadmin`, `mail`, `postgres`, `redis`, `tunnel`, `node`. `action`: `install`, `repair`, `start`, `stop`, `restart`. |
 | POST | `/php/{version}/select` | Varsayılan PHP sürümünü seçer (kurulu değilse indirir) |
 | POST | `/php/{version}/repair` | PHP sürümünü onarır |
 
-`node` yalnızca `install`/`repair` kabul eder. `restart`, `all` için tüm ortamı, tek hizmet için durdur-başlat sırasını uygular.
+`node` ve `composer` yalnızca `install`/`repair` kabul eder. `phpmyadmin`: `install`/`repair`/`open`; `all`: `install`/`start`/`stop`/`restart`. `mail` ayrıca `open` destekler. `cloudflared`, `tunnel` için; `mailpit`, `mail` için takma addır. Desteklenmeyen işlem, başarılıymış gibi sessizce geçilmez (`400`); bilinmeyen hizmet sorgusu `404` döner. `restart`, `all` için tüm sunucuyu, tek hizmet için durdur-başlat sırasını uygular.
+
+Cloudflared masaüstü uygulaması açıldığında eksikse arka planda SHA-256 doğrulanarak kurulur. Mevcut sağlıklı kurulum korunur; bozuk kurulum otomatik değiştirilmez, onarım istenir. İndirme başarısızsa uygulama çalışmaya devam eder; hata `GET /services/tunnel` ve `/logs/serverbond` üzerinden okunabilir. Sonraki açılışta eksik kurulum yeniden denenir. Kurulum tüneli başlatmaz ve jeton gerektirmez. Tünel başlatmak için token/auto-start uçlarını kullanın.
 
 ### Projeler
 
@@ -136,6 +145,8 @@ Tema `config/appearance.json` dosyasında saklanır. İlk arayüz açılışı m
 | POST | `/projects` | `{ "name": "magaza", "path": "C:\\\\dev\\\\magaza" }` — mevcut Laravel kökünü ekler |
 | POST | `/projects/create` | `{ "name": "magaza", "parent": "C:\\\\dev" }` — Composer ile yeni Laravel |
 | POST | `/projects/import` | `{ "url": "https://github.com/owner/repo", "name?": "…", "branch?": "main" }` — klonlar ve ekler |
+| GET | `/github` | GitHub hesabı ve jeton kayıt durumu; jetonun kendisini içermez |
+| POST | `/github/import` | `{ "repository": "owner/repo", "name": "magaza", "branch": "main" }`; `name`/`branch` isteğe bağlı, GitHub URL'si de kabul edilir |
 | GET | `/projects/discover` | Çalışma alanındaki Laravel kökleri |
 | POST | `/projects/import-folders` | `{ "paths": ["C:\\\\dev\\\\a", "C:\\\\dev\\\\b"] }` |
 | GET | `/projects/{id}` | Tek proje |
@@ -237,7 +248,8 @@ Tipik dağıtım betiği: `GET /health` → `POST /projects/{ad}/deploy` → HTT
 
 ## Uygulama notları
 
-- Kod: `crates/serverbond-core/src/api.rs`. Yönlendirme `route()` ve `project_route()` içindeki desen eşlemeleridir; yeni yol eklerken `routes()` listesini ve `api/openapi.rs` gövde şemasını da güncelleyin. OpenAPI yolları aynı listeden üretilir. Settings, işçi ve release gövdelerinde tam tip üretimi yerine ilgili GET yanıtları esas alınır.
+- Kod: `crates/serverbond-core/src/api.rs`. Yönlendirme `route()` ve `project_route()` içindeki desen eşlemeleridir. `crates/serverbond-core/api-routes.json` hem Rust hem arayüz için ortak yol kataloğudur; yeni uç eklerken katalog ve `api/openapi.rs` şeması birlikte güncellenir. Settings, PHP profilleri, işçi, zamanlayıcı ve release gövdelerinin alan tipleri/varsayılanları serileştirilmiş modellerden gelir; port çakışması gibi alanlar arası kontroller yine Manager'da yapılır.
+- `crates/serverbond-core/api-coverage.json` masaüstü komutları ve güncelleme eklentilerinin HTTP karşılıklarını listeler. `api_coverage` testi Tauri'nin kayıtlı komutlarıyla bu listeyi karşılaştırır ve her karşılığın OpenAPI sözleşmesinde bulunmasını zorunlu tutar. İç gezinme olayının tüketimi bir yönetim işlemi olmadığı için açıkça ayrılmıştır. Bu yapısal kontrol, gerçek HTTP davranış testleriyle birlikte çalışır.
 - Masaüstü köprüsü: çekirdekte `DesktopApi`, Tauri'de `src-tauri/src/api.rs`; çekirdeğe Tauri bağımlılığı eklenmez. Arayüzdeki dosya seçimi/clipboard işlemleri API'de dosya yolu gövdeleri/JSON yanıtlarıyla karşılanır; pencerenin iç gezinme olayı ayrı bir sunucu işlemi değildir.
 - Sunucu `tiny_http` üzerinde çalışır; kabul döngüsü `serverbond-api` iş parçacığında, her istek `serverbond-api-request` iş parçacığındadır. `ApiServer` düşürüldüğünde `unblock()` ile döngü kapanır ve iş parçacığı birleştirilir.
 - `Manager::ensure_api` ayarı dinleyiciyle eşitler: açılışta (Tauri `setup`), her `save_settings` sonrasında ve API'nin kendi `PUT /settings` yolunda çağrılır. `shutdown()` dinleyiciyi kapatır.

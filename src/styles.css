@@ -2609,6 +2609,47 @@ td:first-child {
 .api-settings .section-note code {
   overflow-wrap: anywhere;
 }
+.api-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.api-connection, .api-reference-header, .api-reference-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.api-connection {
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.api-connection div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.api-connection span, .api-reference-filters > span { color: var(--muted); font-size: 12px; }
+.api-connection code { overflow-wrap: anywhere; }
+.api-reference-header h2 { margin-bottom: 4px; }
+.api-reference-filters { margin: 20px 0 12px; }
+.api-route-search { display: flex; align-items: center; gap: 8px; flex: 1 1 240px; min-width: 0; }
+.api-route-search input { min-width: 0; width: 100%; }
+.api-reference-filters select { width: auto; }
+.api-example-help summary, .api-route summary { cursor: pointer; }
+.api-example-help { margin-top: 24px; }
+.api-route { border-bottom: 1px solid var(--border); }
+.api-route:first-child { border-top: 1px solid var(--border); }
+.api-route-list { max-height: 560px; overflow-y: auto; scrollbar-gutter: stable; }
+.api-route summary { display: flex; align-items: baseline; gap: 12px; padding: 14px 0; }
+.api-route summary::after { content: "+"; margin-left: auto; color: var(--muted); }
+.api-route[open] summary::after { content: "−"; }
+.api-route summary code { font-size: 12px; overflow-wrap: anywhere; min-width: 0; }
+.api-method { flex: 0 0 52px; font: 600 11px/1.5 ui-monospace, Consolas, monospace; color: var(--accent); }
+.method-delete { color: var(--danger); }
+.api-route-detail { padding: 0 0 16px; color: var(--muted); font-size: 13px; }
+.api-route-detail p { margin: 0 0 12px; }
+.api-body-schema { margin: 0 0 12px; }
+.api-route-detail pre { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow-y: auto; }
+.api-reference button:focus-visible, .api-route summary:focus-visible, .api-example-help summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .settings-save {
   display: flex;
   gap: 10px;

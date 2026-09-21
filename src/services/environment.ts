@@ -4,7 +4,12 @@ import {
   type ComponentId as ComponentName,
   type EnvironmentAction as EnvironmentActionName,
 } from "../domain";
-import type { ApiStatus, Settings } from "../types";
+import type {
+  ApiStatus,
+  ApiSettings,
+  ApiDocumentation,
+  Settings,
+} from "../types";
 
 export const environmentService = {
   start: (id = "all") =>
@@ -31,6 +36,8 @@ export const settingsService = {
 
 export const apiService = {
   status: () => call<ApiStatus>("api_status"),
+  save: (settings: ApiSettings) => call("api_save", { settings }),
+  documentation: () => call<ApiDocumentation>("api_documentation"),
   createToken: () => call<string>("api_token", { action: "create" }),
   forgetToken: () => call<string>("api_token", { action: "forget" }),
 };

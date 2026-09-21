@@ -7,7 +7,7 @@ import Toggle from "./Toggle";
 import StatusBadge, { type StatusTone } from "./StatusBadge";
 
 /**
- * Ayarlar → API: switch the local management API on, pick its port, create
+ * API: switch the local management API on, pick its port, create
  * or revoke the bearer token and copy a ready-to-run example. The token is
  * shown once; only its hash is stored on disk.
  */
@@ -36,7 +36,7 @@ export default function ApiSettings({
     const timer = window.setInterval(() => void refresh(), 5000);
     return () => clearInterval(timer);
   }, []);
-  const baseUrl = `http://127.0.0.1:${values.port}/api/v1`;
+  const baseUrl = status?.baseUrl ?? `http://127.0.0.1:${values.port}/api/v1`;
   const example = `curl -H "Authorization: Bearer ${token || "<jeton>"}" ${baseUrl}/status`;
   const copy = (label: string, text: string) =>
     void run(`${label} kopyalanıyor…`, async () => {
@@ -63,6 +63,21 @@ export default function ApiSettings({
       <div className="api-status">
         <StatusBadge tone={state.tone}>{state.text}</StatusBadge>
       </div>
+      <div className="api-connection">
+        <div>
+          <span>Bağlantı adresi</span>
+          <code>{baseUrl}</code>
+        </div>
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy}
+          onClick={() => copy("API adresi", baseUrl)}
+        >
+          <Copy size={16} />
+          Adresi kopyala
+        </button>
+      </div>
       <div className="settings-grid">
         <Toggle
           label="API'yi aç"
@@ -87,7 +102,7 @@ export default function ApiSettings({
       <p className="section-note">
         {status?.tokenSaved
           ? "Bir jeton kayıtlı. Yenisini oluşturmak eskisini geçersiz kılar."
-          : "Henüz jeton yok; API tüm istekleri reddeder. Bir jeton oluşturun."}
+          : "Jeton oluşturun. Sağlık denetimi dışındaki istekler jeton gerektirir."}
       </p>
       <div className="settings-actions">
         <button
@@ -144,24 +159,26 @@ export default function ApiSettings({
           </p>
         </div>
       ) : null}
-      <h3>Örnek</h3>
-      <div className="api-example">
-        <pre>{example}</pre>
-        <button
-          type="button"
-          className="button secondary small"
-          disabled={busy}
-          onClick={() => copy("Örnek komut", example)}
-        >
-          <Copy size={16} />
-          Kopyala
-        </button>
-      </div>
-      <p className="section-note">
-        Servisler, projeler, masaüstü ve güncellemeler API üzerinden yönetilir.
-        Sözleşme: <code>GET {baseUrl}/openapi.json</code>. Yetenekler:{" "}
-        <code>GET /capabilities</code>.
-      </p>
+      <details className="api-example-help">
+        <summary>Bağlantı örneği</summary>
+        <div className="api-example">
+          <pre>{example}</pre>
+          <button
+            type="button"
+            className="button secondary small"
+            disabled={busy}
+            onClick={() => copy("Örnek komut", example)}
+          >
+            <Copy size={16} />
+            Kopyala
+          </button>
+        </div>
+        <p className="section-note">
+          Servisler, projeler, masaüstü ve güncellemeler API üzerinden
+          yönetilir. Sözleşme: <code>GET {baseUrl}/openapi.json</code>.
+          Yetenekler: <code>GET /capabilities</code>.
+        </p>
+      </details>
     </section>
   );
 }

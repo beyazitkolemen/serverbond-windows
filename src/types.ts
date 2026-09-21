@@ -175,6 +175,15 @@ export interface ApiStatus {
   tokenSaved: boolean;
   baseUrl: string;
 }
+export interface ApiRoute {
+  method: string;
+  path: string;
+  description: string;
+}
+export interface ApiDocumentation {
+  routes: ApiRoute[];
+  document: Record<string, unknown> | null;
+}
 export interface GithubState {
   tokenSaved: boolean;
   login: string | null;

@@ -87,7 +87,7 @@ pub(crate) struct ApiState {
     desktop: Mutex<Option<Arc<dyn DesktopApi>>>,
 }
 
-/// Status the interface shows in Ayarlar → API.
+/// Status the interface shows in Sol menü → API.
 #[derive(Clone, Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiStatus {
@@ -352,7 +352,7 @@ fn handle(manager: &Arc<Manager>, mut request: Request) {
             401,
             json!({
                 "ok": false,
-                "error": "Geçerli bir API jetonu gerekli (Authorization: Bearer …). Ayarlar → API bölümünden oluşturun."
+                "error": "Geçerli bir API jetonu gerekli (Authorization: Bearer …). Sol menü → API bölümünden oluşturun."
             }),
         );
     }
@@ -456,6 +456,15 @@ struct ImportGit {
 }
 
 #[derive(Deserialize)]
+#[serde(default, deny_unknown_fields)]
+#[derive(Default)]
+struct ImportGithub {
+    repository: String,
+    name: String,
+    branch: String,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Paths {
     paths: Vec<PathBuf>,
@@ -543,92 +552,25 @@ fn desktop_call(manager: &Manager, operation: &str, body: &[u8]) -> Result<Reply
 
 /// Human-readable route index served at `/api/v1`.
 pub fn routes() -> Vec<(&'static str, &'static str, &'static str)> {
-    vec![
-        ("GET", "/api/v1", "Yol listesi"),
-        ("GET", "/api/v1/openapi.json", "OpenAPI 3.1 sözleşmesi"),
-        ("GET", "/api/v1/capabilities", "Çalışan hostun yetenekleri"),
-        ("GET", "/api/v1/api", "API durumu"),
-        ("POST", "/api/v1/api/token", "Jetonu yenile; yeni jetonu bir kez döndürür"),
-        ("DELETE", "/api/v1/api/token", "API jetonunu iptal et"),
-        ("POST", "/api/v1/settings/validate", "Settings nesnesini kaydetmeden doğrula"),
-        ("GET", "/api/v1/permissions", "Windows izin durumu"),
-        ("POST", "/api/v1/permissions/grant", "Windows izinlerini uygula {defender}; UAC gerekebilir"),
-        ("POST", "/api/v1/permissions/ensure", "Kayıtlı Windows izinlerini yeniden uygula"),
-        ("POST", "/api/v1/recovery", "Önceki geçerli yapılandırmayı kurtar"),
-        ("GET", "/api/v1/mysql/credentials", "MySQL bağlantı bilgileri; parola içerir"),
-        ("GET", "/api/v1/postgres/credentials", "PostgreSQL bağlantı bilgileri; parola içerir"),
-        ("POST", "/api/v1/system/open-home", "Veri klasörünü aç"),
-        ("POST", "/api/v1/system/runtime-download", "Visual C++ indirme sayfasını aç"),
-        ("POST", "/api/v1/tunnel/apply", "Tünel jetonunu kaydet ve başlat {token}"),
-        ("POST", "/api/v1/projects/{id}/php/repair", "Proje PHP sürümünü onar {version}"),
-        ("POST", "/api/v1/projects/{id}/open", "Projeyi tarayıcıda aç"),
-        ("POST", "/api/v1/projects/{id}/terminal", "Proje terminalini aç"),
-        ("POST", "/api/v1/services/{id}/open", "phpmyadmin veya mail arayüzünü aç"),
-        ("GET", "/api/v1/desktop", "Masaüstü tercihleri ve tepsi durumu"),
-        ("GET", "/api/v1/desktop/appearance", "Tema tercihi; null henüz taşınmadı anlamına gelir"),
-        ("PUT", "/api/v1/desktop/appearance", "Tema tercihi {theme: system|light|dark}"),
-        ("PUT", "/api/v1/desktop", "Masaüstü tercihlerini kaydet {preferences, autostart}"),
-        ("POST", "/api/v1/desktop/{show|hide|menu|exit|restart}", "Masaüstü işlemi; exit/restart yanıt sonrası uygulanır"),
-        ("POST", "/api/v1/desktop/navigate", "Sayfayı aç {page}"),
-        ("GET", "/api/v1/updates", "İmzalı uygulama güncellemesini denetle"),
-        ("GET", "/api/v1/updates/status", "Güncelleme işlem durumu"),
-        ("POST", "/api/v1/updates/install", "Onaylanan sürümü indir, doğrula ve kur {version, confirm:true}"),
-        ("GET", "/api/v1/health", "Sürüm ve durum özeti (jeton gerekmez)"),
-        ("GET", "/api/v1/status", "Tam durum görüntüsü (arayüzle aynı)"),
-        ("GET", "/api/v1/requirements", "Windows ön koşulları"),
-        ("GET", "/api/v1/logs/{id}", "Hizmet günlüğü"),
-        ("GET", "/api/v1/settings", "Ayarlar"),
-        ("PUT", "/api/v1/settings", "Ayarları kaydet (gövde: Settings)"),
-        ("GET", "/api/v1/settings/defaults", "Varsayılan ayarlar"),
-        ("GET", "/api/v1/settings/previous", "Önceki ayarlar"),
-        (
-            "POST",
-            "/api/v1/services/{id}/{install|repair|start|stop|restart}",
-            "Hizmet işlemi (all, php, mysql, caddy, composer, phpmyadmin, mail, postgres, redis, tunnel, node)",
-        ),
-        ("POST", "/api/v1/php/{version}/select", "Varsayılan PHP sürümünü seç"),
-        ("POST", "/api/v1/php/{version}/repair", "PHP sürümünü onar"),
-        ("GET", "/api/v1/projects", "Projeler"),
-        ("POST", "/api/v1/projects", "Mevcut klasörü ekle {name, path}"),
-        ("POST", "/api/v1/projects/create", "Yeni Laravel projesi {name, parent}"),
-        ("POST", "/api/v1/projects/import", "Git deposundan klonla {url, name?, branch?}"),
-        ("GET", "/api/v1/projects/discover", "Çalışma alanında Laravel kökleri"),
-        ("POST", "/api/v1/projects/import-folders", "Klasörleri içe aktar {paths}"),
-        ("GET", "/api/v1/projects/{id}", "Proje (id veya ad)"),
-        ("DELETE", "/api/v1/projects/{id}", "Projeyi listeden kaldır"),
-        ("POST", "/api/v1/projects/{id}/php", "Proje PHP sürümü {version}"),
-        ("POST", "/api/v1/projects/{id}/deploy", "Sürüm çalıştır"),
-        ("GET", "/api/v1/projects/{id}/releases", "Sürüm geçmişi"),
-        ("GET", "/api/v1/projects/{id}/release", "Sürüm tarifi"),
-        ("PUT", "/api/v1/projects/{id}/release", "Sürüm tarifini kaydet"),
-        ("GET", "/api/v1/projects/{id}/git", "Git durumu"),
-        ("GET", "/api/v1/projects/{id}/env", ".env içeriği"),
-        ("PUT", "/api/v1/projects/{id}/env", ".env kaydet {content}"),
-        ("GET", "/api/v1/projects/{id}/jobs", "Kuyruk işçileri ve zamanlayıcı"),
-        ("PUT", "/api/v1/projects/{id}/jobs", "Kaydet {workers, schedule}"),
-        (
-            "POST",
-            "/api/v1/projects/{id}/workers/{workerId}/{start|stop|restart}",
-            "Kuyruk işçisi",
-        ),
-        ("GET", "/api/v1/projects/{id}/schedule", "schedule:list çıktısı"),
-        ("POST", "/api/v1/projects/{id}/schedule/{start|stop|restart}", "Zamanlayıcı"),
-        ("GET", "/api/v1/projects/{id}/failed-jobs", "Başarısız işler"),
-        ("POST", "/api/v1/projects/{id}/failed-jobs/retry", "Yeniden dene {job?}"),
-        ("POST", "/api/v1/projects/{id}/failed-jobs/flush", "Başarısızları temizle"),
-        ("GET", "/api/v1/projects/{id}/logs?source=php|schedule|worker:{id}", "Proje günlüğü"),
-        ("POST", "/api/v1/projects/{id}/database/create", "MySQL veritabanı oluştur"),
-        ("POST", "/api/v1/projects/{id}/database/backup", "SQL yedeği al"),
-        ("POST", "/api/v1/projects/{id}/database/restore", "SQL yedeğini yükle {path}"),
-        ("POST", "/api/v1/mysql/password", "MySQL root parolası {password}"),
-        ("POST", "/api/v1/postgres/password", "PostgreSQL parolası {password}"),
-        ("POST", "/api/v1/tunnel/token", "Cloudflare jetonu {token}"),
-        ("DELETE", "/api/v1/tunnel/token", "Cloudflare jetonunu sil"),
-        ("POST", "/api/v1/tunnel/auto-start", "{autoStart}"),
-        ("POST", "/api/v1/github/token", "GitHub jetonu {token}"),
-        ("DELETE", "/api/v1/github/token", "GitHub jetonunu sil"),
-        ("POST", "/api/v1/https/{trust|untrust}", "Yerel HTTPS sertifikası"),
-    ]
+    #[derive(Deserialize)]
+    struct Route {
+        method: String,
+        path: String,
+        description: String,
+    }
+    static ROUTES: std::sync::LazyLock<Vec<Route>> = std::sync::LazyLock::new(|| {
+        serde_json::from_str(include_str!("../api-routes.json")).expect("embedded API routes")
+    });
+    ROUTES
+        .iter()
+        .map(|route| {
+            (
+                route.method.as_str(),
+                route.path.as_str(),
+                route.description.as_str(),
+            )
+        })
+        .collect()
 }
 
 fn route(
@@ -665,6 +607,11 @@ fn route(
             json!({ "apiVersion": VERSION, "desktop": manager.desktop_api().is_some(), "authentication": "bearer", "maxBodyBytes": MAX_BODY, "maxConcurrentRequests": MAX_IN_FLIGHT }),
         ),
         ["api"] if get => ok(manager.api_status()),
+        ["api"] if put => {
+            manager.save_api_settings(parse(body)?)?;
+            manager.ensure_api()?;
+            ok(manager.api_status())
+        }
         ["api", "token"] if post => ok(json!({ "token": manager.create_api_token()? })),
         ["api", "token"] if delete => {
             manager.clear_api_token()?;
@@ -733,6 +680,23 @@ fn route(
         }
         ["settings", "defaults"] if get => ok(manager.default_settings()),
         ["settings", "previous"] if get => ok(manager.previous_settings()?),
+        ["services"] if get => ok(service_inventory(manager)?),
+        ["services", id] if get => {
+            let id = canonical_service_id(id);
+            match service_inventory(manager)?
+                .into_iter()
+                .find(|item| item["id"] == id)
+            {
+                Some(item) => ok(item),
+                None => Ok(fail(404, "Hizmet bulunamadı.")),
+            }
+        }
+        ["php"] if get => ok(manager.snapshot()?.php_versions),
+        ["github"] if get => ok(manager.snapshot()?.github),
+        ["github", "import"] if post => {
+            let input: ImportGithub = parse(body)?;
+            ok(manager.import_github_project(&input.repository, input.name, input.branch)?)
+        }
         ["services", id, action] if post => {
             service_action(manager, id, action)?;
             ok(json!({ "id": id, "action": action }))
@@ -816,6 +780,10 @@ fn route(
 }
 
 fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
+    let id = canonical_service_id(id);
+    if !service_actions(id).contains(&action) {
+        bail!("Bu hizmet için işlem desteklenmiyor: {id}/{action}");
+    }
     if action == "open" {
         return match id {
             "phpmyadmin" => manager.open_phpmyadmin(),
@@ -884,6 +852,61 @@ fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
             _ => bail!("Bilinmeyen hizmet işlemi: {action}"),
         },
     }
+}
+
+fn canonical_service_id(id: &str) -> &str {
+    match id {
+        "cloudflared" => "tunnel",
+        "mailpit" => "mail",
+        _ => id,
+    }
+}
+
+fn service_actions(id: &str) -> &'static [&'static str] {
+    match id {
+        "all" => &["install", "start", "stop", "restart"],
+        "php" | "mysql" | "caddy" | "postgres" | "redis" | "tunnel" => {
+            &["install", "repair", "start", "stop", "restart"]
+        }
+        "mail" => &["install", "repair", "start", "stop", "restart", "open"],
+        "composer" | "node" => &["install", "repair"],
+        "phpmyadmin" => &["install", "repair", "open"],
+        _ => &[],
+    }
+}
+
+fn service_inventory(manager: &Manager) -> Result<Vec<Value>> {
+    let snapshot = manager.snapshot()?;
+    let mut items = vec![
+        json!({"id":"all","name":"Sunucu","actions":service_actions("all"),"state":{"running":snapshot.any_running,"busy":snapshot.busy}}),
+    ];
+    for package in snapshot.packages {
+        let id = package.package.id.clone();
+        items.push(json!({"id":id,"name":package.package.name,"actions":service_actions(&id),"state":package}));
+    }
+    for (id, name, state) in [
+        (
+            "tunnel",
+            "Cloudflared",
+            serde_json::to_value(snapshot.tunnel)?,
+        ),
+        ("mail", "Mailpit", serde_json::to_value(snapshot.mail)?),
+        (
+            "postgres",
+            "PostgreSQL",
+            serde_json::to_value(snapshot.postgres)?,
+        ),
+        ("redis", "Redis", serde_json::to_value(snapshot.redis)?),
+        ("node", "Node.js", serde_json::to_value(snapshot.node)?),
+    ] {
+        items.push(json!({"id":id,"name":name,"actions":service_actions(id),"state":state}));
+    }
+    Ok(items)
+}
+
+/// Available through IPC even when the HTTP listener is disabled.
+pub fn documentation() -> Value {
+    json!({"routes": routes().into_iter().map(|(method, path, description)| json!({"method":method,"path":path,"description":description})).collect::<Vec<_>>(), "document":openapi::document()})
 }
 
 fn project_route(

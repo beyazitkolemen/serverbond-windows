@@ -12,7 +12,6 @@ import type {
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
-import ApiSettings from "./ApiSettings";
 import AppearanceSettings from "./AppearanceSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
@@ -28,7 +27,6 @@ const sections = [
   "Web sunucusu",
   "Yedek ve aktarım",
   "Sistem",
-  "API",
   "Güncellemeler",
 ] as const;
 const sectionGroups = [
@@ -38,7 +36,7 @@ const sectionGroups = [
   },
   {
     label: "Yönetim",
-    items: ["Yedek ve aktarım", "Sistem", "API", "Güncellemeler"],
+    items: ["Yedek ve aktarım", "Sistem", "Güncellemeler"],
   },
 ] as const;
 const extensions = [
@@ -210,11 +208,9 @@ export default function Settings({
         ))}
       </nav>
       <p className="section-note">
-        {section === "API"
-          ? "API ayarları sunucu çalışırken uygulanabilir."
-          : running
-            ? "Port ve servis ayarlarını değiştirmek için sunucuyu durdurun."
-            : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
+        {running
+          ? "Port ve servis ayarlarını değiştirmek için sunucuyu durdurun."
+          : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
       </p>
       {note && (
         <p role="status" className="settings-feedback">
@@ -901,15 +897,6 @@ export default function Settings({
             </p>
           </section>
         </>
-      )}
-      {section === "API" && (
-        <ApiSettings
-          values={values.api}
-          onChange={(patch) => change("api", { ...values.api, ...patch })}
-          busy={busy}
-          run={run}
-          dirty={JSON.stringify(values.api) !== JSON.stringify(settings.api)}
-        />
       )}
       {section === "Güncellemeler" && (
         <UpdateSettings
