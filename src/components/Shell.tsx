@@ -1,45 +1,17 @@
-import {
-  Box,
-  Folder,
-  Home,
-  ScrollText,
-  Settings,
-  Server,
-  Monitor,
-  LoaderCircle,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import { Page, type Page as AppPage } from "../domain";
+import { Box, Monitor, LoaderCircle, X } from "lucide-react";
+import { type Page as AppPage } from "../domain";
 import type { ReactNode } from "react";
 import { desktop } from "../api";
 import { APP_VERSION } from "../version";
 import ErrorBoundary from "./ErrorBoundary";
 
-type NavEntry = { id: AppPage; title: string; icon: LucideIcon };
-
-const workspaceNav: NavEntry[] = [
-  { id: Page.Overview, title: "Genel bakış", icon: Home },
-  { id: Page.Projects, title: "Projeler", icon: Folder },
-  { id: Page.Logs, title: "Günlükler", icon: ScrollText },
-];
-
-const environmentNav: NavEntry[] = [
-  { id: Page.Packages, title: "Bileşenler", icon: Box },
-  { id: Page.Services, title: "Hizmetler", icon: Server },
-];
-
-const manageNav: NavEntry[] = [
-  { id: Page.Settings, title: "Ayarlar", icon: Settings },
-];
-
-function pageLabel(page: AppPage) {
-  return (
-    [...workspaceNav, ...environmentNav, ...manageNav].find(
-      (entry) => entry.id === page,
-    )?.title ?? "Sayfa"
-  );
-}
+import {
+  workspaceNav,
+  environmentNav,
+  manageNav,
+  pageLabel,
+  type NavEntry,
+} from "./navigation";
 
 function NavButtons({
   items,
@@ -118,7 +90,7 @@ export function Shell({
           </div>
           <div className="brand-copy">
             <span>ServerBond</span>
-            <p>Windows Laravel üretimi</p>
+            <p>Çalışma alanı</p>
           </div>
         </div>
         <div className="sidebar-nav">

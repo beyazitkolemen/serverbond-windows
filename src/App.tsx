@@ -28,6 +28,7 @@ import Logs, { LogPreview } from "./components/Logs";
 import Settings from "./components/Settings";
 import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
+import QuickNavigation from "./components/QuickNavigation";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
 const headings: Record<AppPage, string> = {
@@ -217,51 +218,57 @@ export default function App() {
                 }
               </strong>
             </div>
-            {desktop && (
-              <div className="desktop-actions" aria-label="Masaüstü işlemleri">
-                <button
-                  className="toolbar-button"
-                  title="Uygulama menüsü"
-                  onClick={() =>
-                    void run("Menü açılıyor…", () =>
-                      call("desktop_action", { action: "menu" }),
-                    )
-                  }
+            <div className="workspace-toolbar-actions">
+              <QuickNavigation onPage={setPage} />
+              {desktop && (
+                <div
+                  className="desktop-actions"
+                  aria-label="Masaüstü işlemleri"
                 >
-                  <Ellipsis size={18} />
-                  <span>Uygulama menüsü</span>
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label="Tepsiye küçült"
-                  title="Tepsiye küçült"
-                  onClick={() =>
-                    void run("Tepsiye küçültülüyor…", () =>
-                      call("desktop_action", { action: "hide" }),
-                    )
-                  }
-                >
-                  <PanelBottomClose size={16} />
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label="ServerBond'tan çık"
-                  title="ServerBond'tan çık"
-                  disabled={operationBusy}
-                  onClick={() => {
-                    if (running) {
-                      setLeaveOpen(true);
-                      return;
+                  <button
+                    className="toolbar-button"
+                    title="Uygulama menüsü"
+                    onClick={() =>
+                      void run("Menü açılıyor…", () =>
+                        call("desktop_action", { action: "menu" }),
+                      )
                     }
-                    void call("desktop_action", { action: "exit" }).catch((e) =>
-                      setError(String(e)),
-                    );
-                  }}
-                >
-                  <LogOut size={16} />
-                </button>
-              </div>
-            )}
+                  >
+                    <Ellipsis size={18} />
+                    <span>Uygulama menüsü</span>
+                  </button>
+                  <button
+                    className="icon-button"
+                    aria-label="Tepsiye küçült"
+                    title="Tepsiye küçült"
+                    onClick={() =>
+                      void run("Tepsiye küçültülüyor…", () =>
+                        call("desktop_action", { action: "hide" }),
+                      )
+                    }
+                  >
+                    <PanelBottomClose size={16} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    aria-label="ServerBond'tan çık"
+                    title="ServerBond'tan çık"
+                    disabled={operationBusy}
+                    onClick={() => {
+                      if (running) {
+                        setLeaveOpen(true);
+                        return;
+                      }
+                      void call("desktop_action", { action: "exit" }).catch(
+                        (e) => setError(String(e)),
+                      );
+                    }}
+                  >
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       }

@@ -51,6 +51,8 @@ import RedisActions from "./RedisActions";
 import GithubSettings from "./GithubSettings";
 import TunnelSettings from "./TunnelSettings";
 import StatusBadge from "./StatusBadge";
+import SearchField from "./SearchField";
+import { searchText } from "../search";
 
 const catalog = [
   {
@@ -117,6 +119,8 @@ export default function Services({
   const { values, setValues, dirty, reset } = useDraft(settings);
   const [service, setService] = useState<ServiceId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeOnly, setActiveOnly] = useState(false);
   const locked = busy || running;
   const canSave = dirty && !busy && !running;
   const change = <K extends keyof Values>(key: K, value: Values[K]) =>
@@ -454,17 +458,48 @@ export default function Services({
         };
     }
   };
+  const visibleServices = catalog.filter(
+    (item) =>
+      searchText(`${item.title} ${item.copy}`).includes(searchText(query)) &&
+      (!activeOnly || serviceState(item.id).on),
+  );
   return (
     <div className="settings-layout">
       {!selected ? (
         <>
+          <div className="list-toolbar">
+            <div
+              className="list-filters"
+              role="group"
+              aria-label="Hizmet filtresi"
+            >
+              <button
+                type="button"
+                aria-pressed={!activeOnly}
+                onClick={() => setActiveOnly(false)}
+              >
+                Tümü <span>{catalog.length}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeOnly}
+                onClick={() => setActiveOnly(true)}
+              >
+                Etkin{" "}
+                <span>
+                  {catalog.filter((item) => serviceState(item.id).on).length}
+                </span>
+              </button>
+            </div>
+            <SearchField label="Hizmet ara" value={query} onChange={setQuery} />
+          </div>
           <div className="service-list-heading" aria-hidden="true">
             <span>Uygulama</span>
             <span>Açıklama</span>
             <span>Durum</span>
           </div>
           <ul className="service-list" aria-label="Hizmetler">
-            {catalog.map((item) => {
+            {visibleServices.map((item) => {
               const state = serviceState(item.id);
               const Icon = item.icon;
               return (
@@ -507,6 +542,21 @@ export default function Services({
               );
             })}
           </ul>
+          {!visibleServices.length ? (
+            <div className="search-empty" role="status">
+              <strong>Eşleşen hizmet yok</strong>
+              <button
+                className="section-link"
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setActiveOnly(false);
+                }}
+              >
+                Filtreleri temizle
+              </button>
+            </div>
+          ) : null}
         </>
       ) : (
         <>
