@@ -14,6 +14,7 @@ use std::{
     },
     time::Duration,
 };
+mod operations;
 const SERVICES: &[&str] = &[
     "all",
     "php",
@@ -99,6 +100,13 @@ struct Command {
     service: String,
     action: String,
     expires_at: String,
+    #[serde(default)]
+    operation: Option<String>,
+    #[serde(default = "empty_parameters")]
+    parameters: Value,
+}
+fn empty_parameters() -> Value {
+    json!({})
 }
 #[derive(Deserialize)]
 struct Poll {
@@ -147,8 +155,9 @@ fn post(client: &Client, c: &Credentials, path: &str, body: &Value) -> Result<(u
         return Ok((status, Value::Null));
     }
     let mut bytes = Vec::new();
-    response.take(65537).read_to_end(&mut bytes)?;
-    anyhow::ensure!(bytes.len() <= 65536, "Cloud yanıtı çok büyük.");
+    // Parameters are bounded separately; JSON escaping can expand Unicode paths.
+    response.take(262145).read_to_end(&mut bytes)?;
+    anyhow::ensure!(bytes.len() <= 262144, "Cloud yanıtı çok büyük.");
     Ok((
         status,
         serde_json::from_slice(&bytes).context("Cloud yanıtı geçersiz.")?,
@@ -303,6 +312,14 @@ impl Manager {
     fn save_journal(&self, c: &Credentials, journal: &BTreeMap<String, String>) -> Result<()> {
         storage::atomic_write(&self.cloud_journal_path(c)?, serde_json::to_vec(journal)?)
     }
+    fn cloud_output_path(&self, c: &Credentials, id: &str) -> Result<std::path::PathBuf> {
+        let device =
+            uuid::Uuid::parse_str(c.device_id.as_deref().context("Cihaz eşleştirilmedi.")?)?;
+        let command = uuid::Uuid::parse_str(id)?;
+        Ok(self
+            .home
+            .join(format!("config/cloud-output-{device}-{command}.dpapi")))
+    }
     fn cloud_tick(self: &Arc<Self>, claim: bool) -> Result<()> {
         let c = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
@@ -324,7 +341,7 @@ impl Manager {
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"services":services}),
+            &json!({"services":services,"operations":operations::NAMES}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -352,20 +369,37 @@ impl Manager {
             if saved == "running" && runtime.active.as_deref() == Some(&command.id) {
                 return Ok(());
             }
-            let result = if saved == "running" {
+            let mut result = if saved == "running" {
                 "uncertain"
             } else {
                 &saved
             };
+            let output_path = self.cloud_output_path(&c, &command.id)?;
+            let mut output = None;
+            if command.operation.is_some() && ["succeeded", "failed"].contains(&result) {
+                let decoded = (|| -> Result<Option<Value>> {
+                    if !output_path.try_exists()? {
+                        return Ok(None);
+                    }
+                    let bytes = secrets::read(&output_path)?;
+                    anyhow::ensure!(bytes.len() <= 256 * 1024, "Cloud sonucu çok büyük.");
+                    Ok(Some(serde_json::from_str(&bytes)?))
+                })();
+                match decoded {
+                    Ok(Some(value)) => output = Some(value),
+                    Ok(None) if result == "failed" => {}
+                    // Preserve execution history: lost/corrupt output is never a reason to re-run.
+                    _ => result = "uncertain",
+                }
+            }
             journal.insert(command.id.clone(), result.into());
             self.save_journal(&c, &journal)?;
             drop(runtime);
-            let (status, _) = post(
-                &http,
-                &c,
-                &format!("commands/{}/result", command.id),
-                &json!({"status":result}),
-            )?;
+            let mut body = json!({"status":result});
+            if let Some(output) = output {
+                body["output"] = output;
+            }
+            let (status, _) = post(&http, &c, &format!("commands/{}/result", command.id), &body)?;
             anyhow::ensure!(
                 status == 200 || status == 401,
                 "İşlem sonucu gönderilemedi."
@@ -376,14 +410,22 @@ impl Manager {
             return Ok(());
         }
         let expires = chrono::DateTime::parse_from_rfc3339(&command.expires_at)?;
-        let invalid = !SERVICES.contains(&command.service.as_str())
-            || !SERVICE_ACTIONS.contains(&command.action.as_str())
-            || !services.iter().any(|service| {
-                service["id"] == command.service
-                    && service["actions"].as_array().is_some_and(|actions| {
-                        actions.iter().any(|action| action == &command.action)
-                    })
-            });
+        let parsed_operation = command
+            .operation
+            .as_ref()
+            .map(|name| operations::Operation::parse(name, &command.parameters));
+        let invalid = if let Some(operation) = &parsed_operation {
+            operation.is_err()
+        } else {
+            !SERVICES.contains(&command.service.as_str())
+                || !SERVICE_ACTIONS.contains(&command.action.as_str())
+                || !services.iter().any(|service| {
+                    service["id"] == command.service
+                        && service["actions"].as_array().is_some_and(|actions| {
+                            actions.iter().any(|action| action == &command.action)
+                        })
+                })
+        };
         let state = if invalid {
             "failed"
         } else if expires <= chrono::Utc::now() {
@@ -404,10 +446,25 @@ impl Manager {
         runtime.active = Some(command.id.clone());
         let m = self.clone();
         std::thread::spawn(move || {
-            let result =
-                m.contain(|| crate::api::service_action(&m, &command.service, &command.action));
+            let result = m.contain(|| match parsed_operation {
+                Some(operation) => operation?.execute(&m),
+                None => crate::api::service_action(&m, &command.service, &command.action)
+                    .map(|()| Value::Null),
+            });
             let mut runtime = m.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             let saved = (|| -> Result<()> {
+                if command.operation.is_some() {
+                    let output = match &result {
+                        Ok(value) => json!({"data":value}),
+                        // Raw errors can contain repository URLs or local secrets.
+                        Err(_) => {
+                            json!({"error":"İşlem tamamlanamadı. Girdileri, kurulu bileşenleri ve Windows uygulamasını kontrol edin."})
+                        }
+                    };
+                    let encoded = serde_json::to_string(&output)?;
+                    anyhow::ensure!(encoded.len() <= 256 * 1024, "Cloud sonucu çok büyük.");
+                    secrets::save(&m.cloud_output_path(&c, &command.id)?, &encoded)?;
+                }
                 let mut journal = m.journal(&c)?;
                 journal.insert(
                     command.id,
@@ -696,6 +753,62 @@ mod windows_cloud_tests {
         assert!(!String::from_utf8_lossy(&encrypted).contains(&c.key));
         exchange(&m, &mut c, vec![(401, Value::Null)]).unwrap();
         assert!(!m.cloud_status().unwrap().paired);
+    }
+    #[test]
+    fn project_results_survive_replay_and_are_encrypted_on_disk() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let project = home.path().join("www/private-project");
+        std::fs::create_dir_all(project.join("public")).unwrap();
+        std::fs::write(project.join("public/index.php"), "<?php echo 'ok';").unwrap();
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let command = json!({"command":{"id":id,"service":"projects","action":"execute","operation":"projects.add","parameters":{"name":"private-project","path":project},"expires_at":(chrono::Utc::now()+chrono::Duration::minutes(1)).to_rfc3339()}});
+        exchange(&m, &mut c, vec![(200, command.clone())]).unwrap();
+        let start = std::time::Instant::now();
+        while m.cloud.inner.lock().unwrap().active.is_some() {
+            assert!(start.elapsed() < Duration::from_secs(10));
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(m.journal(&c).unwrap()[&id], "succeeded");
+        let bytes = std::fs::read(m.cloud_output_path(&c, &id).unwrap()).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains("private-project"));
+        let requests = exchange(
+            &m,
+            &mut c,
+            vec![(200, command.clone()), (200, json!({"ok":true}))],
+        )
+        .unwrap();
+        assert_eq!(requests[1]["status"], "succeeded");
+        assert_eq!(
+            requests[1]["output"]["data"]["projects"][0]["name"],
+            "private-project"
+        );
+        assert_eq!(m.snapshot().unwrap().projects.len(), 1);
+        std::fs::remove_file(m.cloud_output_path(&c, &id).unwrap()).unwrap();
+        let requests = exchange(
+            &m,
+            &mut c,
+            vec![(200, command.clone()), (200, json!({"ok":true}))],
+        )
+        .unwrap();
+        assert_eq!(requests[1]["status"], "uncertain");
+        assert!(requests[1].get("output").is_none());
+        assert_eq!(m.snapshot().unwrap().projects.len(), 1);
+        let mut journal = m.journal(&c).unwrap();
+        journal.insert(id.clone(), "running".into());
+        m.save_journal(&c, &journal).unwrap();
+        let requests =
+            exchange(&m, &mut c, vec![(200, command), (200, json!({"ok":true}))]).unwrap();
+        assert_eq!(requests[1]["status"], "uncertain");
+        assert!(requests[1].get("output").is_none());
     }
 }
 

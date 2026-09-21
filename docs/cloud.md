@@ -48,4 +48,8 @@ Bağlantı arızasında 10, 20, 40, en fazla 60 saniye beklenir. 401 erişimi du
 
 ## Yerel doğrulama
 
+Parametreli proje yönetimi: Yeni istemci operations listesini bildirir. Cloud'daki Projeler sekmesi projects.list/add/remove/create/import/github/discover/import-folders komutlarını gönderir. Aynı yerel Manager doğrulamaları ve dosya koruma kuralları geçerlidir. Parametreler 32 KB, yapılandırılmış sonuç 256 KB ile sınırlıdır; liste ve keşif 50 kayıtlık sayfalar kullanır. Cloud HTTP yanıtı, Unicode JSON kaçış payıyla 256 KB sınırındadır.
+
+Sonuç `config/cloud-output-CIHAZ-KOMUT.dpapi` içinde şifreli saklanır; sonuç kalıcı yazılmadan komut tamamlandı sayılmaz. Tekrar teslimde kaydedilmiş sonuç gönderilir. Kayıp/bozuk çıktı veya yarım işlem uncertain olur ve yeniden çalıştırılmaz. Cloud da parametre/sonuç sütunlarını şifreler. Reverb yalnızca bildirim taşır; içerik HTTPS ile gider.
+
 PHPUnit müşteri izolasyonu, oturum/CSRF, eşleştirme tekrarları/süre, hız sınırları, komut sahipliği/süre/tek aktif işlem ve özel Reverb kanal yetkilerini kapsar. Windows testleri DPAPI, URL sınırları, yönlendirme reddi, kalıcı tekrar engeli ve yarım kalan komutları kapsar. İsteğe bağlı cloud_live testi gerçek Laravel/Reverb ile izole Windows Manager çalıştırır.

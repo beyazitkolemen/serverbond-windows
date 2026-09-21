@@ -48,7 +48,8 @@ export default function CloudSettings() {
       <h2>ServerBond Cloud</h2>
       <p className="muted">
         Cloud panelinden bir bağlantı kodu oluşturun ve bu cihazı hesabınıza
-        bağlayın. Uygulama açıkken servislerinizi uzaktan yönetebilirsiniz.
+        bağlayın. Uygulama açıkken servislerinizi ve projelerinizi uzaktan
+        yönetebilirsiniz.
       </p>
       {!desktop && (
         <p role="status">
