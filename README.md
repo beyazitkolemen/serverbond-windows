@@ -17,7 +17,7 @@ Yeni kurulumların varsayılan konumu `C:\ServerBond`, proje çalışma alanı `
 
 Windows x64 ve internet bağlantısı gerekir. Kurulum WebView2 gereksinimini yönetir; PHP/MySQL için Microsoft Visual C++ Runtime gerekir. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
 
-Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Buradaki varsayılanlar ve ekran görüntüleri güncel `main` dalına aittir; yayımlanan paketten sonraki değişiklikleri içerir. [Sürüm notları](docs/releases/v1.2.0.md) · [Güncellemeler](docs/updates.md).
+Son yayımlanan sürüm **v1.3.0**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.0.md) · [Güncellemeler](docs/updates.md).
 
 ## Neler yapabilirsiniz?
 
@@ -27,6 +27,7 @@ Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otom
 - **Ek hizmetler:** phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli.
 - **GitHub:** tarayıcıdan giriş, hesabınızdan depo seçimi ve dal listeleri. [Bağlantı ayarı](docs/github.md).
 - **API ve MCP:** proje, hizmet ve masaüstü işlemleri için yerel HTTP API, OpenAPI rehberi ve yapay zekâ istemcilerine MCP bağlantısı.
+- **Cloud:** tek kullanımlık kodla cihaz eşleştirme ve Reverb üzerinden uzaktan hizmet/proje yönetimi.
 - **Masaüstü:** açık/koyu tema, sistem tepsisi ve Windows başlangıç tercihleri.
 
 ![Solda bölüm menüsüyle proje detayı](docs/screenshots/17-proje-detay.png)

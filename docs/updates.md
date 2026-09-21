@@ -19,6 +19,8 @@ Masaüstü ekranı ve `GET /api/v1/updates` aynı denetimi kullanır. Ağ veya G
 
 **v1.2.0:** İmza anahtarı henüz tanımlı değildir. Release akışı testlerden sonra imzasız EXE, NSIS kurulum paketi ve `SHA256SUMS.txt` yayımlar; bu sürüm de elle kurulur.
 
+**v1.3.0:** Yerel Windows ortamında standart kontroller ve sekiz gerçek servis testi geçti. GitHub Release işi PostgreSQL test sunucusunu başlatamadığından paketler aynı etiketten yerel olarak derlenip yayımlandı. EXE, NSIS ve SHA-256 özetleri vardır; güncelleme elle kurulur.
+
 Depo herkese açık olmalıdır. Özel depoya oturumsuz erişilemez; denetim hata verir.
 
 İmzasız yerel derleme de sürüm denetleyebilir. Uygulama içinden kurulacak yeni paket, yapılandırılmış açık anahtarla doğrulanabilen imzalı bir Release olmalıdır. İmzasız yayınlar otomatik kurulum yolundan geçirilmez.
