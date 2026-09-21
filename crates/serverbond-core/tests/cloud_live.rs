@@ -59,7 +59,7 @@ fn live_reverb_device_roundtrip() {
                 .to_string();
             std::fs::write(
                 file,
-                serde_json::json!({"path":project,"gitUrl":git_url}).to_string(),
+                serde_json::json!({"path":project,"gitUrl":git_url,"source":source}).to_string(),
             )
             .unwrap();
             project
@@ -108,7 +108,10 @@ fn live_reverb_device_roundtrip() {
             "SENTINEL=preserved"
         );
         assert!(project.join("public/index.php").exists());
-        assert!(home.path().join("www/remote-git/public/index.php").exists());
+        assert_eq!(
+            std::fs::read_to_string(home.path().join("www/remote-git/public/index.php")).unwrap(),
+            "<?php echo 'deployed';"
+        );
         assert!(
             manager.snapshot().unwrap().projects.is_empty(),
             "Cloud smoke must remove its project from the list"

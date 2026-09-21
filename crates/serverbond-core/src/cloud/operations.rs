@@ -14,6 +14,9 @@ pub(super) const NAMES: &[&str] = &[
     "projects.github",
     "projects.discover",
     "projects.import-folders",
+    "projects.show",
+    "projects.release",
+    "projects.deploy",
 ];
 
 #[derive(Deserialize)]
@@ -38,6 +41,20 @@ pub(super) struct Create {
 #[serde(deny_unknown_fields)]
 pub(super) struct Remove {
     id: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct Release {
+    id: String,
+    release: crate::model::ProjectRelease,
+    expected_revision: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct Deploy {
+    id: String,
+    expected_revision: String,
+    confirm: bool,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -82,6 +99,12 @@ pub(super) enum Operation {
     Discover(Page),
     #[serde(rename = "projects.import-folders")]
     ImportFolders(Paths),
+    #[serde(rename = "projects.show")]
+    Show(Remove),
+    #[serde(rename = "projects.release")]
+    Release(Release),
+    #[serde(rename = "projects.deploy")]
+    Deploy(Deploy),
 }
 
 impl Operation {
@@ -96,6 +119,23 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::Show(input) => return project_details(manager, &input.id),
+            Self::Release(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                manager.save_project_release_checked(
+                    &input.id,
+                    input.release,
+                    Some(&input.expected_revision),
+                )?;
+                return project_details(manager, &input.id);
+            }
+            Self::Deploy(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                ensure!(input.confirm, "Dağıtım onayı gerekli.");
+                let record =
+                    manager.deploy_project_checked(&input.id, Some(&input.expected_revision))?;
+                return Ok(json!({"projectId":input.id, "deployment":release_summary(record)}));
+            }
             Self::List(page) => return project_page(manager, page.offset),
             Self::Discover(page) => {
                 ensure!(page.offset <= 1000, "Sayfa aralığı geçersiz.");
@@ -130,6 +170,30 @@ impl Operation {
         }
         project_page(manager, 0)
     }
+}
+
+fn release_summary(record: crate::release::ReleaseRecord) -> Value {
+    let truncated = record.output.chars().count() > 8000;
+    let output: String = record.output.chars().take(8000).collect();
+    json!({"startedAt":record.started_at,"durationMs":record.duration_ms,"branch":record.branch,
+        "sha":record.sha,"success":record.success,"output":output,"truncated":truncated})
+}
+
+fn project_details(manager: &Manager, id: &str) -> Result<Value> {
+    uuid::Uuid::parse_str(id)?;
+    let project = manager.project(id)?;
+    let revision = crate::release::release_revision(&project.release)?;
+    let git = manager.project_git_status(id)?;
+    let releases: Vec<Value> = manager
+        .list_project_releases(id)?
+        .into_iter()
+        .take(5)
+        .map(release_summary)
+        .collect();
+    Ok(
+        json!({"project":{"id":project.id,"name":project.name,"path":project.path,"host":project.host,"phpVersion":project.php_version},
+        "git":git,"release":project.release,"revision":revision,"releases":releases}),
+    )
 }
 
 fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
@@ -200,6 +264,50 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(path.join(".env")).unwrap(),
             "SENTINEL=private"
+        );
+    }
+
+    #[test]
+    fn stale_recipes_and_unconfirmed_deployments_cannot_mutate_projects() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let path = home.path().join("www/revision-test");
+        std::fs::create_dir_all(path.join("public")).unwrap();
+        std::fs::write(path.join("public/index.php"), "<?php").unwrap();
+        let project = manager.add_project("revision-test".into(), path).unwrap();
+        let details = project_details(&manager, &project.id).unwrap();
+        let mut recipe = details["release"].clone();
+        recipe["branch"] = json!("staging");
+        let parameters =
+            json!({"id":project.id,"release":recipe,"expectedRevision":details["revision"]});
+        let saved = Operation::parse("projects.release", &parameters)
+            .unwrap()
+            .execute(&manager)
+            .unwrap();
+        assert_ne!(saved["revision"], details["revision"]);
+        assert!(Operation::parse("projects.release", &parameters)
+            .unwrap()
+            .execute(&manager)
+            .is_err());
+        let stale = json!({"id":project.id,"expectedRevision":details["revision"],"confirm":true});
+        let error = Operation::parse("projects.deploy", &stale)
+            .unwrap()
+            .execute(&manager)
+            .unwrap_err();
+        assert!(error.to_string().contains("tarifi değişti"));
+        let unconfirmed =
+            json!({"id":project.id,"expectedRevision":saved["revision"],"confirm":false});
+        assert!(Operation::parse("projects.deploy", &unconfirmed)
+            .unwrap()
+            .execute(&manager)
+            .is_err());
+        assert!(manager
+            .list_project_releases(&project.id)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            manager.project(&project.id).unwrap().release.branch,
+            "staging"
         );
     }
 }

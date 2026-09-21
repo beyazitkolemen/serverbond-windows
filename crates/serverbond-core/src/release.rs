@@ -24,6 +24,14 @@ const MAX_OUTPUT_CHARS: usize = 200_000;
 const MAX_EXTRA_ARTISAN: usize = 12;
 const GIT_MISSING: &str = "git PATH üzerinde bulunamadı. Git for Windows kurun ve PATH'e ekleyin.";
 
+pub(crate) fn release_revision(release: &ProjectRelease) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    Ok(format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(release)?)
+    ))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReleaseStep {
     pub name: String,
@@ -296,6 +304,15 @@ fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<
 
 impl Manager {
     pub fn save_project_release(&self, id: &str, release: ProjectRelease) -> Result<()> {
+        self.save_project_release_checked(id, release, None)
+    }
+
+    pub(crate) fn save_project_release_checked(
+        &self,
+        id: &str,
+        release: ProjectRelease,
+        expected: Option<&str>,
+    ) -> Result<()> {
         let _guard = self.gate()?;
         validate_project_release(&release)?;
         let mut config = self
@@ -309,6 +326,12 @@ impl Manager {
             .find(|p| p.id == id)
             .context("Proje bulunamadı.")?;
         let name = project.name.clone();
+        if let Some(expected) = expected {
+            anyhow::ensure!(
+                release_revision(&project.release)? == expected,
+                "Sürüm tarifi değişti. Güncel bilgileri alın."
+            );
+        }
         project.release = release;
         self.save_config(&config)?;
         self.log(format!("Sürüm tarifi kaydedildi: {name}"));
@@ -378,8 +401,22 @@ impl Manager {
     }
 
     pub fn deploy_project(&self, id: &str) -> Result<ReleaseRecord> {
+        self.deploy_project_checked(id, None)
+    }
+
+    pub(crate) fn deploy_project_checked(
+        &self,
+        id: &str,
+        expected: Option<&str>,
+    ) -> Result<ReleaseRecord> {
         let _guard = self.gate()?;
         let project = self.project(id)?;
+        if let Some(expected) = expected {
+            anyhow::ensure!(
+                release_revision(&project.release)? == expected,
+                "Sürüm tarifi değişti. Dağıtımı başlatmadan güncel bilgileri alın."
+            );
+        }
         let steps = release_steps(&project.release)?;
         if project.release.git_pull {
             git_program()?;

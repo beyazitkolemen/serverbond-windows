@@ -52,4 +52,6 @@ Parametreli proje yönetimi: Yeni istemci operations listesini bildirir. Cloud'd
 
 Sonuç `config/cloud-output-CIHAZ-KOMUT.dpapi` içinde şifreli saklanır; sonuç kalıcı yazılmadan komut tamamlandı sayılmaz. Tekrar teslimde kaydedilmiş sonuç gönderilir. Kayıp/bozuk çıktı veya yarım işlem uncertain olur ve yeniden çalıştırılmaz. Cloud da parametre/sonuç sütunlarını şifreler. Reverb yalnızca bildirim taşır; içerik HTTPS ile gider.
 
+Proje ayrıntısı ve dağıtım: `projects.show` Git durumu, tarif ve son beş sürüm kaydını döndürür. `projects.release` tarif kaydeder; `projects.deploy` ayrıca `confirm:true` gerektirir. Her iki mutasyon `expectedRevision` ile mevcut tarifin SHA-256 özetini Manager kilidi altında karşılaştırır. Eski ekran tarifi ezemez veya dağıtımı başlatamaz. Çıktı kaydı başına ilk 8.000 karakter Cloud'a gönderilir; tam kayıt yerelde kalır. Cloud migration ve kodunu Windows istemcisinden önce yayınlayın.
+
 PHPUnit müşteri izolasyonu, oturum/CSRF, eşleştirme tekrarları/süre, hız sınırları, komut sahipliği/süre/tek aktif işlem ve özel Reverb kanal yetkilerini kapsar. Windows testleri DPAPI, URL sınırları, yönlendirme reddi, kalıcı tekrar engeli ve yarım kalan komutları kapsar. İsteğe bağlı cloud_live testi gerçek Laravel/Reverb ile izole Windows Manager çalıştırır.
