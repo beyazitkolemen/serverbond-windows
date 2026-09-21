@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ShieldCheck, Wrench } from "lucide-react";
 import type { Run } from "../types";
+import StatusBadge from "./StatusBadge";
 
 export default function ServiceRepair({
   name,
@@ -53,10 +54,9 @@ export default function ServiceRepair({
     >
       <div className="service-repair-head">
         <h3>Onarım</h3>
-        <span className={`service-status${needed || issue ? " issue" : ""}`}>
-          <span className={`status-dot ${needed || issue ? "red" : "green"}`} />
+        <StatusBadge tone={needed || issue ? "issue" : "running"}>
           {status}
-        </span>
+        </StatusBadge>
       </div>
       {needed && issue ? (
         <p role="alert" className="settings-feedback">

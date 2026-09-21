@@ -14,6 +14,7 @@ import { QueueSection, ScheduleSection, useProjectJobs } from "./ProjectJobs";
 import ProjectLogs from "./ProjectLogs";
 import ReleasePane, { SummaryGit } from "./ProjectRelease";
 import ProjectEnv from "./ProjectEnv";
+import StatusBadge from "./StatusBadge";
 
 const tabs = [
   { id: "summary", label: "Özet" },
@@ -69,12 +70,9 @@ export default function ProjectDetail({
           <p className="project-url">{url}</p>
         </div>
         <div className="project-actions">
-          <span
-            className={`service-status ${project.running ? "running" : ""}`}
-          >
-            <span className={`status-dot ${project.running ? "green" : ""}`} />
+          <StatusBadge tone={project.running ? "running" : "stopped"}>
             {project.running ? `PHP · ${project.phpPort}` : "PHP kapalı"}
-          </span>
+          </StatusBadge>
           <button
             className="button secondary small"
             disabled={busy || !webRunning || !project.running}
@@ -416,10 +414,9 @@ export function ProjectPhp({
               ? "Uygula"
               : "İndir ve uygula"}
         </button>
-        <span className={`service-status ${project.running ? "running" : ""}`}>
-          <span className={`status-dot ${project.running ? "green" : ""}`} />
+        <StatusBadge tone={project.running ? "running" : "stopped"}>
           {project.running ? `Çalışıyor · ${project.phpPort}` : "Durduruldu"}
-        </span>
+        </StatusBadge>
       </div>
       {project.issue ? (
         <p className="field-error" role="status">
@@ -455,10 +452,9 @@ export function CompactProjectRow({
         <strong>{project.name}</strong>
         <span className="project-url">{url}</span>
       </span>
-      <span className={`service-status ${project.running ? "running" : ""}`}>
-        <span className={`status-dot ${project.running ? "green" : ""}`} />
+      <StatusBadge tone={project.running ? "running" : "stopped"}>
         {project.running ? "Çalışıyor" : "Kapalı"}
-      </span>
+      </StatusBadge>
     </button>
   );
 }

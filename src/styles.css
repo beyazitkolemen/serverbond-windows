@@ -34,9 +34,14 @@
   --accent-border: #c5dfd2;
   --sidebar-line: #1d3a2e;
   --sidebar-well: color-mix(in srgb, #000 22%, var(--sidebar));
+  --sidebar-edge: #0b1a14;
+  --console-bg: #10241c;
+  --console-ink: #d3ddd7;
+  --amber: #b54708;
   --on-accent: #ffffff;
   --on-sidebar: #f4f8f6;
   --overlay: rgb(16 36 28 / 40%);
+  color-scheme: light;
   --radius: 8px;
   --radius-sm: 6px;
   --shadow-sm: 0 1px 2px rgb(16 36 28 / 6%);
@@ -55,6 +60,45 @@
   --page-pad: 36px;
   --content-max: 1400px;
   --sidebar-w: 240px;
+}
+/* Dark appearance: same hues, inverted surfaces. Toggled from Ayarlar → Genel
+   → Görünüm; `system` follows Windows via prefers-color-scheme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e6ece9;
+  --ink-soft: #cdd7d2;
+  --muted: #98a8a0;
+  --faint: #6f7f77;
+  --canvas: #0f1613;
+  --surface: #161f1b;
+  --surface-2: #1c2622;
+  --sidebar: #0b120f;
+  --sidebar-text: #c9d4ce;
+  --sidebar-muted: #7f918a;
+  --sidebar-hover: #142019;
+  --sidebar-active: #1a3428;
+  --sidebar-line: #1a2823;
+  --sidebar-edge: #050907;
+  --accent: #3ab07f;
+  --accent-dark: #5cc596;
+  --accent-soft: #143024;
+  --accent-border: #1f4d39;
+  --border: #29352f;
+  --border-strong: #3a4842;
+  --danger: #f28b82;
+  --danger-soft: #2a1715;
+  --danger-border: #5a2a25;
+  --warning: #f0b35c;
+  --warning-soft: #2a2114;
+  --warning-border: #5a4420;
+  --success: #4fc08d;
+  --console-bg: #0b120f;
+  --console-ink: #cdd7d2;
+  --amber: #f0b35c;
+  --on-accent: #06110c;
+  --overlay: rgb(0 0 0 / 55%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-md: 0 10px 28px rgb(0 0 0 / 50%);
 }
 * {
   box-sizing: border-box;
@@ -160,7 +204,7 @@ small {
   max-width: var(--sidebar-w);
   background: var(--sidebar);
   color: var(--sidebar-text);
-  border-right: 1px solid #0b1a14;
+  border-right: 1px solid var(--sidebar-edge);
   position: fixed;
   inset: 0 auto 0 0;
   display: flex;
@@ -351,7 +395,7 @@ footer .content-rail {
 .button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .button.primary:hover:not(:disabled) {
   background: var(--accent-dark);
@@ -378,7 +422,7 @@ footer .content-rail {
 }
 .button.danger-button {
   background: var(--danger);
-  color: white;
+  color: var(--on-accent);
 }
 .icon-button {
   width: var(--control-h-sm);
@@ -638,6 +682,16 @@ td:first-child {
 .status-dot.red {
   background: var(--danger);
 }
+.status-dot.amber {
+  background: var(--amber);
+}
+.service-status.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
 .service-status.issue {
   color: var(--danger);
   background: var(--danger-soft);
@@ -686,11 +740,59 @@ td:first-child {
   line-height: 1.6;
   color: var(--muted);
 }
+.empty-state.compact {
+  min-height: 0;
+  padding: 16px 20px;
+  gap: 16px;
+}
+.empty-state.compact h3 {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
 .empty-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
+}
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: calc(var(--control-h-sm) - 6px);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.segmented button:hover:not(:disabled) {
+  color: var(--ink);
+}
+.segmented button[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.segmented button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.segmented button:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 .console {
   font-family: "Cascadia Code", "Consolas", monospace;
@@ -1024,8 +1126,8 @@ td:first-child {
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #10241c;
-  color: #d3ddd7;
+  background: var(--console-bg);
+  color: var(--console-ink);
   font:
     12px/1.5 ui-monospace,
     "Cascadia Mono",

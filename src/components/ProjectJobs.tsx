@@ -13,6 +13,7 @@ import {
 import { call } from "../api";
 import type { Project, ProjectSchedule, QueueWorker, Run } from "../types";
 import NumberField from "./NumberField";
+import StatusBadge from "./StatusBadge";
 
 function emptyWorker(name = "default"): QueueWorker {
   return {
@@ -211,14 +212,9 @@ export function ScheduleSection({
           <span>Ortamla başlat</span>
         </label>
         <div className="project-job-actions">
-          <span
-            className={`service-status ${project.scheduleRunning ? "running" : ""}`}
-          >
-            <span
-              className={`status-dot ${project.scheduleRunning ? "green" : ""}`}
-            />
+          <StatusBadge tone={project.scheduleRunning ? "running" : "stopped"}>
             {project.scheduleRunning ? "Çalışıyor" : "Durdu"}
-          </span>
+          </StatusBadge>
           <button
             type="button"
             className="button secondary small"
@@ -313,7 +309,8 @@ export function QueueSection({
     <div className="project-jobs-panel">
       <p className="section-note">
         İşçiler Supervisor gibi <code>queue:work</code> çalıştırır. Azami iş
-        veya süre dolunca işçi çıkar; otomatik yeniden başlamaz.
+        veya süre dolunca işçi temiz kapanır ve ServerBond onu yeniden başlatır;
+        yeniden başlatmalar süren işi bitirmesini bekler.
       </p>
       {!workers.length ? (
         <button
@@ -335,12 +332,11 @@ export function QueueSection({
             <div className="project-worker-head">
               <strong>{worker.name.trim() || "İşçi"}</strong>
               <div className="project-job-actions">
-                <span className={`service-status ${running ? "running" : ""}`}>
-                  <span className={`status-dot ${running ? "green" : ""}`} />
+                <StatusBadge tone={running ? "running" : "stopped"}>
                   {running
                     ? `${state?.running ?? 0}/${worker.processes} çalışıyor`
                     : "Durdu"}
-                </span>
+                </StatusBadge>
                 <button
                   type="button"
                   className="button secondary small"

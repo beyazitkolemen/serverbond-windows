@@ -13,6 +13,7 @@ import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
 import ApiSettings from "./ApiSettings";
+import AppearanceSettings from "./AppearanceSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
@@ -212,7 +213,12 @@ export default function Settings({
           {note}
         </p>
       )}
-      {section === "Genel" && <DesktopSettings busy={busy} run={run} />}
+      {section === "Genel" && (
+        <>
+          <DesktopSettings busy={busy} run={run} />
+          <AppearanceSettings />
+        </>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();

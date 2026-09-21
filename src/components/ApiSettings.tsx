@@ -4,6 +4,7 @@ import { apiService } from "../services";
 import type { ApiSettings as ApiValues, ApiStatus, Run } from "../types";
 import NumberField from "./NumberField";
 import Toggle from "./Toggle";
+import StatusBadge, { type StatusTone } from "./StatusBadge";
 
 /**
  * Ayarlar → API: switch the local management API on, pick its port, create
@@ -42,13 +43,16 @@ export default function ApiSettings({
       await navigator.clipboard.writeText(text);
       return `${label} panoya kopyalandı.`;
     });
-  const state = !status
-    ? { dot: "", text: "Durum okunamadı" }
+  const state: { tone: StatusTone; text: string } = !status
+    ? { tone: "stopped", text: "Durum okunamadı" }
     : status.listening
-      ? { dot: "green", text: `Dinliyor · ${status.baseUrl}` }
+      ? { tone: "running", text: `Dinliyor · ${status.baseUrl}` }
       : status.enabled
-        ? { dot: "red", text: "Açık ama dinlemiyor · günlükleri kontrol edin" }
-        : { dot: "", text: "Kapalı" };
+        ? {
+            tone: "issue",
+            text: "Açık ama dinlemiyor · günlükleri kontrol edin",
+          }
+        : { tone: "stopped", text: "Kapalı" };
   return (
     <section className="settings-section api-settings">
       <h2>Yönetim API'si</h2>
@@ -59,8 +63,7 @@ export default function ApiSettings({
         her istek <code>Authorization: Bearer</code> jetonu ister.
       </p>
       <div className="api-status">
-        <span className={`status-dot ${state.dot}`} />
-        <span>{state.text}</span>
+        <StatusBadge tone={state.tone}>{state.text}</StatusBadge>
       </div>
       <div className="settings-grid">
         <Toggle

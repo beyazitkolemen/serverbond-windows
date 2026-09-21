@@ -41,6 +41,7 @@ import PostgresSettings from "./PostgresSettings";
 import RedisActions from "./RedisActions";
 import GithubSettings from "./GithubSettings";
 import TunnelSettings from "./TunnelSettings";
+import StatusBadge from "./StatusBadge";
 
 const catalog = [
   {
@@ -460,14 +461,9 @@ export default function Services({
                 >
                   <span className="service-tile-head">
                     <strong>{item.title}</strong>
-                    <span
-                      className={`service-status ${state.on ? "running" : ""}`}
-                    >
-                      <span
-                        className={`status-dot ${state.on ? "green" : ""}`}
-                      />
+                    <StatusBadge tone={state.on ? "running" : "stopped"}>
                       {state.label}
-                    </span>
+                    </StatusBadge>
                   </span>
                   <span className="service-tile-copy">{item.copy}</span>
                 </button>

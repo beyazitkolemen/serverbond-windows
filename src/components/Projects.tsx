@@ -36,6 +36,8 @@ function githubSlug(raw: string): string {
     .slice(0, 48);
 }
 import ProjectDetail, { CompactProjectRow } from "./ProjectDetail";
+import StatusBadge from "./StatusBadge";
+import EmptyState from "./EmptyState";
 
 export default function Projects({
   projects,
@@ -175,14 +177,9 @@ export default function Projects({
                     <ExternalLink size={16} />
                     Aç
                   </button>
-                  <span
-                    className={`service-status ${project.running ? "running" : ""}`}
-                  >
-                    <span
-                      className={`status-dot ${project.running ? "green" : ""}`}
-                    />
+                  <StatusBadge tone={project.running ? "running" : "stopped"}>
                     {project.running ? "Çalışıyor" : "Kapalı"}
-                  </span>
+                  </StatusBadge>
                 </div>
               </div>
             </article>
@@ -219,16 +216,11 @@ export default function Projects({
           ) : null}
         </div>
       ) : (
-        <div className="empty-state">
-          <Folder size={44} strokeWidth={1.5} />
-          <div>
-            <h3>Çalışma alanında proje yok</h3>
-            <p>
-              Mevcut bir Laravel klasörü ekleyin, GitHub’dan klonlayın veya yeni
-              proje oluşturun. PHP sürümü, kuyruk ve zamanlayıcı proje
-              sayfasından yönetilir.
-            </p>
-            <div className="empty-actions">
+        <EmptyState
+          icon={<Folder size={44} strokeWidth={1.5} />}
+          title="Çalışma alanında proje yok"
+          actions={
+            <>
               <button
                 className="button secondary small"
                 disabled={busy}
@@ -255,9 +247,13 @@ export default function Projects({
                 <Plus size={16} />
                 Proje ekle
               </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          Mevcut bir Laravel klasörü ekleyin, GitHub’dan klonlayın veya yeni
+          proje oluşturun. PHP sürümü, kuyruk ve zamanlayıcı proje sayfasından
+          yönetilir.
+        </EmptyState>
       )}
       {modal ? (
         <ProjectDialog

@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { defaultRelease } from "../types";
 import { useDraft } from "../hooks/useDraft";
+import StatusBadge from "./StatusBadge";
 
 function normalize(release?: ProjectRelease): ProjectRelease {
   return {
@@ -83,18 +84,15 @@ export default function ReleasePane({
         <code>.env</code> dosyasına yazılmaz.
       </p>
       <div className="release-toolbar">
-        <span
-          className={`service-status ${last ? (last.success ? "running" : "issue") : ""}`}
+        <StatusBadge
+          tone={last ? (last.success ? "running" : "issue") : "stopped"}
         >
-          <span
-            className={`status-dot ${last ? (last.success ? "green" : "red") : ""}`}
-          />
           {last
             ? last.success
               ? `Son sürüm başarılı · ${last.startedAt}`
               : `Son sürüm başarısız · ${last.startedAt}`
             : "Henüz sürüm çalıştırılmadı"}
-        </span>
+        </StatusBadge>
         <div className="release-actions">
           <button
             type="button"

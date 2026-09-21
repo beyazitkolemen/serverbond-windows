@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { call } from "../api";
 import type { PackageStatus, Run } from "../types";
+import StatusBadge from "./StatusBadge";
 
 export default function Packages({
   packages,
@@ -162,12 +163,7 @@ export default function Packages({
                 </td>
                 <td className="version">{p.version}</td>
                 <td>
-                  <span
-                    className={`service-status ${p.running ? "running" : ""}`}
-                  >
-                    <span
-                      className={`status-dot ${p.running ? "green" : ""}`}
-                    />
+                  <StatusBadge tone={p.running ? "running" : "stopped"}>
                     {p.running
                       ? "Çalışıyor"
                       : p.installed
@@ -175,7 +171,7 @@ export default function Packages({
                         : p.repairable
                           ? "Kurulum eksik"
                           : "Kurulu değil"}
-                  </span>
+                  </StatusBadge>
                 </td>
                 <td className="table-action">
                   <div className="package-buttons">
