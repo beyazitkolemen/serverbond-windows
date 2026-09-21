@@ -140,6 +140,7 @@ fn live_reverb_device_roundtrip() {
                         || std::env::var("SMOKE_JOBS").as_deref() == Ok("1")
                         || std::env::var("SMOKE_DATABASE").as_deref() == Ok("1")
                         || std::env::var("SMOKE_POSTGRES").as_deref() == Ok("1")
+                        || std::env::var("SMOKE_GITHUB_IMPORT").as_deref() == Ok("1")
                     {
                         600
                     } else {
@@ -152,6 +153,41 @@ fn live_reverb_device_roundtrip() {
         std::thread::sleep(Duration::from_millis(200));
     }
     manager.cloud_disconnect().unwrap();
+    if std::env::var("SMOKE_GITHUB_IMPORT").as_deref() == Ok("1") {
+        let snapshot = manager.snapshot().unwrap();
+        let project = &snapshot
+            .projects
+            .iter()
+            .find(|p| p.project.name == "github-live-preview")
+            .expect("Cloud GitHub project must be registered")
+            .project;
+        assert!(
+            project.path.starts_with(home.path()),
+            "Clone must stay in isolated test home"
+        );
+        assert!(project.path.join("public/index.php").is_file());
+        assert!(project.path.join("artisan").is_file());
+        let output = std::process::Command::new("git")
+            .args(["branch", "--show-current"])
+            .current_dir(&project.path)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap().trim(),
+            project.release.branch
+        );
+        let output = std::process::Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(&project.path)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap().trim(),
+            "https://github.com/laravel/laravel.git"
+        );
+    }
     if std::env::var("SMOKE_POSTGRES").as_deref() == Ok("1") {
         manager.stop_postgres().unwrap();
     }
