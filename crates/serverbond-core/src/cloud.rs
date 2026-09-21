@@ -15,6 +15,7 @@ use std::{
     time::Duration,
 };
 mod database;
+mod desktop;
 mod environment;
 mod github;
 mod jobs;
@@ -354,7 +355,7 @@ impl Manager {
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"services":services,"operations":operations::NAMES}),
+            &json!({"services":services,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self

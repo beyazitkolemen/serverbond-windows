@@ -119,7 +119,7 @@ impl Manager {
         *self.api.desktop.lock().unwrap_or_else(|e| e.into_inner()) = Some(desktop);
     }
 
-    fn desktop_api(&self) -> Option<Arc<dyn DesktopApi>> {
+    pub(crate) fn desktop_api(&self) -> Option<Arc<dyn DesktopApi>> {
         self.api
             .desktop
             .lock()

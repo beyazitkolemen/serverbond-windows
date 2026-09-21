@@ -843,10 +843,10 @@ fn main() {
             let manager = Arc::new(Manager::open_recovering(launch_home()?)?);
             let desktop = desktop::Desktop::new(&manager.home);
             app.manage(manager.clone());
-            manager.start_cloud();
             app.manage(desktop);
             app.manage(appearance::Appearance::new(&manager.home));
             manager.attach_desktop_api(Arc::new(api::Host::new(app.handle().clone())));
+            manager.start_cloud();
             if let Err(error) = manager.ensure_api() {
                 manager.log(format!("Yönetim API'si başlatılamadı: {error:#}"));
             }
