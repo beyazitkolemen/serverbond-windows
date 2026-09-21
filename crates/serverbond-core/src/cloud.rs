@@ -14,6 +14,7 @@ use std::{
     },
     time::Duration,
 };
+mod jobs;
 mod operations;
 const SERVICES: &[&str] = &[
     "all",

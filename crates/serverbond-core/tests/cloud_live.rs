@@ -25,6 +25,8 @@ fn live_reverb_device_roundtrip() {
             let source = home.path().join("source-repo");
             std::fs::create_dir_all(source.join("public")).unwrap();
             std::fs::write(source.join("public/index.php"), "<?php echo 'git';").unwrap();
+            // Minimal Artisan protocol fixture: real PHP processes, no queue backend.
+            std::fs::write(source.join("artisan"), "<?php if (in_array($argv[1] ?? '', ['queue:work', 'schedule:work'], true)) { while (true) { usleep(200000); } } echo 'fixture ok';").unwrap();
             for args in [
                 vec!["init", "--initial-branch=main"],
                 vec!["add", "."],
@@ -96,11 +98,15 @@ fn live_reverb_device_roundtrip() {
         }
         assert!(
             start.elapsed()
-                < Duration::from_secs(if std::env::var("SMOKE_PHP").as_deref() == Ok("1") {
-                    600
-                } else {
-                    150
-                }),
+                < Duration::from_secs(
+                    if std::env::var("SMOKE_PHP").as_deref() == Ok("1")
+                        || std::env::var("SMOKE_JOBS").as_deref() == Ok("1")
+                    {
+                        600
+                    } else {
+                        150
+                    }
+                ),
             "Cloud roundtrip timed out: {:?}",
             status.error
         );

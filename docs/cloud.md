@@ -56,4 +56,6 @@ Proje ayrıntısı ve dağıtım: `projects.show` Git durumu, tarif ve son beş 
 
 PHP yönetimi: `php.list/select/repair` varsayılan sürümü; `projects.php` ve `projects.php-repair` proje sürümünü yönetir. Parametrelerde sürüm ve proje işlemlerinde UUID bulunur. Aynı Manager kurulum, SHA-256 doğrulaması, yeniden başlatma/geri alma ve çalışan sunucuda onarım reddi uygulanır. Sonuç yalnızca sürüm durumlarını içerir; tam ayarlar veya paket adresleri gönderilmez. Cloud'u yeni yetenekleri kabul edecek sürüme önce güncelleyin.
 
+Kuyruk yönetimi: `jobs.show/save/worker/schedule` aynı yerel Manager ayar ve süreç yönetimini kullanır. Ayar kaydı `expectedRevision` ile kilit altında kontrol edilir; eski Cloud taslağı yerel değişiklikleri ezemez. Başlatma/durdurma/yeniden başlatma hedef projeye ait işçi UUID'siyle yapılır. Sonuçta yapılandırma ve süreç sayıları bulunur; ham hata metni veya log gönderilmez.
+
 PHPUnit müşteri izolasyonu, oturum/CSRF, eşleştirme tekrarları/süre, hız sınırları, komut sahipliği/süre/tek aktif işlem ve özel Reverb kanal yetkilerini kapsar. Windows testleri DPAPI, URL sınırları, yönlendirme reddi, kalıcı tekrar engeli ve yarım kalan komutları kapsar. İsteğe bağlı cloud_live testi gerçek Laravel/Reverb ile izole Windows Manager çalıştırır.

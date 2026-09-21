@@ -18,6 +18,13 @@ use std::{
 };
 
 pub const MAX_WORKERS: usize = 8;
+pub(crate) fn jobs_revision(workers: &[QueueWorker], schedule: &ProjectSchedule) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    Ok(format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(&(workers, schedule))?)
+    ))
+}
 /// A `queue:work` process that ran at least this long and exited with status 0
 /// finished on purpose (`--max-jobs`, `--max-time`, `queue:restart`) and is
 /// started again; shorter lives are reported as failures to avoid a restart loop.
@@ -320,6 +327,16 @@ impl Manager {
         workers: Vec<QueueWorker>,
         schedule: ProjectSchedule,
     ) -> Result<()> {
+        self.save_project_jobs_checked(id, workers, schedule, None)
+    }
+
+    pub(crate) fn save_project_jobs_checked(
+        &self,
+        id: &str,
+        workers: Vec<QueueWorker>,
+        schedule: ProjectSchedule,
+        expected: Option<&str>,
+    ) -> Result<()> {
         let _guard = self.gate()?;
         let workers = assign_worker_ids(workers)?;
         validate_project_jobs(&workers, &schedule)?;
@@ -334,6 +351,12 @@ impl Manager {
             .find(|p| p.id == id)
             .context("Proje bulunamadı.")?;
         let name = project.name.clone();
+        if let Some(expected) = expected {
+            anyhow::ensure!(
+                jobs_revision(&project.workers, &project.schedule)? == expected,
+                "Kuyruk ayarları değişti. Güncel bilgileri alın."
+            );
+        }
         let previous = project.workers.clone();
         let previous_schedule = project.schedule.clone();
         project.workers = workers.clone();

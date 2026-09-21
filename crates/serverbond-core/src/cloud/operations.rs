@@ -22,6 +22,10 @@ pub(super) const NAMES: &[&str] = &[
     "php.repair",
     "projects.php",
     "projects.php-repair",
+    "jobs.show",
+    "jobs.save",
+    "jobs.worker",
+    "jobs.schedule",
 ];
 
 #[derive(Deserialize)]
@@ -103,6 +107,14 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "jobs.show")]
+    JobsShow(Remove),
+    #[serde(rename = "jobs.save")]
+    JobsSave(super::jobs::Save),
+    #[serde(rename = "jobs.worker")]
+    JobsWorker(super::jobs::Control),
+    #[serde(rename = "jobs.schedule")]
+    JobsSchedule(super::jobs::Control),
     #[serde(rename = "php.list")]
     PhpList(Empty),
     #[serde(rename = "php.select")]
@@ -149,6 +161,10 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::JobsShow(input) => return super::jobs::show(manager, &input.id),
+            Self::JobsSave(input) => return super::jobs::save(manager, input),
+            Self::JobsWorker(input) => return super::jobs::control(manager, input, true),
+            Self::JobsSchedule(input) => return super::jobs::control(manager, input, false),
             Self::PhpList(_) => return php_inventory(manager),
             Self::PhpSelect(input) => {
                 manager.select_php(&input.version)?;
