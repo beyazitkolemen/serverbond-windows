@@ -95,13 +95,36 @@ fn live_reverb_device_roundtrip() {
             break;
         }
         assert!(
-            start.elapsed() < Duration::from_secs(150),
+            start.elapsed()
+                < Duration::from_secs(if std::env::var("SMOKE_PHP").as_deref() == Ok("1") {
+                    600
+                } else {
+                    150
+                }),
             "Cloud roundtrip timed out: {:?}",
             status.error
         );
         std::thread::sleep(Duration::from_millis(200));
     }
     manager.cloud_disconnect().unwrap();
+    if std::env::var("SMOKE_PHP").as_deref() == Ok("1") {
+        assert_eq!(
+            manager
+                .snapshot()
+                .unwrap()
+                .packages
+                .iter()
+                .find(|p| p.package.id == "php")
+                .unwrap()
+                .package
+                .version,
+            "8.3.33"
+        );
+        assert!(home.path().join("bin/php/8.3.33/php.exe").exists());
+        if project_fixture.is_some() {
+            assert!(home.path().join("bin/php/8.4.25/php.exe").exists());
+        }
+    }
     if let Some(project) = project_fixture {
         assert_eq!(
             std::fs::read_to_string(project.join(".env")).unwrap(),

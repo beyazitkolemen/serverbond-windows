@@ -17,7 +17,27 @@ pub(super) const NAMES: &[&str] = &[
     "projects.show",
     "projects.release",
     "projects.deploy",
+    "php.list",
+    "php.select",
+    "php.repair",
+    "projects.php",
+    "projects.php-repair",
 ];
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Empty {}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Php {
+    version: String,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ProjectPhp {
+    id: String,
+    version: String,
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -83,6 +103,16 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "php.list")]
+    PhpList(Empty),
+    #[serde(rename = "php.select")]
+    PhpSelect(Php),
+    #[serde(rename = "php.repair")]
+    PhpRepair(Php),
+    #[serde(rename = "projects.php")]
+    ProjectPhp(ProjectPhp),
+    #[serde(rename = "projects.php-repair")]
+    ProjectPhpRepair(ProjectPhp),
     #[serde(rename = "projects.list")]
     List(Page),
     #[serde(rename = "projects.add")]
@@ -119,6 +149,25 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::PhpList(_) => return php_inventory(manager),
+            Self::PhpSelect(input) => {
+                manager.select_php(&input.version)?;
+                return php_inventory(manager);
+            }
+            Self::PhpRepair(input) => {
+                manager.repair_php(&input.version)?;
+                return php_inventory(manager);
+            }
+            Self::ProjectPhp(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                manager.select_project_php(&input.id, &input.version)?;
+                return project_details(manager, &input.id);
+            }
+            Self::ProjectPhpRepair(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                manager.repair_project_php(&input.id, &input.version)?;
+                return project_details(manager, &input.id);
+            }
             Self::Show(input) => return project_details(manager, &input.id),
             Self::Release(input) => {
                 uuid::Uuid::parse_str(&input.id)?;
@@ -192,8 +241,21 @@ fn project_details(manager: &Manager, id: &str) -> Result<Value> {
         .collect();
     Ok(
         json!({"project":{"id":project.id,"name":project.name,"path":project.path,"host":project.host,"phpVersion":project.php_version},
-        "git":git,"release":project.release,"revision":revision,"releases":releases}),
+        "git":git,"release":project.release,"revision":revision,"releases":releases,
+        "phpVersions":crate::model::php_versions().into_iter().map(|p| p.version).collect::<Vec<_>>()}),
     )
+}
+
+fn php_inventory(manager: &Manager) -> Result<Value> {
+    let snapshot = manager.snapshot()?;
+    let selected = snapshot
+        .packages
+        .iter()
+        .find(|p| p.package.id == "php")
+        .map(|p| p.package.version.clone())
+        .unwrap_or_default();
+    let versions: Vec<Value> = snapshot.php_versions.into_iter().map(|p| json!({"version":p.package.version,"installed":p.installed,"running":p.running,"repairable":p.repairable})).collect();
+    Ok(json!({"selected":selected,"anyRunning":snapshot.any_running,"versions":versions}))
 }
 
 fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
@@ -217,6 +279,26 @@ fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn php_catalog_is_safe_and_unknown_versions_do_not_change_selection() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let before = php_inventory(&manager).unwrap();
+        assert_eq!(
+            before["versions"].as_array().unwrap().len(),
+            crate::model::php_versions().len()
+        );
+        assert!(!before.to_string().contains("sha256"));
+        assert!(!before.to_string().contains("settings"));
+        assert!(Operation::parse("php.list", &json!({"shell":"bad"})).is_err());
+        for name in ["php.select", "php.repair"] {
+            assert!(Operation::parse(name, &json!({"version":"99.0.0"}))
+                .unwrap()
+                .execute(&manager)
+                .is_err());
+        }
+        assert_eq!(before, php_inventory(&manager).unwrap());
+    }
     #[test]
     fn operations_reject_unknown_fields_and_invalid_targets() {
         assert!(Operation::parse("shell", &json!({})).is_err());
