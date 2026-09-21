@@ -159,7 +159,7 @@ export default function UpdateSettings({
       <p className="section-note">
         Kaynak:{" "}
         <a
-          href="https://github.com/beyazitkolemen/f4box-laravel/releases/latest"
+          href="https://github.com/beyazitkolemen/serverbond-windows/releases/latest"
           target="_blank"
           rel="noreferrer"
         >

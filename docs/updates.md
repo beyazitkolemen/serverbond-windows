@@ -8,7 +8,9 @@ ServerBond, yayımlanmış GitHub sürümlerindeki imzalı NSIS paketini `latest
 2. **Ayarlar → Güncellemeler** veya tepsi menüsündeki **Güncellemeleri denetle** ile GitHub’ı sorun.
 3. Sürüm notlarını okuyup **kur ve yeniden başlat** deyin. Çalışan PHP/MySQL/Caddy durur; kurulum bitince ServerBond yeniden açılır.
 
-Kaynak: `https://github.com/beyazitkolemen/f4box-laravel/releases/latest/download/latest.json`
+Kaynak: `https://github.com/beyazitkolemen/serverbond-windows/releases/latest/download/latest.json`
+
+**v1.1.0:** GitHub Actions hesap ödeme/limit engeli ve tanımlanmamış imza anahtarı nedeniyle paketler Windows'ta yerel olarak derlenip yayımlandı. Bu sürüm `latest.json` ve `.sig` içermez; GitHub Releases sayfasındaki kurulum EXE'si elle çalıştırılır. Aşağıdaki imzalı yayın akışı, Actions ve imza anahtarı hazır olduğunda kullanılabilir.
 
 Depo herkese açık olmalıdır. Özel depoda `latest.json` oturumsuz indirilemez; uygulama “güncelleme yok” veya ağ hatası gösterir.
 

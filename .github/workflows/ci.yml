@@ -43,7 +43,7 @@ jobs:
           }
           Copy-Item $setup.FullName "artifacts/ServerBond_${version}_x64-setup.exe"
           Get-ChildItem artifacts/*.exe | ForEach-Object {
-            "$(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()  $($_.Name)"
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
           } | Set-Content -Encoding ascii artifacts/SHA256SUMS.txt
           Get-Content artifacts/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4

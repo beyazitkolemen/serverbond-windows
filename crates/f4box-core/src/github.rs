@@ -231,9 +231,9 @@ impl Manager {
         validate_git_branch(&branch)?;
         let name = if name.trim().is_empty() {
             let folder = url
-                .trim_end_matches('/')
+                .trim_end_matches(['/', '\\'])
                 .trim_end_matches(".git")
-                .rsplit('/')
+                .rsplit(['/', '\\'])
                 .next()
                 .unwrap_or_default();
             slug_from_folder(folder)?

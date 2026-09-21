@@ -4,15 +4,15 @@ Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rus
 
 PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, GitHub’dan proje ekleme, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
-## İndir — v1.1
+## İndir — v1.1.0
 
-Uygulama sürümü **1.1.0**. Windows x64 paketleri CI tarafından `ServerBond_1.1.0_x64-setup.exe`, `ServerBond_1.1.0_x64.exe` ve `SHA256SUMS.txt` olarak üretilir.
+Uygulama sürümü **1.1.0**. Windows x64 yayını `ServerBond_1.1.0_x64-setup.exe`, `ServerBond_1.1.0_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.
 
-- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/ServerBond_1.1.0_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
-- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/f4box-laravel/releases/download/v1.1/ServerBond_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
-- [v1.1 sürüm notları](docs/releases/v1.1.md)
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.0/ServerBond_1.1.0_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.0/ServerBond_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
+- [v1.1.0 sürüm notları](docs/releases/v1.1.md)
 
-v1.1 ikili paketi henüz yayımlanmadıysa son yayımlanan [v1.0](https://github.com/beyazitkolemen/f4box-laravel/releases/tag/v1.0) kullanılabilir.
+Bu sürüm elle kurulur; otomatik güncelleme için imzalı paket içermez. Eski F4Box veri klasörü varsa kullanılmaya devam edilir.
 
 Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir.
 
@@ -24,21 +24,21 @@ Kurulu masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsü
 
 Görüntüler uygulamanın kendi arayüzünden alınmıştır; tasarım maketi değildir. Proje adları, portlar ve süreç kimlikleri örnek veridir.
 
-| Bileşen yönetimi | Kuyruk ve zamanlama |
-| --- | --- |
-| ![Bileşenler](docs/screenshots/02-bilesenler.png) | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
-| Yerel e-posta yakalama | Node.js ve Windows izinleri |
-| ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png) |
-| Yerel HTTPS | Proje günlükleri |
-| ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png) | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png) |
-| Yerel sürüm | İsteğe bağlı PostgreSQL |
-| ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png) | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png) |
-| GitHub hesabı | GitHub’dan proje |
-| ![GitHub hesabı](docs/screenshots/12-github.png) | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png) |
-| Proje .env | İsteğe bağlı Redis |
-| ![Proje .env editörü](docs/screenshots/14-proje-env.png) | ![İsteğe bağlı Redis](docs/screenshots/15-redis.png) |
-| Hizmetler | Cloudflare tüneli |
-| ![Hizmetler listesi](docs/screenshots/16-hizmetler.png) | ![Cloudflare tüneli ayarları](docs/screenshots/05-tunel.png) |
+| Bileşen yönetimi                                                       | Kuyruk ve zamanlama                                                                  |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| ![Bileşenler](docs/screenshots/02-bilesenler.png)                      | ![Projeler, kuyruk işçileri ve zamanlayıcı](docs/screenshots/03-projeler-kuyruk.png) |
+| Yerel e-posta yakalama                                                 | Node.js ve Windows izinleri                                                          |
+| ![E-posta ayarları ve Mailpit servisi](docs/screenshots/04-eposta.png) | ![Node.js kurulumu ve Windows izinleri](docs/screenshots/06-sistem.png)              |
+| Yerel HTTPS                                                            | Proje günlükleri                                                                     |
+| ![Web sunucusu ve Auto SSL](docs/screenshots/08-web-https.png)         | ![Proje günlük görüntüleyicisi](docs/screenshots/09-proje-gunlukleri.png)            |
+| Yerel sürüm                                                            | İsteğe bağlı PostgreSQL                                                              |
+| ![Proje sürüm tarifi](docs/screenshots/10-proje-surum.png)             | ![İsteğe bağlı PostgreSQL](docs/screenshots/11-postgresql.png)                       |
+| GitHub hesabı                                                          | GitHub’dan proje                                                                     |
+| ![GitHub hesabı](docs/screenshots/12-github.png)                       | ![GitHub’dan proje ekle](docs/screenshots/13-proje-github.png)                       |
+| Proje .env                                                             | İsteğe bağlı Redis                                                                   |
+| ![Proje .env editörü](docs/screenshots/14-proje-env.png)               | ![İsteğe bağlı Redis](docs/screenshots/15-redis.png)                                 |
+| Hizmetler                                                              | Cloudflare tüneli                                                                    |
+| ![Hizmetler listesi](docs/screenshots/16-hizmetler.png)                | ![Cloudflare tüneli ayarları](docs/screenshots/05-tunel.png)                         |
 
 [PHP ayarları ve tam boy görüntüler →](docs/screenshots/README.md)
 
@@ -52,17 +52,17 @@ Projeler `http://proje-adi.localhost:8088` biçimindeki adreslerden açılır. `
 
 **Klasör tara** proje çalışma alanındaki (`projects`, eski `www` veya Ayarlar’daki yol) Laravel köklerini listeler. Hem `magaza` hem `musteri/magaza` bulunur; `vendor`, `node_modules` ve benzeri klasörler atlanır. Aynı klasör adı çakışırsa iç klasör `musteri-magaza` olur. MySQL çalışırken proje eklemek veya Laravel oluşturmak, proje adıyla (tire → alt çizgi) veritabanını `IF NOT EXISTS` ile açar; `.env` yazılmaz. Proje kartından SQL yedeği alınır ve `.sql` geri yüklenir.
 
-| Bileşen | Sabit sürüm | İşlev |
-| --- | --- | --- |
-| PHP x64 NTS | 7.4.33 / 8.0.30 / 8.1.34 / 8.2.33 / 8.3.33 / 8.4.25 / 8.5.10 | Seçilebilir PHP CLI ve FastCGI |
-| MySQL Community | 8.4.10 LTS | Yerel veritabanı |
-| Caddy | 2.11.4 | Proje yönlendirme ve dosya sunma |
-| Composer | 2.10.3 | Laravel proje kurulumu |
-| phpMyAdmin | 5.2.3, tüm diller | Tarayıcıdan MySQL yönetimi |
-| Cloudflared | 2026.9.1 | İsteğe bağlı Cloudflare tüneli |
-| Mailpit | 1.31.2 | İsteğe bağlı yerel e-posta yakalama |
-| PostgreSQL | 17.11 | İsteğe bağlı pgsql sunucusu |
-| Node.js | 24.21.0 LTS | İsteğe bağlı npm / npx |
+| Bileşen         | Sabit sürüm                                                  | İşlev                               |
+| --------------- | ------------------------------------------------------------ | ----------------------------------- |
+| PHP x64 NTS     | 7.4.33 / 8.0.30 / 8.1.34 / 8.2.33 / 8.3.33 / 8.4.25 / 8.5.10 | Seçilebilir PHP CLI ve FastCGI      |
+| MySQL Community | 8.4.10 LTS                                                   | Yerel veritabanı                    |
+| Caddy           | 2.11.4                                                       | Proje yönlendirme ve dosya sunma    |
+| Composer        | 2.10.3                                                       | Laravel proje kurulumu              |
+| phpMyAdmin      | 5.2.3, tüm diller                                            | Tarayıcıdan MySQL yönetimi          |
+| Cloudflared     | 2026.9.1                                                     | İsteğe bağlı Cloudflare tüneli      |
+| Mailpit         | 1.31.2                                                       | İsteğe bağlı yerel e-posta yakalama |
+| PostgreSQL      | 17.11                                                        | İsteğe bağlı pgsql sunucusu         |
+| Node.js         | 24.21.0 LTS                                                  | İsteğe bağlı npm / npx              |
 
 Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklarından indirilir. Windows x64 Visual C++ 2015–2022 Redistributable ve WebView2 Runtime gerekir. Bu bilgisayarda ikisi de mevcuttur. Başka bir bilgisayarda PHP/MySQL başlatılamıyorsa önce [Microsoft Visual C++ Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) kurulmalıdır. Tauri kurulum paketi WebView2 gereksinimini yönetir.
 

@@ -9,13 +9,14 @@ use f4box_core::{
 use std::{fs, io::Write};
 
 fn available_settings(mut settings: Settings) -> Settings {
-    let listeners: Vec<_> = (0..4)
+    let listeners: Vec<_> = (0..5)
         .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
         .collect();
     settings.web_port = listeners[0].local_addr().unwrap().port();
     settings.mysql_port = listeners[1].local_addr().unwrap().port();
     settings.php_port = listeners[2].local_addr().unwrap().port();
     settings.web.https_port = listeners[3].local_addr().unwrap().port();
+    settings.redis.port = listeners[4].local_addr().unwrap().port();
     settings
 }
 
@@ -851,14 +852,15 @@ fn redis_is_optional_and_rejects_port_collisions() {
     assert!(!state.auto_start);
 
     let mut settings = available_settings(Settings::default());
+    let redis_port = settings.redis.port;
     settings.redis.port = settings.web_port;
     assert!(manager.save_settings(settings.clone()).is_err());
 
-    settings.redis.port = 16380;
+    settings.redis.port = redis_port;
     settings.redis.auto_start = true;
     manager.save_settings(settings).unwrap();
     let saved = manager.snapshot().unwrap().redis;
-    assert_eq!(saved.port, 16380);
+    assert_eq!(saved.port, redis_port);
     assert!(saved.auto_start);
 
     assert!(manager
@@ -980,11 +982,12 @@ fn granting_windows_permissions_is_windows_only_and_starts_ungranted() {
     let state = manager.snapshot().unwrap().permissions;
     assert!(!state.granted && !state.helper && !state.declined);
     assert!(state.applied.is_empty() && state.pending.is_empty());
-    let error = manager.grant_permissions(false).unwrap_err().to_string();
-    assert!(
-        error.contains("yalnızca Windows") || error.contains("Yetki"),
-        "{error}"
-    );
+    // On Windows this would request elevation and change system permissions.
+    #[cfg(not(windows))]
+    {
+        let error = manager.grant_permissions(false).unwrap_err().to_string();
+        assert!(error.contains("yalnızca Windows"), "{error}");
+    }
     assert!(!home.path().join("config/permissions.json").exists());
 }
 
