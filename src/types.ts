@@ -249,6 +249,21 @@ export interface PermissionState {
   helper: boolean;
   declined: boolean;
 }
+export interface InstallProgress {
+  packageId: string;
+  name: string;
+  version: string;
+  phase:
+    | "preparing"
+    | "downloading"
+    | "verifying"
+    | "extracting"
+    | "installing"
+    | "permissions";
+  completed: number;
+  total: number | null;
+}
+
 export interface Snapshot {
   packages: PackageStatus[];
   phpVersions: PackageStatus[];
@@ -264,6 +279,7 @@ export interface Snapshot {
   home: string;
   settings: Settings;
   busy: boolean;
+  installProgress: InstallProgress | null;
   anyRunning: boolean;
   recoveryIssue: string | null;
   restartRequired: boolean;

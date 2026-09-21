@@ -509,6 +509,79 @@ footer .content-rail {
 .update-progress-block {
   margin: 14px 0 4px;
 }
+.installation-progress {
+  padding: 18px 20px;
+  margin: 0 0 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.installation-progress-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.installation-progress-heading svg {
+  color: var(--accent);
+}
+.installation-progress-heading strong {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.installation-progress-heading strong span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.installation-progress-heading > span {
+  color: var(--ink-soft);
+}
+.installation-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--border);
+}
+.installation-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 150ms linear;
+}
+.installation-progress-track.indeterminate > span {
+  width: 35%;
+  animation: installation-pulse 1.4s ease-in-out infinite alternate;
+}
+.installation-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes installation-pulse {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(185%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .installation-progress-track > span {
+    transition: none;
+  }
+  .installation-progress-track.indeterminate > span {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
 .update-progress {
   height: 8px;
   background: var(--border);

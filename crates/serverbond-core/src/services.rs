@@ -92,7 +92,7 @@ impl Manager {
         if self.snapshot()?.any_running {
             bail!("PHP onarımı için önce çalışan sunucuyu durdurun.");
         }
-        crate::install::repair(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, true)?;
         self.select_php_inner(version)
     }
 
@@ -100,7 +100,7 @@ impl Manager {
         self.check_install_requirements()?;
         let package = crate::model::php_package(version)?;
         // Download and verify before interrupting the running environment.
-        crate::install::install(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, false)?;
         let ini = self.write_php_config_for(version)?;
         let executable = self.home.join("bin/php").join(version).join("php.exe");
         let profile = self

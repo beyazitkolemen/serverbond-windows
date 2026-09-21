@@ -377,6 +377,7 @@
   ],
   "home": "C:\\Users\\dev\\AppData\\Local\\ServerBond",
   "busy": false,
+  "installProgress": null,
   "anyRunning": true,
   "recoveryIssue": null,
   "restartRequired": false

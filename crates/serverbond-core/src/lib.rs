@@ -56,6 +56,7 @@ pub struct Manager {
     config: Mutex<Config>,
     processes: Mutex<HashMap<String, ManagedChild>>,
     logs: Mutex<VecDeque<String>>,
+    install_progress: Mutex<Option<install::InstallProgress>>,
     service_errors: Mutex<HashMap<String, String>>,
     project_ports: Mutex<HashMap<String, u16>>,
     operation: Mutex<()>,
@@ -152,6 +153,7 @@ impl Manager {
             config: Mutex::new(config),
             processes: Mutex::new(HashMap::new()),
             logs: Mutex::new(VecDeque::new()),
+            install_progress: Mutex::new(None),
             service_errors: Mutex::new(HashMap::new()),
             project_ports: Mutex::new(HashMap::new()),
             operation: Mutex::new(()),
@@ -265,14 +267,14 @@ impl Manager {
     pub(crate) fn install_tool(&self, id: &str) -> Result<()> {
         let package = tool_package(id)?;
         self.check_install_requirements()?;
-        install::install(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, false)?;
         self.refresh_permissions_quietly();
         Ok(())
     }
 
     pub(crate) fn repair_tool(&self, id: &str) -> Result<()> {
         let package = tool_package(id)?;
-        install::repair(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, true)?;
         self.service_errors
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -476,6 +478,11 @@ impl Manager {
                 .collect(),
             home: self.home.clone(),
             busy: self.is_busy(),
+            install_progress: self
+                .install_progress
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone(),
             recovery_issue: self.recovery_issue(),
             restart_required: self.restart_required(),
             any_running: !processes.is_empty(),
@@ -512,7 +519,7 @@ impl Manager {
             }
         }
         for package in packages {
-            install::install(&self.home, &package, |line| self.log(line))?;
+            self.install_package(&package, false)?;
         }
         if self.executable("php").is_ok() {
             self.write_php_config()?;
@@ -541,7 +548,7 @@ impl Manager {
         if self.snapshot()?.any_running {
             bail!("Onarmadan önce çalışan sunucuyu durdurun. MySQL verileri korunur.");
         }
-        install::repair(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, true)?;
         if id == "php" {
             self.write_php_config()?;
         }

@@ -29,6 +29,7 @@ import Settings from "./components/Settings";
 import ApiPage from "./components/ApiPage";
 import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
+import InstallationProgress from "./components/InstallationProgress";
 import QuickNavigation from "./components/QuickNavigation";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 import { useTheme } from "./hooks/useTheme";
@@ -59,6 +60,7 @@ export default function App() {
   }, [themeError]);
   const inFlight = useRef(false);
   const requestNumber = useRef(0);
+  const pollingActive = Boolean(busy || state?.busy);
   const refresh = useCallback(async () => {
     const request = ++requestNumber.current;
     try {
@@ -88,12 +90,15 @@ export default function App() {
       }
     };
     void poll();
-    const timer = window.setInterval(() => void poll(), 1500);
+    const timer = window.setInterval(
+      () => void poll(),
+      pollingActive ? 500 : 1500,
+    );
     return () => {
       ++requestNumber.current;
       clearInterval(timer);
     };
-  }, [refresh]);
+  }, [refresh, pollingActive]);
   useEffect(() => {
     if (!desktop) return;
     let active = true;
@@ -312,10 +317,17 @@ export default function App() {
           {running ? "Sunucu durdur" : "Sunucu başlat"}
         </button>
       </header>
+      {state?.installProgress && (
+        <InstallationProgress progress={state.installProgress} />
+      )}
       <Notice
         error={error || connectionError}
-        busy={busy || (state?.busy ? "Arka planda işlem sürüyor…" : "")}
-        message={message}
+        busy={
+          state?.installProgress
+            ? ""
+            : busy || (state?.busy ? "Arka planda işlem sürüyor…" : "")
+        }
+        message={state?.installProgress ? "" : message}
         dismiss={() => {
           setError("");
           setMessage("");

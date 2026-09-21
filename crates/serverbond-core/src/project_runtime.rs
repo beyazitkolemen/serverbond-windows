@@ -167,7 +167,7 @@ impl Manager {
         }
         self.check_install_requirements()?;
         let package = crate::model::php_package(version)?;
-        crate::install::repair(&self.home, &package, |line| self.log(line))?;
+        self.install_package(&package, true)?;
         self.select_project_php_inner(id, version)
     }
 

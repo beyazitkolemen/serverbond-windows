@@ -125,6 +125,13 @@ fn native(path: &Path) -> String {
 }
 
 #[cfg(any(test, windows))]
+fn helper_arguments(path: &Path) -> String {
+    // ScheduledTask/Start-Process accept a command line, not a Rust argv array.
+    // Quote the script path inside that command line (spaces and Unicode paths).
+    format!("-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File \"{}\"", native(path))
+}
+
+#[cfg(any(test, windows))]
 fn rule_name(program: &str) -> String {
     format!(
         "{}: {}",
@@ -143,7 +150,14 @@ pub(crate) fn script(
     helper_script: Option<&Path>,
 ) -> String {
     let mut text = String::from(
-        "# ServerBond tarafından üretilir. Yükseltilmiş yetkiyle çalışır.\n$ErrorActionPreference = 'Stop'\n$applied = New-Object System.Collections.ArrayList\n$failed = New-Object System.Collections.ArrayList\ntry {\n",
+        "# ServerBond tarafından üretilir. Yükseltilmiş yetkiyle çalışır.\n$ErrorActionPreference = 'Stop'\n\
+# Eski görev tanımı bu betiği görünür açmışsa konsolu hemen gizle. Görev aşağıda güncellenir.\n\
+try {\n\
+  Add-Type -Namespace ServerBond -Name PermissionConsole -MemberDefinition '[System.Runtime.InteropServices.DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetConsoleWindow(); [System.Runtime.InteropServices.DllImport(\"user32.dll\")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow); [System.Runtime.InteropServices.DllImport(\"user32.dll\")] public static extern bool IsWindowVisible(System.IntPtr hWnd);'\n\
+  $console = [ServerBond.PermissionConsole]::GetConsoleWindow()\n\
+  if ($console -ne [IntPtr]::Zero) { $null = [ServerBond.PermissionConsole]::ShowWindow($console, 0) }\n\
+} catch { }\n\
+$applied = New-Object System.Collections.ArrayList\n$failed = New-Object System.Collections.ArrayList\ntry {\n",
     );
     for program in programs {
         let path = native(program);
@@ -172,8 +186,9 @@ pub(crate) fn script(
     if let Some(helper) = helper_script {
         let shell = native(&crate::terminal::powershell_path());
         let script = native(helper);
+        let arguments = quote(&helper_arguments(helper));
         text.push_str(&format!(
-            "  try {{\n    $action = New-ScheduledTaskAction -Execute {shell} -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' + {script})\n    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest\n    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew\n    Register-ScheduledTask -TaskName {task} -Action $action -Principal $principal -Settings $settings -Description 'ServerBond güvenlik duvarı ve klasör izinlerini yeniler.' -Force | Out-Null\n    $null = icacls {script} /inheritance:r /grant:r 'SYSTEM:(F)' /grant:r ($env:USERNAME + ':(F)') 2>&1\n    $null = $applied.Add('Zamanlanmış görev: ' + {task})\n  }} catch {{\n    $null = $failed.Add('Zamanlanmış görev: ' + $_.Exception.Message)\n  }}\n",
+            "  try {{\n    $action = New-ScheduledTaskAction -Execute {shell} -Argument ({arguments})\n    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest\n    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew\n    Register-ScheduledTask -TaskName {task} -Action $action -Principal $principal -Settings $settings -Description 'ServerBond güvenlik duvarı ve klasör izinlerini yeniler.' -Force | Out-Null\n    $null = icacls {script} /inheritance:r /grant:r 'SYSTEM:(F)' /grant:r ($env:USERNAME + ':(F)') 2>&1\n    $null = $applied.Add('Zamanlanmış görev: ' + {task})\n  }} catch {{\n    $null = $failed.Add('Zamanlanmış görev: ' + $_.Exception.Message)\n  }}\n",
             shell = quote(&shell),
             script = quote(&script),
             task = quote(TASK),
@@ -419,9 +434,9 @@ impl Manager {
             "-Command",
         ])
         .arg(format!(
-            "$process = Start-Process -FilePath {shell} -ArgumentList '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',{script} -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $process.ExitCode",
+            "$process = Start-Process -FilePath {shell} -ArgumentList ({arguments}) -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $process.ExitCode",
             shell = quote(&native(&crate::terminal::powershell_path())),
-            script = quote(&native(script_path)),
+            arguments = quote(&helper_arguments(script_path)),
         ));
         let output = ManagedChild::output(cmd, Duration::from_secs(300))?;
         if output.status.success() {
@@ -457,6 +472,7 @@ impl Manager {
             if action == PermissionAction::Skip {
                 return Ok(self.permission_state());
             }
+            let _progress = self.permission_progress();
             let (script_path, result) = self.write_permission_script(defender)?;
             let accepted = match action {
                 PermissionAction::Silent => {
@@ -543,6 +559,40 @@ impl Manager {
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
+    #[test]
+    fn hidden_helper_runs_in_a_unicode_spaced_path_without_a_visible_console() {
+        let home = tempfile::Builder::new()
+            .prefix("ServerBond Türkçe O'Brien ")
+            .tempdir()
+            .unwrap();
+        let helper = home.path().join("helper script.ps1");
+        let result = home.path().join("result.json");
+        let visibility = home.path().join("visible.txt");
+        // No firewall, ACL, Defender or scheduled-task changes in this test.
+        let body = script(home.path(), &[], None, false, &result, None)
+            + &format!("\n[ServerBond.PermissionConsole]::IsWindowVisible([ServerBond.PermissionConsole]::GetConsoleWindow()) | Set-Content -LiteralPath ({})\n", quote(&native(&visibility)));
+        let mut bytes = vec![0xEF, 0xBB, 0xBF];
+        bytes.extend_from_slice(body.as_bytes());
+        std::fs::write(&helper, bytes).unwrap();
+        let mut cmd = command(crate::terminal::powershell_path());
+        cmd.args(["-NoProfile", "-NonInteractive", "-Command"]).arg(format!(
+            "$p = Start-Process -FilePath ({shell}) -ArgumentList ({arguments}) -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode",
+            shell = quote(&native(&crate::terminal::powershell_path())),
+            arguments = quote(&helper_arguments(&helper)),
+        ));
+        let output = ManagedChild::output(cmd, Duration::from_secs(30)).unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let parsed = parse_script_result(&std::fs::read(result).unwrap()).unwrap();
+        assert!(parsed.applied.is_empty());
+        assert!(parsed.failed.is_empty());
+        assert_eq!(std::fs::read_to_string(visibility).unwrap().trim(), "False");
+    }
+
     #[test]
     fn script_result_accepts_powershell_encodings() {
         let json = r#"{"applied":["firewall"],"failed":[]}"#;
@@ -605,6 +655,9 @@ mod tests {
         assert!(text.contains("Add-MpPreference -ExclusionPath 'C:\\Users\\O''Brien\\ServerBond'"));
         assert!(text.contains("Register-ScheduledTask -TaskName 'ServerBond Permissions'"));
         assert!(text.contains("-RunLevel Highest"));
+        assert!(text.contains("-WindowStyle Hidden"));
+        assert!(text
+            .contains("-File \"C:\\Users\\O''Brien\\ServerBond\\config\\permissions-apply.ps1\""));
         assert!(text.contains("permissions-apply.ps1"));
         assert!(text.contains("finally"));
         assert_eq!(

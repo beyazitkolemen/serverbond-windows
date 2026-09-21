@@ -31,6 +31,8 @@ serverbond api forget         # jetonu siler
 
 ## Yanıt biçimi
 
+`GET /snapshot` yanıtındaki `installProgress`, kurulum sürerken `packageId`, `name`, `version`, `phase`, `completed` ve `total` alanlarını içerir; aktif kurulum yoksa `null` döner. `phase`: `preparing`, `downloading`, `verifying`, `extracting`, `installing` veya `permissions`. İndirme/doğrulama sayaçları byte, arşiv açma sayacı dosya adedidir. `total: null` olduğunda yüzde hesaplanmaz. İşlem sırasında durum 500 ms aralıklarla sorgulanabilir; kurulum isteğini yeniden göndermeyin.
+
 Her yanıt JSON'dur. `GET /openapi.json` doğrudan OpenAPI 3.1 belgesini döndürür (Swagger/Postman gibi istemcilere aktarılabilir); diğer yanıtlar şu zarfı kullanır:
 
 ```json

@@ -3,8 +3,30 @@
 #[ignore = "downloads the pinned cloudflared executable into a temporary directory"]
 fn launch_downloads_verified_cloudflared_once_without_starting_a_tunnel() {
     let home = tempfile::tempdir().unwrap();
-    let manager = serverbond_core::Manager::new(home.path().into()).unwrap();
-    manager.prepare_launch_tools().unwrap();
+    let manager = std::sync::Arc::new(serverbond_core::Manager::new(home.path().into()).unwrap());
+    let worker_manager = manager.clone();
+    let worker = std::thread::spawn(move || worker_manager.prepare_launch_tools());
+    let mut saw_download = false;
+    while !worker.is_finished() {
+        if let Some(progress) = manager.snapshot().unwrap().install_progress {
+            assert_eq!(progress.package_id, "cloudflared");
+            if progress.phase == serverbond_core::install::InstallPhase::Downloading
+                && progress.completed > 0
+            {
+                saw_download = true;
+                if let Some(total) = progress.total {
+                    assert!(progress.completed <= total);
+                }
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    worker.join().unwrap().unwrap();
+    assert!(
+        saw_download,
+        "live download progress must be visible while installation runs"
+    );
+    assert!(manager.snapshot().unwrap().install_progress.is_none());
     let installed = manager.snapshot().unwrap().tunnel;
     assert!(installed.installed);
     assert!(!installed.running);

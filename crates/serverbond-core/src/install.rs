@@ -6,13 +6,108 @@ use crate::domain::ComponentId;
 use crate::model::Package;
 use crate::repository::DataDir;
 use anyhow::{bail, Context, Result};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
     io::{Read, Write},
     path::{Component, Path},
-    time::Duration,
+    time::{Duration, Instant},
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum InstallPhase {
+    Preparing,
+    Downloading,
+    Verifying,
+    Extracting,
+    Installing,
+    Permissions,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallProgress {
+    pub package_id: String,
+    pub name: String,
+    pub version: String,
+    pub phase: InstallPhase,
+    pub completed: u64,
+    pub total: Option<u64>,
+}
+
+pub(crate) struct ProgressGuard<'a>(&'a std::sync::Mutex<Option<InstallProgress>>);
+
+impl Drop for ProgressGuard<'_> {
+    fn drop(&mut self) {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+}
+
+impl crate::Manager {
+    #[cfg(windows)]
+    pub(crate) fn permission_progress(&self) -> ProgressGuard<'_> {
+        *self
+            .install_progress
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(InstallProgress {
+            package_id: "permissions".into(),
+            name: "Windows".into(),
+            version: String::new(),
+            phase: InstallPhase::Permissions,
+            completed: 0,
+            total: None,
+        });
+        ProgressGuard(&self.install_progress)
+    }
+
+    /// All entry points share live state, including API requests and launch tools.
+    /// The caller holds the operation gate; errors and unwinds clear the state.
+    pub(crate) fn install_package(&self, package: &Package, repair: bool) -> Result<()> {
+        let _progress = ProgressGuard(&self.install_progress);
+        install_with_progress(
+            &self.home,
+            package,
+            repair,
+            |line| self.log(line),
+            |phase, completed, total| {
+                *self
+                    .install_progress
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner()) = Some(InstallProgress {
+                    package_id: package.id.clone(),
+                    name: package.name.clone(),
+                    version: package.version.clone(),
+                    phase,
+                    completed,
+                    total,
+                });
+            },
+        )
+    }
+}
+
+// Report real byte/file counts, throttled independently of the text log.
+struct Reporter<F: FnMut(InstallPhase, u64, Option<u64>)> {
+    callback: F,
+    phase: InstallPhase,
+    last: Instant,
+}
+
+impl<F: FnMut(InstallPhase, u64, Option<u64>)> Reporter<F> {
+    fn report(&mut self, phase: InstallPhase, completed: u64, total: Option<u64>) {
+        if phase != self.phase
+            || completed == 0
+            || total == Some(completed)
+            || self.last.elapsed() >= Duration::from_millis(150)
+        {
+            (self.callback)(phase, completed, total);
+            self.phase = phase;
+            self.last = Instant::now();
+        }
+    }
+}
 
 pub(crate) const DOWNLOAD_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const DOWNLOAD_TOTAL_TIMEOUT: Duration = Duration::from_secs(30 * 60);
@@ -35,7 +130,18 @@ pub(crate) fn download_client() -> Result<reqwest::blocking::Client> {
 }
 
 pub fn verify_hash(path: &Path, expected: &str) -> Result<()> {
+    verify_hash_progress(path, expected, |_, _| {})
+}
+
+fn verify_hash_progress(
+    path: &Path,
+    expected: &str,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<()> {
     let mut file = File::open(path)?;
+    let total = file.metadata()?.len();
+    let mut completed = 0;
+    progress(0, total);
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 128 * 1024];
     loop {
@@ -44,6 +150,8 @@ pub fn verify_hash(path: &Path, expected: &str) -> Result<()> {
             break;
         }
         hasher.update(&buffer[..n]);
+        completed += n as u64;
+        progress(completed, total);
     }
     if format!("{:x}", hasher.finalize()) != expected.to_ascii_lowercase() {
         bail!("SHA-256 doğrulaması başarısız. Paket kurulmadı; yeniden indirin.");
@@ -52,7 +160,18 @@ pub fn verify_hash(path: &Path, expected: &str) -> Result<()> {
 }
 
 pub fn extract_zip(path: &Path, destination: &Path, prefix: &str) -> Result<()> {
+    extract_zip_progress(path, destination, prefix, |_, _| {})
+}
+
+fn extract_zip_progress(
+    path: &Path,
+    destination: &Path,
+    prefix: &str,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<()> {
     let mut archive = zip::ZipArchive::new(File::open(path)?)?;
+    let files = archive.len() as u64;
+    progress(0, files);
     if archive.len() > 100_000 {
         bail!("Arşiv dosya sayısı sınırını aşıyor.");
     }
@@ -92,6 +211,7 @@ pub fn extract_zip(path: &Path, destination: &Path, prefix: &str) -> Result<()> 
                 .context("Arşiv klasör yapısı beklenenden farklı.")?
         };
         if relative.as_os_str().is_empty() {
+            progress(i as u64 + 1, files);
             continue;
         }
         let out = destination.join(relative);
@@ -107,16 +227,17 @@ pub fn extract_zip(path: &Path, destination: &Path, prefix: &str) -> Result<()> 
                 bail!("Arşiv dosyasının gerçek boyutu kayıtla eşleşmiyor.");
             }
         }
+        progress(i as u64 + 1, files);
     }
     Ok(())
 }
 
 pub fn install(home: &Path, package: &Package, log: impl Fn(String)) -> Result<()> {
-    install_inner(home, package, false, log)
+    install_with_progress(home, package, false, log, |_, _, _| {})
 }
 
 pub fn repair(home: &Path, package: &Package, log: impl Fn(String)) -> Result<()> {
-    install_inner(home, package, true, log)
+    install_with_progress(home, package, true, log, |_, _, _| {})
 }
 
 pub fn required_files(package: &Package) -> Vec<&str> {
@@ -219,7 +340,19 @@ pub fn archive_fallback(package: &Package) -> Option<String> {
     None
 }
 
-fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(String)) -> Result<()> {
+pub(crate) fn install_with_progress(
+    home: &Path,
+    package: &Package,
+    repair: bool,
+    log: impl Fn(String),
+    progress: impl FnMut(InstallPhase, u64, Option<u64>),
+) -> Result<()> {
+    let mut reporter = Reporter {
+        callback: progress,
+        phase: InstallPhase::Preparing,
+        last: Instant::now(),
+    };
+    reporter.report(InstallPhase::Preparing, 0, None);
     let destination = DataDir::new(home).package(&package.id, &package.version);
     if !repair && validate_installation(&destination, package).is_ok() {
         log(format!(
@@ -247,11 +380,17 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
                 .unwrap_or("bin")
         }
     ));
-    if cache.exists() && verify_hash(&cache, &package.sha256).is_err() {
+    if cache.exists()
+        && verify_hash_progress(&cache, &package.sha256, |done, total| {
+            reporter.report(InstallPhase::Verifying, done, Some(total));
+        })
+        .is_err()
+    {
         fs::remove_file(&cache)?;
     }
     if !cache.exists() {
         log(format!("{} {} indiriliyor…", package.name, package.version));
+        reporter.report(InstallPhase::Downloading, 0, None);
         let client = download_client()?;
         let mut response = client.get(&package.url).send()?;
         if matches!(response.status().as_u16(), 404 | 410) {
@@ -262,6 +401,7 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
         }
         let mut response = response.error_for_status()?;
         let total = response.content_length().unwrap_or(0);
+        reporter.report(InstallPhase::Downloading, 0, (total > 0).then_some(total));
         if total > 1024 * 1024 * 1024 {
             bail!("Paket boyutu sınırı aşıldı.");
         }
@@ -286,6 +426,11 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
                 bail!("Paket boyutu sınırı aşıldı.");
             }
             partial.write_all(&buffer[..count])?;
+            reporter.report(
+                InstallPhase::Downloading,
+                received,
+                (total > 0).then_some(total),
+            );
             let percent = (received * 100).checked_div(total).unwrap_or(0);
             if percent >= last_percent + 10 {
                 log(format!("{} indiriliyor: %{percent}", package.name));
@@ -293,10 +438,14 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
             }
         }
         partial.as_file().sync_all()?;
-        verify_hash(partial.path(), &package.sha256)?;
+        verify_hash_progress(partial.path(), &package.sha256, |done, total| {
+            reporter.report(InstallPhase::Verifying, done, Some(total));
+        })?;
         partial.persist(&cache)?;
     }
-    verify_hash(&cache, &package.sha256)?;
+    verify_hash_progress(&cache, &package.sha256, |done, total| {
+        reporter.report(InstallPhase::Verifying, done, Some(total));
+    })?;
     log(format!(
         "{} SHA-256 doğrulandı. Dosyalar hazırlanıyor…",
         package.name
@@ -304,10 +453,14 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
     fs::create_dir_all(destination.parent().unwrap())?;
     let stage = tempfile::tempdir_in(destination.parent().unwrap())?;
     if package.archive {
-        extract_zip(&cache, stage.path(), &package.prefix)?;
+        extract_zip_progress(&cache, stage.path(), &package.prefix, |done, total| {
+            reporter.report(InstallPhase::Extracting, done, Some(total));
+        })?;
     } else {
+        reporter.report(InstallPhase::Installing, 0, None);
         fs::copy(&cache, stage.path().join(&package.executable))?;
     }
+    reporter.report(InstallPhase::Installing, 0, None);
     fs::write(
         stage.path().join("installed.json"),
         serde_json::to_vec_pretty(package)?,
@@ -344,6 +497,84 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cached_install_reports_verification_extraction_and_commit() {
+        let home = tempfile::tempdir().unwrap();
+        fs::create_dir(home.path().join("cache")).unwrap();
+        let archive_path = home.path().join("cache/fixture-1.zip");
+        let mut archive = zip::ZipWriter::new(File::create(&archive_path).unwrap());
+        archive
+            .start_file("app.exe", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        archive.write_all(b"test executable").unwrap();
+        archive
+            .start_file("assets/data.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        archive.write_all(b"test asset").unwrap();
+        archive.finish().unwrap();
+        let mut package = crate::model::catalog().remove(0);
+        package.id = "fixture".into();
+        package.version = "1".into();
+        package.executable = "app.exe".into();
+        package.archive = true;
+        package.prefix.clear();
+        package.sha256 = format!("{:x}", Sha256::digest(fs::read(&archive_path).unwrap()));
+        let mut events = Vec::new();
+        install_with_progress(
+            home.path(),
+            &package,
+            false,
+            |_| {},
+            |phase, done, total| events.push((phase, done, total)),
+        )
+        .unwrap();
+        assert_eq!(events.first().unwrap().0, InstallPhase::Preparing);
+        assert!(events
+            .iter()
+            .any(|(phase, done, total)| *phase == InstallPhase::Verifying
+                && *done > 0
+                && Some(*done) == *total));
+        assert!(events.contains(&(InstallPhase::Extracting, 2, Some(2))));
+        assert_eq!(events.last().unwrap().0, InstallPhase::Installing);
+        assert!(!events
+            .iter()
+            .any(|(phase, _, _)| *phase == InstallPhase::Downloading));
+        assert!(health(home.path(), &package).installed);
+    }
+
+    #[test]
+    fn progress_guard_clears_state_after_failure_and_unwind() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = crate::Manager::new(home.path().into()).unwrap();
+        let package = crate::model::catalog().remove(0);
+        fs::create_dir_all(DataDir::new(home.path()).package(&package.id, &package.version))
+            .unwrap();
+        assert!(manager.install_package(&package, false).is_err());
+        assert!(manager.snapshot().unwrap().install_progress.is_none());
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = ProgressGuard(&manager.install_progress);
+            *manager.install_progress.lock().unwrap() = Some(InstallProgress {
+                package_id: package.id.clone(),
+                name: package.name.clone(),
+                version: package.version.clone(),
+                phase: InstallPhase::Downloading,
+                completed: 12,
+                total: None,
+            });
+            assert_eq!(
+                manager
+                    .snapshot()
+                    .unwrap()
+                    .install_progress
+                    .unwrap()
+                    .completed,
+                12
+            );
+            panic!("interrupted installation");
+        }));
+        assert!(manager.snapshot().unwrap().install_progress.is_none());
+    }
 
     #[test]
     fn health_marks_missing_and_incomplete_installs() {

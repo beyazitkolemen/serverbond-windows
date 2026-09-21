@@ -344,6 +344,7 @@ pub struct Snapshot {
     pub logs: Vec<String>,
     pub home: PathBuf,
     pub busy: bool,
+    pub install_progress: Option<crate::install::InstallProgress>,
     pub any_running: bool,
     pub recovery_issue: Option<String>,
     pub restart_required: bool,

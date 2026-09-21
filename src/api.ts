@@ -165,6 +165,7 @@ const preview: Snapshot = {
     declined: false,
   },
   busy: false,
+  installProgress: null,
   anyRunning: false,
   recoveryIssue: null,
   restartRequired: false,
