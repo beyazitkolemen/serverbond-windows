@@ -150,9 +150,6 @@ export default function Projects({
                   <p className="project-url">
                     {projectUrl(project.host, webPort, https, httpsPort)}
                   </p>
-                  <p className="project-path" title={project.path}>
-                    {project.path.replace(/^\\\\\?\\/, "")}
-                  </p>
                   <p className="project-path">
                     {project.running
                       ? `PHP ${project.phpVersion} · ${project.phpPort}`
@@ -250,9 +247,9 @@ export default function Projects({
             </>
           }
         >
-          Mevcut bir Laravel klasörü ekleyin, GitHub’dan klonlayın veya yeni
-          proje oluşturun. PHP sürümü, kuyruk ve zamanlayıcı proje sayfasından
-          yönetilir.
+          {compact
+            ? null
+            : "Klasörden, GitHub’dan veya yeni bir Laravel projesi ekleyin."}
         </EmptyState>
       )}
       {modal ? (
@@ -539,18 +536,18 @@ function ProjectDialog({
         )}
         <p className="field-hint">
           {fromGithub
-            ? `Depo ${home.replace(/^\\\\\?\\/, "")}\\${name || "ornek-proje"} klasörüne klonlanır. ${
+            ? `Konum: ${home.replace(/^\\\\\?\\/, "")}\\${name || "ornek-proje"}. ${
                 github.tokenSaved
                   ? github.login
-                    ? `Kayıtlı hesap: ${github.login}.`
+                    ? `Hesap: ${github.login}.`
                     : "GitHub jetonu kayıtlı."
-                  : "Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
+                  : "Özel depolar için Hizmetler → GitHub’dan jeton ekleyin."
               }`
             : create
-              ? `Üst klasörde ornek-proje/ oluşur. Laravel 12 için PHP 8.2 veya üzeri ve Composer gerekir. Seçili PHP: ${phpVersion}.`
-              : "public/index.php içeren kök klasörü seçin. Mevcut dosyalarınız değiştirilmez."}{" "}
-          MySQL çalışıyorsa {databaseName(name || "ornek-proje")} veritabanı
-          oluşturulur; proje .env dosyası yazılmaz.
+              ? `Laravel 12 için PHP 8.2+ gerekir. Seçili sürüm: ${phpVersion}.`
+              : "public/index.php içeren proje klasörünü seçin."}{" "}
+          MySQL açıksa {databaseName(name || "ornek-proje")} oluşturulur. .env
+          korunur.
         </p>
         {create && !canCreate ? (
           <p className="field-error" role="status">
@@ -793,9 +790,7 @@ function DiscoverDialog({
       {items.length ? (
         <>
           <p className="dialog-copy">
-            Çalışma alanında {items.length} Laravel kökü bulundu. Kayıtlı
-            projeler atlandı. İki seviye (müşteri/uygulama) taranır; .env
-            dosyaları değiştirilmez.
+            {items.length} yeni proje bulundu. .env dosyaları korunur.
           </p>
           <ul className="discover-list">
             {items.map((item) => (
@@ -808,10 +803,7 @@ function DiscoverDialog({
           </ul>
         </>
       ) : (
-        <p className="dialog-copy">
-          Çalışma alanında henüz kayıtlı olmayan Laravel kökü yok.
-          public/index.php içeren bir veya iki seviye klasörler taranır.
-        </p>
+        <p className="dialog-copy">Yeni proje bulunamadı.</p>
       )}
       {serverError ? (
         <p className="field-error" role="alert">

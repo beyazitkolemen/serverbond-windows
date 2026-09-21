@@ -32,7 +32,7 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 
 ## Sayfalar
 
-- **Genel bakış:** kontrol odası. Ortam özeti (ölçümler ilgili sayfaya gider), sade bileşen tablosu, kompakt proje satırları, son kayıtlar. PHP seçici, kuyruk paneli ve uzun notlar bu sayfada yoktur.
+- **Genel bakış:** ortam durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
 - **Projeler:** solda ayırıcılarla bölünmüş tek proje listesi, sağda sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Aç ve Terminal başlıkta kalır.
 - **Hizmetler:** her uygulama tam genişlikte bir satır. Simge/ad, açıklama, durum ve açma oku masaüstünde hizalıdır. 1100 altında açıklama adın altına; 540 altında durum da alta geçer. Satırın tamamı klavyeyle erişilebilir bir düğmedir. Hizmete girince üstte ortak denetim şeridi (durum, Kur / Başlat / Durdur / Aç); port ve jeton **Ayarlar** düğmesindedir. Onarım ayrı karttır.
@@ -40,6 +40,8 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 - **Günlükler:** kaynak sekmeli görüntüleyici.
 
 ## Davranış ve erişilebilirlik
+
+Bilgilendirmeler kısa ve eyleme dönüktür. Sayfa başlıklarının altında tekrarlayan açıklamalar yoktur. Metinler yalnızca kullanıcının kararını veya sonraki adımını etkileyen bilgiyi içerir. Laravel bağlantı örnekleri kapalı başlayan “Laravel bağlantısı” bölümlerinde açılır. Silme/geri yükleme etkileri, yeniden başlatma gereksinimleri, güvenlik izinleri ve hata ayrıntıları kısaltma uğruna kaldırılmaz.
 
 Başarı bildirimi dört saniyede kapanır; hata kullanıcı kapatana kadar kalır. Çalışan ortamdan çıkış onay ister. Boş proje durumunda tara ve ekle eylemleri görünür.
 

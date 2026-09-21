@@ -57,10 +57,8 @@ export default function ApiSettings({
     <section className="settings-section api-settings">
       <h2>Yönetim API'si</h2>
       <p className="section-note">
-        Arayüzün yaptığı her şeyi yerel bir HTTP API üzerinden de
-        yapabilirsiniz: hizmetleri başlatıp durdurma, proje ekleme, sürüm
-        çalıştırma, kuyruk ve zamanlayıcı yönetimi. Yalnızca 127.0.0.1 dinlenir;
-        her istek <code>Authorization: Bearer</code> jetonu ister.
+        Yerel yönetim API’si. İşlemler için <code>Authorization: Bearer</code>{" "}
+        jetonu gerekir.
       </p>
       <div className="api-status">
         <StatusBadge tone={state.tone}>{state.text}</StatusBadge>
@@ -82,8 +80,7 @@ export default function ApiSettings({
       </div>
       {dirty ? (
         <p className="section-note">
-          Değişiklikler alttaki Kaydet düğmesiyle uygulanır; API ortam
-          çalışırken de açılıp kapatılabilir.
+          Kaydet ile uygulanır; servisleri durdurmanız gerekmez.
         </p>
       ) : null}
       <h3>Jeton</h3>
@@ -143,8 +140,7 @@ export default function ApiSettings({
             Kopyala
           </button>
           <p className="section-note">
-            Bu jeton bir daha gösterilmez. Saklayın; kaybederseniz yenisini
-            oluşturun.
+            Jeton yalnızca bir kez gösterilir. Güvenli bir yere kaydedin.
           </p>
         </div>
       ) : null}

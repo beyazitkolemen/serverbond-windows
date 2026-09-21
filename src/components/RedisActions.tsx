@@ -28,16 +28,17 @@ export default function RedisActions({
         ]}
         action={() => redisService.repair()}
       />
-      <p className="section-note">
-        Port ve otomatik başlatma Ayarlar düğmesindedir. Laravel{" "}
-        <code>.env</code> dosyasına <code>REDIS_CLIENT=predis</code>,{" "}
-        <code>REDIS_HOST=127.0.0.1</code>, <code>REDIS_PORT={redis.port}</code>{" "}
-        ve isteğe bağlı <code>CACHE_STORE=redis</code> /{" "}
-        <code>QUEUE_CONNECTION=redis</code> yazın. ServerBond <code>.env</code>{" "}
-        yazmaz. Resmî PHP paketinde <code>redis</code> uzantısı yoktur;{" "}
-        <code>predis/predis</code> kullanın. Komut:{" "}
-        <code>serverbond redis install|start|stop|repair</code>.
-      </p>
+      <details className="connection-help">
+        <summary>Laravel bağlantısı</summary>
+        <p className="section-note">
+          <code>.env</code>: <code>REDIS_CLIENT=predis</code>,{" "}
+          <code>REDIS_HOST=127.0.0.1</code>,{" "}
+          <code>REDIS_PORT={redis.port}</code> ve isteğe bağlı{" "}
+          <code>CACHE_STORE=redis</code> / <code>QUEUE_CONNECTION=redis</code>{" "}
+          yazın. ServerBond <code>.env</code> yazmaz. PHP’de Redis uzantısı
+          yerine <code>predis/predis</code> kullanın.
+        </p>
+      </details>
     </section>
   );
 }

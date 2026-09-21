@@ -288,9 +288,8 @@ function DatabasePane({
   return (
     <div className="project-pane">
       <p className="section-note">
-        Veritabanı adı proje adından türetilir. ServerBond proje{" "}
-        <code>.env</code> dosyasına kendiliğinden yazmaz. Ortam sekmesinden
-        düzenleyebilirsiniz.
+        Bağlantı bilgilerini Ortam sekmesindeki <code>.env</code> dosyasına
+        girin.
       </p>
       <dl className="project-facts">
         <div>

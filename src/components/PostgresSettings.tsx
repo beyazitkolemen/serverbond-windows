@@ -163,16 +163,15 @@ export default function PostgresSettings({
         ]}
         action={() => postgresService.repair()}
       />
-      <p className="section-note">
-        Port ve otomatik başlatma Ayarlar düğmesindedir. MySQL varsayılan kalır;
-        PostgreSQL isteğe bağlıdır ve ortamı bloke etmez. Laravel{" "}
-        <code>DB_CONNECTION=pgsql</code>, <code>DB_HOST=127.0.0.1</code>,{" "}
-        <code>DB_PORT={postgres.port}</code>, <code>DB_USERNAME=postgres</code>{" "}
-        değerlerini kendi <code>.env</code> dosyanızda tanımlarsınız; ServerBond
-        yazmaz. PHP <code>pgsql</code> / <code>pdo_pgsql</code> uzantılarını PHP
-        sekmesinden açın. Komut:{" "}
-        <code>serverbond postgres install|start|stop|repair</code>.
-      </p>
+      <details className="connection-help">
+        <summary>Laravel bağlantısı</summary>
+        <p className="section-note">
+          <code>.env</code>: <code>DB_CONNECTION=pgsql</code>,{" "}
+          <code>DB_HOST=127.0.0.1</code>, <code>DB_PORT={postgres.port}</code>,{" "}
+          <code>DB_USERNAME=postgres</code> değerlerini girin. PHP ayarlarından{" "}
+          <code>pgsql</code> / <code>pdo_pgsql</code> uzantılarını açın.
+        </p>
+      </details>
     </section>
   );
 }

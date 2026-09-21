@@ -84,10 +84,7 @@ export default function DesktopSettings({
       }}
     >
       <h2>Windows ve sistem tepsisi</h2>
-      <p className="section-note">
-        Bu tercihler servisler çalışırken de değiştirilebilir. Tepsi simgesi
-        saatin yanında veya gizli simgeler menüsünde görünür.
-      </p>
+      <p className="section-note">Başlangıç ve pencere davranışını seçin.</p>
       {!desktop && (
         <p className="section-note">
           Bu seçenekler masaüstü uygulamasında kullanılabilir.
@@ -139,9 +136,8 @@ export default function DesktopSettings({
           </label>
         ))}
         <p className="section-note">
-          Tepsiye küçültmek servisleri durdurmaz. Tamamen kapatmak için tepsi
-          menüsündeki Çıkış komutunu kullanın. PHP/MySQL'in otomatik başlaması
-          aşağıdaki ortam seçeneğine bağlıdır.
+          Tepsiye küçültmek servisleri durdurmaz. Tamamen kapatmak için Çıkış’ı
+          seçin.
         </p>
         <button className="button primary" type="submit" disabled={!draft}>
           Masaüstü tercihlerini kaydet

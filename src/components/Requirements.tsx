@@ -44,8 +44,7 @@ export default function Requirements({
         </button>
       </div>
       <p className="section-note">
-        Kontroller bilgisayarınızda yapılır. Eksik Visual C++ çalışma zamanı
-        indirme bağlantısından kurulabilir; ardından yeniden denetleyin.
+        Eksikleri tamamladıktan sonra yeniden denetleyin.
       </p>
       {!desktop ? (
         <p>Gereksinimler masaüstü uygulamasında denetlenir.</p>

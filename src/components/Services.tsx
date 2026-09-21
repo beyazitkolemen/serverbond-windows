@@ -57,37 +57,37 @@ const catalog = [
     id: WorkspaceService.PhpMyAdmin,
     title: "phpMyAdmin",
     icon: Database,
-    copy: "MySQL veritabanlarını tarayıcıdan yönetin.",
+    copy: "MySQL yönetimi",
   },
   {
     id: WorkspaceService.Mail,
     title: "E-posta",
     icon: Mail,
-    copy: "Mailpit yerel SMTP yakalayıcı ve gelen kutusu.",
+    copy: "Yerel e-posta kutusu",
   },
   {
     id: WorkspaceService.Postgres,
     title: "PostgreSQL",
     icon: Database,
-    copy: "İsteğe bağlı PostgreSQL 17 · Laravel pgsql.",
+    copy: "PostgreSQL 17 veritabanı",
   },
   {
     id: WorkspaceService.Redis,
     title: "Redis",
     icon: Zap,
-    copy: "Kuyruk, önbellek ve oturum için Redis 8.",
+    copy: "Kuyruk ve önbellek",
   },
   {
     id: WorkspaceService.Github,
     title: "GitHub",
     icon: Github,
-    copy: "Özel depolar için bir kez jeton kaydı.",
+    copy: "Özel depolara erişim",
   },
   {
     id: WorkspaceService.Tunnel,
     title: "Tünel",
     icon: Globe,
-    copy: "Cloudflare Tunnel ile dışarı açın.",
+    copy: "İnternetten erişim",
   },
 ] as const;
 
@@ -507,9 +507,6 @@ export default function Services({
               );
             })}
           </ul>
-          <p className="section-note">
-            Kurulum, bağlantı ve ayarlar için bir uygulama seçin.
-          </p>
         </>
       ) : (
         <>
@@ -564,8 +561,8 @@ export default function Services({
             >
               <p className="section-note">
                 {running
-                  ? "Bu ayarları kaydetmek için önce ortamı durdurun."
-                  : "Kaydedilen portlar sonraki başlangıçta uygulanır."}
+                  ? "Kaydetmek için ortamı durdurun."
+                  : "Değişiklikler sonraki başlangıçta uygulanır."}
               </p>
               <fieldset disabled={locked} className="settings-fields">
                 {service === WorkspaceService.PhpMyAdmin ? (
@@ -693,9 +690,7 @@ function PmaActions({
         blockedReason="Onarmak için ortamı durdurun. phpMyAdmin dosyaları web sunucusu açıkken kilitlenebilir."
       />
       <p className="section-note">
-        Dil, satır sayısı ve oturum süresi Ayarlar düğmesindedir. Giriş:{" "}
-        <strong>root</strong>; MySQL parolası Ayarlar → Sistem’de. Onarım ortam
-        çalışırken kilitlenir; önce ortamı durdurun.
+        Kullanıcı: <strong>root</strong> · Parola: Ayarlar → Sistem.
       </p>
     </section>
   );

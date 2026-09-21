@@ -9,5 +9,6 @@ globs: src/**/*.{ts,tsx,css}
 - Hizmet IPC’si `src/services` üzerindedir (`mailService.start()`). Yeni `call("mail", { action })` yazma; tel dizileri `src/domain` enum’larında durur.
 - Tasarım: nötr zemin `#f8fafb`, yeşil vurgu `#147a56`, kenar çubuğu 224px. Hizmetler her biri ayrı satırda; gezinme grupları kutusuz. Renkler açık/koyu tema tokenlarından gelir. [docs/design/design-system.md](../../docs/design/design-system.md).
 - Uzun yazma işlemlerini UI zaman aşımıyla yeniden başlatma; `call()` bunu zaten ayırır.
+- Genel bakışta açıklama metni gösterme; yalnızca durum, ölçüm ve işlemler. Diğer ekranlarda kısa yönlendirmeler kullan; uzun bağlantı örneklerini açılır yardımda tut. Hata ve işlem etkilerini koru.
 - Ayar formu `key={JSON.stringify(settings)}` ile sunucu ayarı değişince sıfırlanır; taslağı poll ile ezme.
 - Yeni Laravel 12 için PHP karşılaştırması `phpSupportsLaravel12` ile yapılır; `Number("8.10")` kullanma.

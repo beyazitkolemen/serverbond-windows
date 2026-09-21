@@ -79,9 +79,7 @@ export default function ReleasePane({
   return (
     <div className="project-pane project-release">
       <p className="section-note">
-        Bu Windows makinesinde Forge benzeri üretim sürümü: git, Composer ve
-        Artisan sabit bayraklarla çalışır. Uzak sunucu yoktur. Proje{" "}
-        <code>.env</code> dosyasına yazılmaz.
+        Seçilen adımları bu bilgisayarda uygular. <code>.env</code> korunur.
       </p>
       <div className="release-toolbar">
         <StatusBadge

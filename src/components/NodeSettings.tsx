@@ -16,10 +16,7 @@ export default function NodeSettings({
     <section className="settings-section">
       <h2>Node.js</h2>
       <p className="section-note">
-        Laravel ön yüzü için <code>npm</code> ve <code>npx</code> gerekir. Sabit
-        Node.js {node.version} LTS paketi resmî <code>SHASUMS256.txt</code>{" "}
-        özetiyle doğrulanarak ServerBond klasörüne kurulur. Sistem PATH'i
-        değiştirilmez; sürüm yalnızca proje terminallerinde görünür.
+        Node.js {node.version} LTS, npm ve npx’i proje terminallerine ekler.
       </p>
       <div className="tunnel-status">
         <span className={`status-dot ${node.installed ? "on" : "off"}`} />
@@ -72,10 +69,7 @@ export default function NodeSettings({
         action={() => nodeService.repair()}
       />
       <p className="section-note">
-        Kurduktan sonra proje kartındaki <strong>Terminal</strong> düğmesiyle
-        açılan pencerede <code>npm install</code> ve <code>npm run dev</code>{" "}
-        çalışır. Açık terminalleri kapatıp yeniden açın. Komut satırından:{" "}
-        <code>serverbond node install|repair|status</code>.
+        Kurulumdan sonra açık proje terminallerini yeniden açın.
       </p>
     </section>
   );

@@ -28,13 +28,15 @@ export default function MailActions({
         ]}
         action={() => mailService.repair()}
       />
-      <p className="section-note">
-        SMTP, arayüz portu ve otomatik başlatma Ayarlar düğmesindedir. Laravel
-        için <code>.env</code> dosyasına <code>MAIL_MAILER=smtp</code>,{" "}
-        <code>MAIL_HOST=127.0.0.1</code> ve{" "}
-        <code>MAIL_PORT={mail.smtpPort}</code> yazın; kullanıcı ve parola
-        gerekmez. Yakalanan e-postalar dışarı gönderilmez.
-      </p>
+      <details className="connection-help">
+        <summary>Laravel bağlantısı</summary>
+        <p className="section-note">
+          <code>.env</code>: <code>MAIL_MAILER=smtp</code>,{" "}
+          <code>MAIL_HOST=127.0.0.1</code> ve{" "}
+          <code>MAIL_PORT={mail.smtpPort}</code> yazın; kullanıcı ve parola
+          gerekmez. Yakalanan e-postalar dışarı gönderilmez.
+        </p>
+      </details>
     </section>
   );
 }

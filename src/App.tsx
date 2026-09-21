@@ -30,19 +30,13 @@ import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
 
-const headings: Record<AppPage, [string, string]> = {
-  [Page.Overview]: [
-    "Genel bakış",
-    "Bu makinedeki üretim servisleri, projeler ve kayıtlar.",
-  ],
-  [Page.Packages]: ["Bileşenler", "PHP, MySQL ve web sunucusu paketleri."],
-  [Page.Projects]: ["Projeler", "Bu makinede çalışan Laravel uygulamaları."],
-  [Page.Logs]: ["Günlükler", "Kurulum, proje ve servis kayıtları."],
-  [Page.Services]: [
-    "Hizmetler",
-    "phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel.",
-  ],
-  [Page.Settings]: ["Ayarlar", "Çalışma alanı, portlar ve Windows tercihleri."],
+const headings: Record<AppPage, string> = {
+  [Page.Overview]: "Genel bakış",
+  [Page.Packages]: "Bileşenler",
+  [Page.Projects]: "Projeler",
+  [Page.Logs]: "Günlükler",
+  [Page.Services]: "Hizmetler",
+  [Page.Settings]: "Ayarlar",
 };
 
 export default function App() {
@@ -274,8 +268,7 @@ export default function App() {
     >
       <header className="page-header">
         <div>
-          <h1>{headings[page][0]}</h1>
-          <p>{headings[page][1]}</p>
+          <h1>{headings[page]}</h1>
         </div>
         <button
           className={`button ${running ? "secondary" : "primary"} environment-button`}
@@ -368,10 +361,7 @@ export default function App() {
               </div>
               <div>
                 <h2>ServerBond {appUpdate.version} yayımlandı</h2>
-                <p>
-                  Kurulu sürüm v{appUpdate.currentVersion}. Güncelleme GitHub
-                  üzerinden indirilir; onayınız olmadan kurulmaz.
-                </p>
+                <p>Mevcut sürüm: v{appUpdate.currentVersion}.</p>
               </div>
               <button
                 className="button banner-button"
@@ -394,25 +384,21 @@ export default function App() {
               </div>
               <ol className="setup-steps">
                 <li>
-                  <strong>1. Bileşenler</strong>
-                  <span>PHP, MySQL ve Caddy</span>
+                  <strong>1. Bileşenleri kur</strong>
                 </li>
                 <li>
-                  <strong>2. Proje</strong>
-                  <span>Mevcut klasör veya yeni Laravel</span>
+                  <strong>2. Proje ekle</strong>
                 </li>
                 <li>
-                  <strong>3. Ortam</strong>
-                  <span>Servisleri buradan başlatın</span>
+                  <strong>3. Ortamı başlat</strong>
                 </li>
               </ol>
               <button
                 className="button banner-button"
                 disabled={disabled}
                 onClick={() =>
-                  void run(
-                    "Bileşenler kuruluyor… İlerlemeyi günlüklerden takip edebilirsiniz.",
-                    () => packagesService.install("all"),
+                  void run("Bileşenler kuruluyor…", () =>
+                    packagesService.install("all"),
                   )
                 }
               >

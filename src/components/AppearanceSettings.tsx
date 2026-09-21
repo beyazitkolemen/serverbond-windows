@@ -7,10 +7,7 @@ export default function AppearanceSettings() {
   return (
     <section className="settings-section">
       <h2>Görünüm</h2>
-      <p className="section-note">
-        Windows temasını izler ya da açık/koyu görünüme sabitlenir. Tercih bu
-        bilgisayarda saklanır.
-      </p>
+      <p className="section-note">Tema tercihi bu bilgisayarda saklanır.</p>
       <SegmentedControl<ThemePreference>
         label="Tema"
         value={preference}

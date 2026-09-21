@@ -20,11 +20,7 @@ export default function PermissionSettings({
     <section className="settings-section permission-section">
       <h2>Windows izinleri</h2>
       <p className="section-note">
-        ServerBond açılırken Windows’tan bir kez tam yetki ister. Onay, güvenlik
-        duvarı kurallarını, veri klasörü erişimini ve isteğe bağlı Defender
-        istisnasını uygular; ardından bir zamanlanmış görev kurulur. Uygulamanın
-        kendisi yükseltilmiş yetkiyle çalışmaz. Sonraki açılışlarda ve yeni
-        paket kurulumlarında Windows bir daha soru sormaz.
+        Windows onayı, aşağıdaki izinleri ve yetkili yardımcı görevi kurar.
       </p>
       <ul className="permission-list">
         <li>

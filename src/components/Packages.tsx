@@ -63,13 +63,8 @@ export default function Packages({
         <div className="php-selector">
           <div className="php-selector-copy">
             <label htmlFor="php-version">Varsayılan PHP sürümü</label>
-            <p>
-              Yeni projeler için kullanılacak Windows x64 NTS paketi indirilir.
-            </p>
-            <small>
-              Varsayılan: PHP {active?.version} · Mevcut projelerin sürümü proje
-              kartından seçilir.
-            </small>
+            <p>Yeni projelerde kullanılacak PHP sürümü.</p>
+            <small>Mevcut projelerin sürümü ayrı seçilir.</small>
           </div>
           <div className="php-selector-controls">
             <select
@@ -129,7 +124,7 @@ export default function Packages({
           <thead>
             <tr>
               <th>Bileşen</th>
-              <th>Açıklama</th>
+              {detailed ? <th>Açıklama</th> : null}
               <th>Sürüm</th>
               <th>Durum</th>
               <th className="actions-heading">İşlem</th>
@@ -152,15 +147,15 @@ export default function Packages({
                     <strong>{p.name}</strong>
                   </div>
                 </td>
-                <td className="package-description">
-                  {p.description}
-                  {detailed ? (
+                {detailed ? (
+                  <td className="package-description">
+                    {p.description}
                     <small>
                       {p.license}
                       {p.pid ? ` · PID ${p.pid}` : ""}
                     </small>
-                  ) : null}
-                </td>
+                  </td>
+                ) : null}
                 <td className="version">{p.version}</td>
                 <td>
                   <StatusBadge tone={p.running ? "running" : "stopped"}>
@@ -260,16 +255,13 @@ export default function Packages({
       {detailed &&
       packages.some((p) => p.id === "phpmyadmin" && p.installed) ? (
         <p className="section-note">
-          phpMyAdmin girişi: kullanıcı <strong>root</strong>; parola Ayarlar →
-          Sistem → MySQL bağlantısı bölümünde. ServerBond'ın MySQL portu
-          otomatik kullanılır. PHP, MySQL ve web sunucusu çalışırken açılabilir.
+          phpMyAdmin: <strong>root</strong> · Parola: Ayarlar → Sistem.
         </p>
       ) : null}
       {detailed ? (
         <p className="section-note">
-          Paketler resmî kaynaklardan indirilir ve SHA-256 ile doğrulanır.
-          Program dosyaları ve MySQL verileri ayrı klasörlerde saklanır. Onar
-          işlemi için ortamı durdurun; önceki program klasörü saklanır.
+          Onarım için ortamı durdurun. Veriler ve önceki program kopyası
+          korunur.
         </p>
       ) : null}
     </section>

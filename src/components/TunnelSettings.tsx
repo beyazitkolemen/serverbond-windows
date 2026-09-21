@@ -40,22 +40,17 @@ export default function TunnelSettings({
       ) : null}
       {showOps ? (
         <p className="section-note">
-          Cloudflared {tunnel.version} yerel projelerinizi Cloudflare üzerinden
-          dış bir adrese açar. Hangi adresin hangi porta gittiğini Cloudflare
-          Zero Trust panelindeki tünel yapılandırması belirler. Kurulum ve
-          başlat/durdur üstteki denetim şeridindedir.
+          Projeleri internete açar. Adres ve port yönlendirmesini Cloudflare
+          Zero Trust’tan ayarlayın.
         </p>
       ) : (
         <p className="section-note">
-          Jetonu buraya yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI
-          ile şifreler; günlüklere yazılmaz.
+          Cloudflare tünel jetonunu yapıştırın. Şifreli saklanır.
         </p>
       )}
       {showSettings && !showOps ? (
         <p className="section-note">
-          {tunnel.tokenSaved
-            ? "Jeton Windows hesabınıza bağlı olarak şifrelenmiş halde saklanıyor."
-            : "Jeton kaydedilmedi. Aşağıya yapıştırıp kaydedin."}
+          {tunnel.tokenSaved ? "Jeton kayıtlı." : "Tünel jetonunu ekleyin."}
         </p>
       ) : null}
 
@@ -118,11 +113,9 @@ export default function TunnelSettings({
             </button>
           </div>
           <p className="section-note">
-            Cloudflare Zero Trust → Networks → Tunnels → tüneli oluşturun →
-            Install and run a connector. Jetonu veya tüm{" "}
-            <code>cloudflared.exe service install …</code> satırını buraya
-            yapıştırın. ServerBond jetonu ayıklar; günlüklere ve komut satırına
-            yazmaz.
+            Zero Trust → Networks → Tunnels. Jetonu veya{" "}
+            <code>cloudflared.exe service install …</code> komutunu
+            yapıştırabilirsiniz.
           </p>
           <div className="settings-actions">
             <button
@@ -175,10 +168,8 @@ export default function TunnelSettings({
         </label>
       ) : null}
       <p className="section-note">
-        <Globe size={14} /> Tünel başarısız olursa ortam çalışmaya devam eder;
-        hata bu kartta ve Günlükler → cloudflared bölümünde görünür. Tepsi
-        menüsündeki Servisler → Cloudflare tüneli aynı başlat/durdur işini
-        yapar.
+        <Globe size={14} /> Tünel hataları: Günlükler → cloudflared. Yerel
+        servisler çalışmaya devam eder.
       </p>
     </section>
   );

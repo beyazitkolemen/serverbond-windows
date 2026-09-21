@@ -64,9 +64,7 @@ export default function ServiceRepair({
         </p>
       ) : null}
       <p className="section-note">
-        Program dosyaları SHA-256 doğrulanmış paketten yeniden kurulur. Yeni
-        paket hazır olmadan mevcut klasör değiştirilmez. Önceki kopya{" "}
-        <code>bin/…/sürüm-before-repair-…</code> olarak saklanır.
+        Program dosyaları yenilenir. Önceki kopya ve aşağıdaki veriler korunur.
       </p>
       <ul className="service-repair-keeps">
         {keeps.map((item) => (
@@ -107,11 +105,8 @@ export default function ServiceRepair({
           </p>
           <ol className="service-repair-steps">
             <li>Çalışıyorsa süreç durdurulur.</li>
-            <li>Önbellek veya indirme SHA-256 ile doğrulanır.</li>
-            <li>Yeni paket evre klasöründe açılır, sonra atomik taşınır.</li>
-            <li>
-              Önceki program klasörü <code>before-repair</code> adıyla korunur.
-            </li>
+            <li>Doğrulanan paketle program dosyaları yenilenir.</li>
+            <li>Önceki program kopyası korunur.</li>
           </ol>
           <div className="modal-actions">
             <button

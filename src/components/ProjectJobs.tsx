@@ -169,9 +169,7 @@ export function ScheduleSection({
   return (
     <div className="project-jobs-panel">
       <p className="section-note">
-        Zamanlayıcı her dakika Laravel <code>schedule:run</code> komutunu
-        yürütür. Tanımlar projenin <code>routes/console.php</code> veya
-        <code>app/Console</code> dosyalarındadır.
+        Laravel’in zamanlanmış görevlerini çalıştırır.
       </p>
       {!schedule.enabled ? (
         <button
@@ -308,9 +306,8 @@ export function QueueSection({
   return (
     <div className="project-jobs-panel">
       <p className="section-note">
-        İşçiler Supervisor gibi <code>queue:work</code> çalıştırır. Azami iş
-        veya süre dolunca işçi temiz kapanır ve ServerBond onu yeniden başlatır;
-        yeniden başlatmalar süren işi bitirmesini bekler.
+        Kuyruktaki işleri çalıştırır. Yeniden başlatma, süren işin bitmesini
+        bekler.
       </p>
       {!workers.length ? (
         <button

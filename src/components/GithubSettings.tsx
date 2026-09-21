@@ -26,8 +26,8 @@ export default function GithubSettings({
       {showOps ? (
         <p className="section-note">
           {github.tokenSaved
-            ? "Jeton Windows DPAPI ile şifrelenir; komut satırına yazılmaz. Değiştirmek için Ayarlar’ı kullanın."
-            : "Jeton kaydedilmedi. Ayarlar’dan kişisel erişim jetonunu yapıştırın."}
+            ? "Jeton kayıtlı. Ayarlar’dan değiştirebilirsiniz."
+            : "Özel depolar için Ayarlar’dan jeton ekleyin."}
         </p>
       ) : null}
       {showForm ? (
@@ -85,10 +85,8 @@ export default function GithubSettings({
             </button>
           </div>
           <p className="section-note">
-            GitHub → Settings → Developer settings → Personal access tokens.
-            Klasik jeton için <code>repo</code> yetkisi; ince ayarlı jeton için
-            Contents okuma yeterlidir. Genel depolar jeton olmadan da klonlanır.
-            Komut: <code>serverbond github token|forget|import</code>.
+            Genel depolar için jeton gerekmez. Özel depolar: klasik jetonda{" "}
+            <code>repo</code>, ince ayarlı jetonda Contents okuma yetkisi.
           </p>
         </>
       ) : null}

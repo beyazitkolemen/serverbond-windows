@@ -205,8 +205,8 @@ export default function Settings({
       </nav>
       <p className="section-note">
         {running
-          ? "Çalışma alanı, yedek klasörü ve açılış tercihi ortam çalışırken kaydedilir. Port, PHP, MySQL ve web ayarları için önce ortamı durdurun."
-          : "Kaydedilen ayarlar sonraki servis başlangıcında uygulanır. Açık terminalleri yeniden açın."}
+          ? "Port ve servis ayarlarını değiştirmek için ortamı durdurun."
+          : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
       </p>
       {note && (
         <p role="status" className="settings-feedback">
@@ -237,10 +237,8 @@ export default function Settings({
                 `${home}\\projects`,
               )}
               <p className="section-note">
-                Yeni Laravel projeleri buraya yazılır. Klasör tara bir ve iki
-                seviye kökleri okur: magaza veya musteri/magaza. vendor ve
-                node_modules atlanır. Boş değer projects klasörünü kullanır;
-                eski www klasörü de taranır. Kayıtlı projeler taşınmaz.
+                Yeni projelerin konumu. Boşsa projects kullanılır. Mevcut
+                projeler taşınmaz.
               </p>
               <Toggle
                 label="ServerBond açıldığında ortamı otomatik başlat"
@@ -248,8 +246,7 @@ export default function Settings({
                 onChange={(v) => change("startOnLaunch", v)}
               />
               <p className="section-note">
-                Kurulu PHP, MySQL ve web sunucusunu başlatır. Windows başlangıcı
-                için yukarıdaki masaüstü tercihini de açın.
+                Uygulama açıldığında kurulu servisleri başlatır.
               </p>
             </section>
           )}
@@ -262,8 +259,7 @@ export default function Settings({
                 `${home}\\backups`,
               )}
               <p className="section-note">
-                Boş değer varsayılan backups klasörünü kullanır. Bundan sonraki
-                yedekler bu klasöre yazılır; eski yedekler taşınmaz.
+                Boşsa backups kullanılır. Mevcut yedekler taşınmaz.
               </p>
             </section>
           )}
@@ -316,9 +312,7 @@ export default function Settings({
                 </select>
               </label>
               <p className="section-note">
-                Yeni projeler ve ortak FastCGI bu sürümü kullanır. Kurulu
-                değilse indirilir. Ortam çalışırken değiştirilemez; proje
-                kartından ayrı sürüm seçilebilir.
+                Yeni projelerin varsayılan sürümü. Mevcut projeler ayrı seçilir.
               </p>
               <label>
                 Ayar kapsamı
@@ -338,10 +332,8 @@ export default function Settings({
               </label>
               <p className="section-note">
                 {version
-                  ? "Değişiklik yaptığınızda bu sürüm için ayrı profil oluşur. Aynı sürümü kullanan tüm projelere uygulanır."
-                  : "Özel profili olmayan tüm PHP sürümleri bu ayarları kullanır."}{" "}
-                Kurulu sürümler kaydetmeden önce çalıştırılarak doğrulanır.
-                Üretim varsayılanı: sayfada hata kapalı, günlük ve OPcache açık.
+                  ? "Bu sürümü kullanan tüm projelere uygulanır."
+                  : "Özel profili olmayan PHP sürümlerine uygulanır."}
               </p>
               {version && values.phpVersions[version] && (
                 <button
@@ -417,8 +409,8 @@ export default function Settings({
               </div>
               <h3>Uzantılar</h3>
               <p className="section-note">
-                Seçilen uzantı PHP paketinde bulunmalı. Gerekli uzantıları
-                kapatmak phpMyAdmin veya projelerinizi etkileyebilir.
+                Gerekli uzantıları kapatmak projeleri ve phpMyAdmin’i
+                etkileyebilir.
               </p>
               <div className="extension-grid">
                 {extensions.map((ext) => (
@@ -449,9 +441,7 @@ export default function Settings({
                 />
               </label>
               <p className="section-note">
-                anahtar=değer biçimi kullanın. Form değerlerini burada
-                tekrarlamayın. Uzantı yolu ve FastCGI bağlantı ayarları
-                ServerBond tarafından yönetilir.
+                anahtar=değer biçimi kullanın. Formdaki ayarları tekrarlamayın.
               </p>
             </section>
           )}
@@ -510,8 +500,7 @@ export default function Settings({
                 }
               />
               <p className="section-note">
-                Günlük MySQL veri klasörüne yazılır. Karşılaştırma düzeni yeni
-                veritabanlarını etkiler; mevcut tablolar dönüştürülmez.
+                Karşılaştırma düzeni yalnızca yeni veritabanlarına uygulanır.
               </p>
               <label>
                 SQL modları
@@ -528,8 +517,7 @@ export default function Settings({
                 />
               </label>
               <p className="section-note">
-                Modları virgülle ayırın. Boş değer isteğe bağlı SQL modlarını
-                kapatır.
+                Virgülle ayırın. Boşsa isteğe bağlı SQL modları kapanır.
               </p>
             </section>
           )}
@@ -551,7 +539,7 @@ export default function Settings({
               </label>
               <p className="section-note">
                 {
-                  "Örnek: {name}.dev.localhost. .localhost adresleri hosts değişikliği gerektirmez. Kaydetmek kayıtlı proje adreslerini de günceller; projelerinizdeki APP_URL değerini ayrıca düzenleyin."
+                  "Örnek: {name}.localhost. Kayıtlı proje adresleri de değişir; APP_URL değerini ayrıca güncelleyin."
                 }
               </p>
               <div className="settings-grid">
@@ -599,16 +587,11 @@ export default function Settings({
                 />
               ) : null}
               <p className="section-note">
-                Caddy dahili bir CA ile {`{name}.localhost`} adreslerine
-                sertifika verir. HTTP istekleri HTTPS’e yönlendirilir. Sertifika
-                bu Windows kullanıcısının güven deposuna yazılır; yönetici onayı
-                gerekmez. Ortam çalışırken port değiştirilemez. Kaydettikten
-                sonra ortamı başlatın; sertifika güveni aşağıdaki düğmelerle
-                yönetilir.
+                HTTP, HTTPS’e yönlendirilir. Yerel sertifika Windows
+                kullanıcınızın güven deposuna eklenir.
               </p>
               <p className="section-note">
-                Erişim kayıtları Günlükler → Caddy bölümünde görünür. Sunucu
-                yalnızca bu bilgisayardan bağlantı kabul eder.
+                Yalnızca yerel erişim. Kayıtlar: Günlükler → Caddy.
               </p>
             </section>
           )}
@@ -616,9 +599,8 @@ export default function Settings({
             <section className="settings-section">
               <h2>Ayarları aktar</h2>
               <p className="section-note">
-                JSON yalnızca tercihleri içerir; MySQL yönetici parolası,
-                veritabanları ve proje listesi içermez. İçe aktarılan ayarları
-                gözden geçirip Kaydet ile uygulayın.
+                Yalnızca ayarlar aktarılır; parolalar, veritabanları ve projeler
+                dahil değildir. İçe aktardıktan sonra Kaydet’i seçin.
               </p>
               <div className="settings-actions">
                 <button
@@ -703,8 +685,7 @@ export default function Settings({
           <section className="settings-section">
             <h2>Sertifika güveni</h2>
             <p className="section-note">
-              HTTPS açıkken ortamı bir kez başlatın. Sertifika bu Windows
-              kullanıcısının deposuna yazılır; tarayıcı uyarısı kaybolur.
+              HTTPS açıkken ortamı başlatın, ardından yerel sertifikaya güvenin.
             </p>
             <div className="settings-grid">
               <button
@@ -804,8 +785,8 @@ export default function Settings({
               </button>
             </div>
             <p className="section-note">
-              Rastgele parola Windows hesabınıza bağlı olarak şifrelenir. Proje
-              .env dosyaları yazılmaz.
+              Parola şifreli saklanır. Proje .env dosyaları otomatik
+              güncellenmez.
             </p>
             <h3>Parolayı değiştir</h3>
             <p className="section-note">
@@ -906,10 +887,8 @@ export default function Settings({
               Klasörü aç
             </button>
             <p className="section-note">
-              Kalıcı ayarlar config.json içinde; önceki tercihler
-              config/settings.previous.json dosyasında tutulur. Üretilen
-              php.ini, my.ini ve Caddyfile dosyalarını doğrudan düzenlemek
-              yerine bu ekranı kullanın.
+              Servis ayarlarını bu ekrandan değiştirin. Önceki ayarlar
+              yedeklenir.
             </p>
           </section>
         </>

@@ -173,9 +173,7 @@ export function Shell({
         </main>
         <footer>
           <div className="content-rail">
-            {desktop
-              ? `ServerBond v${APP_VERSION}`
-              : "Tarayıcı önizlemesi · Kurulum için masaüstü uygulamasını açın"}
+            {desktop ? `ServerBond v${APP_VERSION}` : "Salt okunur önizleme"}
           </div>
         </footer>
       </div>

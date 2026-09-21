@@ -71,17 +71,14 @@ export default function UpdateSettings({
     <section className="settings-section">
       <h2>Uygulama güncellemesi</h2>
       <p className="section-note">
-        ServerBond, yayımlanmış GitHub sürümlerindeki imzalı kurulum paketini
-        denetler. Güncelleme sessiz kurulmaz; siz onayladıktan sonra indirilir
-        ve ServerBond yeniden açılır.
+        Güncellemeler onayınızla indirilip kurulur.
       </p>
       <p>
         Kurulu sürüm <strong>v{APP_VERSION}</strong>
       </p>
       {!desktop && (
         <p className="section-note">
-          Tarayıcı önizlemesi güncelleme indirmez. Denetim için masaüstü
-          uygulamasını açın.
+          Güncellemeleri masaüstü uygulamasından denetleyin.
         </p>
       )}
       {error && (
@@ -98,9 +95,8 @@ export default function UpdateSettings({
         <div className="update-notes">
           <h3>ServerBond {available.version}</h3>
           <p className="section-note">
-            Şu an v{available.currentVersion} kullanıyorsunuz. Kurulum çalışan
-            PHP, MySQL ve web sunucusunu durdurur; ardından ServerBond yeniden
-            açılır.
+            Mevcut sürüm: v{available.currentVersion}. Kurulum servisleri
+            durdurur ve ServerBond’ı yeniden açar.
           </p>
           {available.notes ? <pre>{available.notes}</pre> : null}
         </div>
