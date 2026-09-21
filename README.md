@@ -6,13 +6,13 @@ PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdm
 
 Geriye uyumluluk hedefi Windows 10 x64 ve Windows Server 2019/2022 Desktop Experience'tır. Eski makinelerde uçtan uca doğrulama henüz tamamlanmadı; bileşen sınırları ve `main` dalındaki hazırlık [Windows uyumluluğu](docs/windows-compatibility.md) belgesindedir. Windows 7/8.1 ve Server 2012 R2 desteklenmez.
 
-## İndir — v1.1.1
+## İndir — v1.2.0
 
-Uygulama sürümü **1.1.1**. Windows x64 yayını `ServerBond_1.1.1_x64-setup.exe`, `ServerBond_1.1.1_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.
+Uygulama sürümü **1.2.0**. Windows x64 yayını `ServerBond_1.2.0_x64-setup.exe`, `ServerBond_1.2.0_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.
 
-- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.1/ServerBond_1.1.1_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
-- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.1/ServerBond_1.1.1_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
-- [v1.1.1 sürüm notları](docs/releases/v1.1.1.md)
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.2.0/ServerBond_1.2.0_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.2.0/ServerBond_1.2.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
+- [v1.2.0 sürüm notları](docs/releases/v1.2.0.md)
 
 Bu sürüm elle kurulur; otomatik güncelleme için imzalı paket içermez. Önceki kurulumların verileri korunur; ayrıntılar [adlandırma ve uyumluluk](docs/naming.md) belgesindedir.
 

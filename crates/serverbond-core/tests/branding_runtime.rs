@@ -21,9 +21,6 @@ fn serverbond_environment_reaches_cli_web_and_project_terminal() -> Result<()> {
     settings.mysql_port = listeners[1].local_addr()?.port();
     settings.php_port = listeners[2].local_addr()?.port();
     settings.web.https_port = listeners[3].local_addr()?.port();
-    // This checks names and extension loading, independently of Windows'
-    // shared OPcache mapping used by other PHP processes on the machine.
-    settings.php.opcache = false;
     let web_port = settings.web_port;
     drop(listeners);
     manager.save_settings(settings)?;

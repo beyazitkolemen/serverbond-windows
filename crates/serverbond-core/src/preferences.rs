@@ -4,6 +4,7 @@
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, path::Path, time::Duration};
 
 use crate::{
@@ -338,6 +339,11 @@ impl PhpSettings {
         // Since PHP 8.5 OPcache is built in. Configure it without loading a DLL;
         // explicitly disable it too when the user's switch is off.
         text.push_str(&format!("opcache.enable={}\nopcache.enable_cli={}\nopcache.memory_consumption={}\nopcache.validate_timestamps=1\nopcache.revalidate_freq=0\n", u8::from(self.opcache), u8::from(self.opcache), self.opcache_mb));
+        // Windows shares OPcache between processes of the same user and SAPI.
+        // Isolate each installation/build from other PHP distributions (e.g. Herd)
+        // whose different DLL addresses can otherwise cause ASLR startup failures.
+        let cache_id = Sha256::digest(crate::portable_path(ext).as_bytes());
+        text.push_str(&format!("opcache.cache_id=serverbond-{cache_id:x}\n"));
         if let Some(mail) = mail.filter(|mail| mail.relay_php_mail) {
             text.push_str(&format!(
                 "SMTP=127.0.0.1\nsmtp_port={}\nsendmail_from=serverbond@localhost\n",
@@ -577,6 +583,28 @@ pub type PhpProfiles = BTreeMap<String, PhpSettings>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn opcache_is_stable_and_isolated_by_installation_and_php_build() {
+        let php = PhpSettings::default();
+        let cache_id = |path: &str| {
+            php.render(Path::new(path), None)
+                .unwrap()
+                .lines()
+                .find(|line| line.starts_with("opcache.cache_id="))
+                .unwrap()
+                .to_owned()
+        };
+        let first = cache_id("C:/ServerBond Türkçe/bin/php/7.4.33/ext");
+        assert_eq!(first, cache_id("C:/ServerBond Türkçe/bin/php/7.4.33/ext"));
+        assert_ne!(first, cache_id("C:/ServerBond Türkçe/bin/php/8.4.25/ext"));
+        assert_ne!(first, cache_id("C:/Other/bin/php/7.4.33/ext"));
+        assert!(first
+            .strip_prefix("opcache.cache_id=serverbond-")
+            .unwrap()
+            .chars()
+            .all(|c| c.is_ascii_hexdigit()));
+    }
 
     #[test]
     fn php_mail_reaches_the_catcher_only_while_the_relay_is_on() {

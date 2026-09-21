@@ -84,7 +84,12 @@ fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
     assert!(manager.save_settings(invalid).is_err());
     assert_eq!(before, fs::read(home.path().join("config.json"))?);
     manager.start("all")?;
-    assert!(manager.save_settings(settings.clone()).is_err());
+    // Saving unchanged preferences is allowed; runtime changes require a stop.
+    manager.save_settings(settings.clone())?;
+    let mut running_change = settings.clone();
+    running_change.php.memory_mb = 1024;
+    assert!(manager.save_settings(running_change).is_err());
+    assert_eq!(manager.snapshot()?.settings.php.memory_mb, 768);
     let mysql = manager.mysql_query("SELECT @@innodb_buffer_pool_size, @@max_connections, @@max_allowed_packet, @@wait_timeout, @@collation_server, @@slow_query_log, @@long_query_time")?;
     assert_eq!(
         mysql,

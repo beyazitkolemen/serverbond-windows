@@ -11,7 +11,7 @@ description: ServerBond test matrisi ve asistanların hangi komutu nerede çalı
 | `npm run test:core` | Her yer | `cargo test -p serverbond-core` |
 | `npm run check` | Windows | Arayüz + tüm workspace clippy |
 | `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS/EXE |
-| `.github/workflows/release.yml` | tag `v*` | İmzalı güncelleme paketi |
+| `.github/workflows/release.yml` | sürümle eşleşen tag `v*` | Gerçek servis testlerinden sonra EXE/NSIS ve SHA-256; anahtar varsa imzalı güncelleme paketi |
 | `npm run test:integration` | Windows, uygulama kapalı | Gerçek paket + servis duman testi |
 | `cargo test -p serverbond-core --tests -- --ignored` | Windows | php_matrix, environment, preferences_runtime |
 

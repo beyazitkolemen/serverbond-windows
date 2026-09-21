@@ -9,8 +9,19 @@ permissions:
 jobs:
   windows:
     runs-on: windows-2022
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF -ne "refs/tags/v$version") { throw "Release must run from the matching version tag." }
+          if (-not (Test-Path "docs/releases/v$version.md")) { throw "Release notes are missing." }
+          "RELEASE_TAG=v$version" >> $env:GITHUB_ENV
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -30,7 +41,10 @@ jobs:
         run: cargo test --workspace --locked
       - name: Rust checks
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Real Windows environment tests
+        run: cargo test -p serverbond-core --tests --locked -- --ignored --nocapture --test-threads=1
       - name: Signed Windows installer and updater manifest
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,9 +57,12 @@ jobs:
             Windows x64 kurulum paketi ve otomatik güncelleme bildirimi (`latest.json`).
 
             Ayrıntılar: docs/releases ve docs/updates.md
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           updaterJsonPreferNsis: true
+      - name: Unsigned Windows installer
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        run: npm run desktop:build:unsigned
       - name: Versioned checksums
         shell: pwsh
         run: |
@@ -63,3 +80,14 @@ jobs:
         with:
           name: ServerBond-Windows-x64-release
           path: artifacts/*
+      - name: Publish verified release assets
+        shell: pwsh
+        run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
+            gh release create $env:RELEASE_TAG --verify-tag --draft --title "ServerBond $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md"
+            if ($LASTEXITCODE -ne 0) { throw "Could not create draft release." }
+          }
+          gh release upload $env:RELEASE_TAG artifacts/* --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not upload release assets." }
+          gh release edit $env:RELEASE_TAG --notes-file "docs/releases/$env:RELEASE_TAG.md" --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw "Could not publish release." }

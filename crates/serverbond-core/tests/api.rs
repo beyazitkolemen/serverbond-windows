@@ -14,17 +14,30 @@ fn free_port() -> u16 {
 }
 
 fn settings_with_api(port: u16) -> Settings {
+    // Keep reservations alive while allocating: Windows may immediately reuse
+    // a port from a dropped listener, producing duplicate service settings.
+    let mut listeners = Vec::new();
+    while listeners.len() < 8 {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        if listener.local_addr().unwrap().port() != port {
+            listeners.push(listener);
+        }
+    }
+    let ports: Vec<_> = listeners
+        .iter()
+        .map(|listener| listener.local_addr().unwrap().port())
+        .collect();
     let mut settings = Settings {
-        web_port: free_port(),
-        mysql_port: free_port(),
-        php_port: free_port(),
+        web_port: ports[0],
+        mysql_port: ports[1],
+        php_port: ports[2],
         ..Default::default()
     };
-    settings.web.https_port = free_port();
-    settings.mail.smtp_port = free_port();
-    settings.mail.web_port = free_port();
-    settings.postgres.port = free_port();
-    settings.redis.port = free_port();
+    settings.web.https_port = ports[3];
+    settings.mail.smtp_port = ports[4];
+    settings.mail.web_port = ports[5];
+    settings.postgres.port = ports[6];
+    settings.redis.port = ports[7];
     settings.api.enabled = true;
     settings.api.port = port;
     settings

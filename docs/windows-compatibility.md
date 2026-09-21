@@ -1,6 +1,6 @@
 # Windows uyumluluğu
 
-Bu belge `main` dalındaki uyumluluk hazırlığını tanımlar. Daha önce yayımlanan v1.1.1 kurulum paketi bu değişiklikleri içermez. Aşağıdaki hedefler, eski Windows üzerinde tamamlanmış uçtan uca test garantisi değildir.
+Bu belge v1.2.0 ile gelen uyumluluk hazırlığını tanımlar. Aşağıdaki hedefler, eski Windows üzerinde tamamlanmış uçtan uca test garantisi değildir.
 
 ## Hedefler ve sınırlar
 

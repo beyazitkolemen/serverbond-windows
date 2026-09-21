@@ -12,6 +12,8 @@ Kaynak: `https://github.com/beyazitkolemen/serverbond-windows/releases/latest/do
 
 **v1.1.0 ve v1.1.1:** Paketler Windows'ta yerel olarak derlenip yayımlandı. Güncelleme imza anahtarı tanımlı olmadığından bu sürümler `latest.json` ve `.sig` içermez; GitHub Releases sayfasındaki kurulum EXE'si elle çalıştırılır. Aşağıdaki imzalı yayın akışı, Actions ve imza anahtarı hazır olduğunda kullanılabilir.
 
+**v1.2.0:** İmza anahtarı henüz tanımlı değildir. Release akışı testlerden sonra imzasız EXE, NSIS kurulum paketi ve `SHA256SUMS.txt` yayımlar; bu sürüm de elle kurulur.
+
 Depo herkese açık olmalıdır. Özel depoda `latest.json` oturumsuz indirilemez; uygulama “güncelleme yok” veya ağ hatası gösterir.
 
 İmzasız yerel derleme (`npm run desktop:build:unsigned`) veya el ile kopyalanan EXE bu kanalı kullanamaz. Güncelleme, Release işinin ürettiği imzalı kurulum paketinden gelir.
@@ -22,15 +24,15 @@ Depo herkese açık olmalıdır. Özel depoda `latest.json` oturumsuz indirileme
 2. Depo sırlarına ekleyin:
    - `TAURI_SIGNING_PRIVATE_KEY`: minisign özel anahtarının içeriği
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: anahtar parolası; yoksa boş bırakın
-3. `package.json`, `src-tauri/tauri.conf.json` ve `src-tauri/Cargo.toml` sürümlerini birlikte yükseltin.
-4. `v1.2.0` gibi bir etiket itin veya **Release** işini elle çalıştırın.
+3. `package.json`, `crates/serverbond-core/Cargo.toml`, `src-tauri/tauri.conf.json` ve `src-tauri/Cargo.toml` sürümlerini birlikte yükseltin; npm/Cargo kilit dosyalarını yenileyin ve `docs/releases/v<sürüm>.md` notlarını ekleyin.
+4. Sürümle eşleşen etiketi itin veya **Release** işini o etiket üzerinde elle çalıştırın. `main` üzerinden doğrudan yayın reddedilir.
 
 ```powershell
 git tag v1.2.0
 git push origin v1.2.0
 ```
 
-`Release` işi Windows’ta imzalı NSIS, `latest.json` ve `.sig` üretir. Genel bakıştaki güncelleyici yalnızca yayımlanmış (draft olmayan) sürümleri görür.
+`Release` işi derleme, biçim, Clippy, standart testler ve gerçek Windows servis testlerini çalıştırır. İmza anahtarı varsa imzalı NSIS, `latest.json` ve `.sig`; yoksa imzasız NSIS üretir. Sürüm numaralı EXE, kurulum paketi ve SHA-256 özetleri yüklenene kadar yayın taslak kalır. Genel bakıştaki güncelleyici yalnızca imzalı, yayımlanmış (draft olmayan) sürümleri görür.
 
 Anahtar üretmek:
 
