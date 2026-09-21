@@ -6,6 +6,11 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "settings.show",
+    "settings.save",
+    "settings.validate",
+    "settings.defaults",
+    "settings.previous",
     "postgres.connection",
     "postgres.credentials",
     "postgres.password",
@@ -132,6 +137,16 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "settings.show")]
+    SettingsShow(Empty),
+    #[serde(rename = "settings.save")]
+    SettingsSave(Box<super::settings::Save>),
+    #[serde(rename = "settings.validate")]
+    SettingsValidate(Box<super::settings::Validate>),
+    #[serde(rename = "settings.defaults")]
+    SettingsDefaults(Empty),
+    #[serde(rename = "settings.previous")]
+    SettingsPrevious(Empty),
     #[serde(rename = "postgres.connection")]
     PostgresConnection(Empty),
     #[serde(rename = "postgres.credentials")]
@@ -225,6 +240,11 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::SettingsShow(_) => return super::settings::show(manager),
+            Self::SettingsSave(input) => return super::settings::save(manager, *input),
+            Self::SettingsValidate(input) => return super::settings::validate(*input),
+            Self::SettingsDefaults(_) => return Ok(super::settings::defaults(manager)),
+            Self::SettingsPrevious(_) => return super::settings::previous(manager),
             Self::PostgresConnection(_) => return super::postgres::connection(manager),
             Self::PostgresCredentials(input) => {
                 return super::postgres::credentials(manager, input)

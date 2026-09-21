@@ -20,6 +20,7 @@ mod jobs;
 mod mysql;
 mod operations;
 mod postgres;
+mod settings;
 const SERVICES: &[&str] = &[
     "all",
     "php",
@@ -471,6 +472,9 @@ impl Manager {
                         Ok(value) => json!({"data":value}),
                         Err(error) if error.is::<crate::envfile::EnvConflict>() => {
                             json!({"error":crate::envfile::EnvConflict.to_string()})
+                        }
+                        Err(error) if error.is::<crate::preferences::SettingsConflict>() => {
+                            json!({"error":crate::preferences::SettingsConflict.to_string()})
                         }
                         // Raw errors can contain repository URLs or local secrets.
                         Err(_) => {
