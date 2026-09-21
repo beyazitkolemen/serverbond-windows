@@ -227,10 +227,10 @@ impl Operation {
     pub(super) fn parse(name: &str, parameters: &Value) -> Result<Self> {
         ensure!(
             serde_json::to_vec(parameters)?.len()
-                <= if name == "env.write" {
-                    384 * 1024
-                } else {
-                    32768
+                <= match name {
+                    "env.write" => 384 * 1024,
+                    "settings.save" | "settings.validate" => 256 * 1024,
+                    _ => 32768,
                 },
             "İşlem parametreleri çok büyük."
         );

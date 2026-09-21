@@ -54,6 +54,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn large_unicode_profiles_validate_without_lifting_other_operation_limits() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let mut settings = Settings::default();
+        settings.php.extra_ini = format!(";{}", "ş".repeat(7000));
+        for version in crate::model::php_versions().into_iter().take(3) {
+            settings
+                .php_versions
+                .insert(version.version, settings.php.clone());
+        }
+        let parameters = json!({"settings":settings});
+        assert!(serde_json::to_vec(&parameters).unwrap().len() > 32768);
+        let before = manager.export_settings().unwrap();
+        let result = super::super::operations::Operation::parse("settings.validate", &parameters)
+            .unwrap()
+            .execute(&manager)
+            .unwrap();
+        assert_eq!(result, json!({"valid":true}));
+        assert_eq!(before, manager.export_settings().unwrap());
+        let mut oversized = parameters;
+        oversized["settings"]["php"]["extraIni"] = "a".repeat(256 * 1024).into();
+        let error = super::super::operations::Operation::parse("settings.validate", &oversized)
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains("çok büyük"));
+        let error = super::super::operations::Operation::parse(
+            "projects.add",
+            &json!({"name":"test","path":"a".repeat(32768)}),
+        )
+        .err()
+        .unwrap();
+        assert!(error.to_string().contains("çok büyük"));
+    }
+
+    #[test]
     fn settings_transport_requires_confirmation_and_does_not_mutate_on_reads() {
         let home = tempfile::tempdir().unwrap();
         let manager = Manager::new(home.path().into()).unwrap();
