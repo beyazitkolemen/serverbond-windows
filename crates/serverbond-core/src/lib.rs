@@ -621,6 +621,34 @@ impl Manager {
         self.save_settings_inner(settings)
     }
 
+    /// Read settings and their revision from the same configuration snapshot.
+    pub fn settings_with_revision(&self) -> Result<(Settings, String)> {
+        let settings = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .clone();
+        let revision = preferences::settings_revision(&settings)?;
+        Ok((settings, revision))
+    }
+
+    /// Compare and save under the same gate used by local settings mutations.
+    /// The returned revision belongs to this save, not a later concurrent edit.
+    pub fn save_settings_checked(
+        &self,
+        settings: Settings,
+        expected_revision: &str,
+    ) -> Result<(Settings, String)> {
+        let _guard = self.gate()?;
+        let (_, current_revision) = self.settings_with_revision()?;
+        if current_revision != expected_revision {
+            return Err(preferences::SettingsConflict.into());
+        }
+        self.save_settings_inner(settings)?;
+        self.settings_with_revision()
+    }
+
     pub fn save_api_settings(&self, api: crate::preferences::ApiSettings) -> Result<()> {
         let _guard = self.gate()?;
         let mut settings = self

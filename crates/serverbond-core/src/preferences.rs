@@ -43,6 +43,24 @@ pub const EXTENSIONS: &[&str] = &[
     "xsl",
 ];
 
+/// A stable, safe error for stale remote settings forms.
+#[derive(Debug)]
+pub struct SettingsConflict;
+
+impl std::fmt::Display for SettingsConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Windows ayarları değişti. Güncel ayarları alıp tekrar deneyin.")
+    }
+}
+impl std::error::Error for SettingsConflict {}
+
+pub(crate) fn settings_revision(settings: &Settings) -> Result<String> {
+    Ok(format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(settings)?)
+    ))
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct PhpSettings {
