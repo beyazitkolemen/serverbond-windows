@@ -26,6 +26,11 @@ pub(super) const NAMES: &[&str] = &[
     "jobs.save",
     "jobs.worker",
     "jobs.schedule",
+    "jobs.failed",
+    "jobs.retry",
+    "jobs.flush",
+    "jobs.tasks",
+    "projects.log",
 ];
 
 #[derive(Deserialize)]
@@ -107,6 +112,16 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "jobs.failed")]
+    JobsFailed(Remove),
+    #[serde(rename = "jobs.retry")]
+    JobsRetry(super::jobs::Retry),
+    #[serde(rename = "jobs.flush")]
+    JobsFlush(super::jobs::Flush),
+    #[serde(rename = "jobs.tasks")]
+    JobsTasks(Remove),
+    #[serde(rename = "projects.log")]
+    ProjectLog(super::jobs::Log),
     #[serde(rename = "jobs.show")]
     JobsShow(Remove),
     #[serde(rename = "jobs.save")]
@@ -161,6 +176,53 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::JobsFailed(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                return Ok(super::jobs::text_result(
+                    &input.id,
+                    "failed",
+                    manager.list_failed_jobs(&input.id)?,
+                    false,
+                ));
+            }
+            Self::JobsRetry(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                ensure!(input.confirm, "Yeniden deneme onayı gerekli.");
+                return Ok(super::jobs::text_result(
+                    &input.id,
+                    "retry",
+                    manager.retry_failed_jobs(&input.id, Some(&input.job))?,
+                    false,
+                ));
+            }
+            Self::JobsFlush(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                ensure!(input.confirm, "Temizleme onayı gerekli.");
+                return Ok(super::jobs::text_result(
+                    &input.id,
+                    "flush",
+                    manager.flush_failed_jobs(&input.id)?,
+                    false,
+                ));
+            }
+            Self::JobsTasks(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                return Ok(super::jobs::text_result(
+                    &input.id,
+                    "tasks",
+                    manager.list_project_schedule(&input.id)?,
+                    false,
+                ));
+            }
+            Self::ProjectLog(input) => {
+                uuid::Uuid::parse_str(&input.id)?;
+                return Ok(super::jobs::text_result(
+                    &input.id,
+                    &input.source,
+                    manager.read_project_log(&input.id, &input.source)?,
+                    true,
+                ));
+            }
             Self::JobsShow(input) => return super::jobs::show(manager, &input.id),
             Self::JobsSave(input) => return super::jobs::save(manager, input),
             Self::JobsWorker(input) => return super::jobs::control(manager, input, true),

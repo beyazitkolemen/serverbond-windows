@@ -63,7 +63,6 @@ pub fn queue_work_args(worker: &QueueWorker) -> Vec<String> {
     let mut args = vec![
         "artisan".into(),
         "queue:work".into(),
-        worker.connection.clone(),
         format!("--queue={}", worker.queue),
         format!("--sleep={}", worker.sleep),
         format!("--tries={}", worker.max_tries),
@@ -73,6 +72,11 @@ pub fn queue_work_args(worker: &QueueWorker) -> Vec<String> {
         "--no-interaction".into(),
         "--no-ansi".into(),
     ];
+    // "default" is our UI sentinel; omitting the argument lets Laravel use
+    // queue.default (usually QUEUE_CONNECTION), rather than a connection named default.
+    if worker.connection != "default" {
+        args.insert(2, worker.connection.clone());
+    }
     if worker.max_jobs > 0 {
         args.push(format!("--max-jobs={}", worker.max_jobs));
     }
@@ -1009,6 +1013,10 @@ mod tests {
     #[test]
     fn artisan_arguments_are_literal_flags() {
         let mut worker = worker();
+        worker.connection = "default".into();
+        let defaults = queue_work_args(&worker);
+        assert!(!defaults.contains(&"default".into()));
+        assert!(defaults[2].starts_with("--"));
         worker.connection = "redis".into();
         worker.queue = "high,default".into();
         worker.timeout = 90;

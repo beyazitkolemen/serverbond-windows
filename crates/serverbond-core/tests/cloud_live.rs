@@ -14,6 +14,18 @@ fn live_reverb_device_roundtrip() {
     let url = std::env::var("SERVERBOND_CLOUD_SMOKE_URL").unwrap();
     let home = tempfile::tempdir().unwrap();
     let manager = Arc::new(Manager::new(home.path().to_path_buf()).unwrap());
+    if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
+        for entry in std::fs::read_dir(cache).unwrap() {
+            let entry = entry.unwrap();
+            if entry.file_type().unwrap().is_file() {
+                std::fs::copy(
+                    entry.path(),
+                    home.path().join("cache").join(entry.file_name()),
+                )
+                .unwrap();
+            }
+        }
+    }
     let project_fixture = std::env::var("SERVERBOND_CLOUD_SMOKE_PROJECT_FILE")
         .ok()
         .map(|file| {

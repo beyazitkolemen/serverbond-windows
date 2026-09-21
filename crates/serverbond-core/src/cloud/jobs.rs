@@ -29,6 +29,36 @@ pub(super) enum Action {
     Restart,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Retry {
+    pub id: String,
+    pub job: String,
+    pub confirm: bool,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Flush {
+    pub id: String,
+    pub confirm: bool,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Log {
+    pub id: String,
+    pub source: String,
+}
+
+pub(super) fn text_result(id: &str, kind: &str, text: String, tail: bool) -> Value {
+    let count = text.chars().count();
+    let text: String = text
+        .chars()
+        .skip(if tail { count.saturating_sub(32000) } else { 0 })
+        .take(32000)
+        .collect();
+    json!({"projectId":id,"kind":kind,"text":text,"truncated":count>32000})
+}
+
 pub(super) fn show(manager: &Manager, id: &str) -> Result<Value> {
     uuid::Uuid::parse_str(id)?;
     let state = manager
@@ -88,6 +118,14 @@ pub(super) fn control(manager: &Manager, input: Control, worker: bool) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn long_unicode_logs_keep_the_tail_and_mark_truncation() {
+        let text = format!("{}son", "ş".repeat(32000));
+        let result = text_result("project", "php", text, true);
+        assert_eq!(result["text"].as_str().unwrap().chars().count(), 32000);
+        assert!(result["text"].as_str().unwrap().ends_with("son"));
+        assert_eq!(result["truncated"], true);
+    }
     #[test]
     fn settings_are_revision_checked_and_stopping_never_creates_processes() {
         let home = tempfile::tempdir().unwrap();

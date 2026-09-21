@@ -58,4 +58,8 @@ PHP yönetimi: `php.list/select/repair` varsayılan sürümü; `projects.php` ve
 
 Kuyruk yönetimi: `jobs.show/save/worker/schedule` aynı yerel Manager ayar ve süreç yönetimini kullanır. Ayar kaydı `expectedRevision` ile kilit altında kontrol edilir; eski Cloud taslağı yerel değişiklikleri ezemez. Başlatma/durdurma/yeniden başlatma hedef projeye ait işçi UUID'siyle yapılır. Sonuçta yapılandırma ve süreç sayıları bulunur; ham hata metni veya log gönderilmez.
 
+İsteğe bağlı çıktı işlemleri: `jobs.failed/tasks` liste alır; `jobs.retry` iş kimliği veya `all` ve açık onayla yeniden kuyruğa alır; `jobs.flush` açık onayla başarısız kayıtları siler. `projects.log` yalnızca projenin PHP/zamanlayıcı/işçi günlüklerini okuyabilir. Günlüklerin son 32.000 karakteri, diğer çıktıların ilk 32.000 karakteri şifreli sonuç olarak saklanıp HTTPS ile iletilir; Reverb bildirimine girmez. Proje dışı işçi ve genel dosya yolu reddedilir.
+
+Kuyruk bağlantısı `default` olduğunda `queue:work` komutuna bağlantı adı verilmez; Laravel'in `queue.default` / `QUEUE_CONNECTION` ayarı kullanılır. `redis` veya `database` gibi açık bağlantı adları aynen iletilir. Bu davranış yerel uygulama, API ve Cloud için ortaktır.
+
 PHPUnit müşteri izolasyonu, oturum/CSRF, eşleştirme tekrarları/süre, hız sınırları, komut sahipliği/süre/tek aktif işlem ve özel Reverb kanal yetkilerini kapsar. Windows testleri DPAPI, URL sınırları, yönlendirme reddi, kalıcı tekrar engeli ve yarım kalan komutları kapsar. İsteğe bağlı cloud_live testi gerçek Laravel/Reverb ile izole Windows Manager çalıştırır.
