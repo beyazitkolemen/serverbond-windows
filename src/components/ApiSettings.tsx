@@ -158,9 +158,9 @@ export default function ApiSettings({
         </button>
       </div>
       <p className="section-note">
-        Yol listesi için <code>GET {baseUrl}</code>; komut satırından{" "}
-        <code>serverbond api routes</code>. Yanıtlar{" "}
-        <code>{'{ "ok": true, "data": … }'}</code> biçimindedir.
+        Servisler, projeler, masaüstü ve güncellemeler API üzerinden yönetilir.
+        Sözleşme: <code>GET {baseUrl}/openapi.json</code>. Yetenekler:{" "}
+        <code>GET /capabilities</code>.
       </p>
     </section>
   );

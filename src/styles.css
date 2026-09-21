@@ -2606,6 +2606,9 @@ td:first-child {
 .api-token .section-note {
   margin: 0;
 }
+.api-settings .section-note code {
+  overflow-wrap: anywhere;
+}
 .settings-save {
   display: flex;
   gap: 10px;

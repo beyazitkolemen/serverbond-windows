@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
+import { call, desktop } from "../api";
+import { listen } from "@tauri-apps/api/event";
 
 export type ThemePreference = "system" | "light" | "dark";
 
 const STORAGE_KEY = "serverbond.theme";
 const query = "(prefers-color-scheme: dark)";
+const changed = "serverbond:theme";
+
+function store(preference: ThemePreference) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, preference);
+  } catch {
+    /* Native preference remains persisted. */
+  }
+  document.documentElement.dataset.theme = resolve(preference);
+  window.dispatchEvent(new CustomEvent(changed, { detail: preference }));
+}
 
 function read(): ThemePreference {
   try {
@@ -26,16 +39,54 @@ export function applyStoredTheme() {
 
 /**
  * Appearance preference: follows Windows by default and can be pinned to
- * light or dark. Stored in the WebView's localStorage; the Rust side has no
- * say in colours.
+ * light or dark. Desktop preferences persist in Rust and synchronize with
+ * HTTP callers. Browser previews keep using localStorage.
  */
 export function useTheme(): {
   preference: ThemePreference;
   setPreference: (next: ThemePreference) => void;
   resolved: "light" | "dark";
+  error: string;
+  busy: boolean;
 } {
   const [preference, setPreferenceState] = useState<ThemePreference>(read);
   const [resolved, setResolved] = useState(() => resolve(preference));
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    const update = (event: Event) =>
+      setPreferenceState((event as CustomEvent<ThemePreference>).detail);
+    window.addEventListener(changed, update);
+    if (desktop) {
+      void (async () => {
+        const remove = await listen<ThemePreference>(
+          "desktop:theme",
+          (event) => {
+            if (active) store(event.payload);
+          },
+        );
+        if (!active) {
+          remove();
+          return;
+        }
+        unlisten = remove;
+        const theme = await call<ThemePreference>("appearance_save", {
+          theme: read(),
+          initializeOnly: true,
+        });
+        if (active) store(theme);
+      })().catch((error) => {
+        if (active) setError(String(error));
+      });
+    }
+    return () => {
+      active = false;
+      unlisten?.();
+      window.removeEventListener(changed, update);
+    };
+  }, []);
   useEffect(() => {
     const media = window.matchMedia?.(query);
     const update = () => {
@@ -47,14 +98,22 @@ export function useTheme(): {
     media?.addEventListener("change", update);
     return () => media?.removeEventListener("change", update);
   }, [preference]);
-  const setPreference = (next: ThemePreference) => {
+  const setPreference = async (next: ThemePreference) => {
+    setBusy(true);
+    setError("");
     try {
-      if (next === "system") window.localStorage.removeItem(STORAGE_KEY);
-      else window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* private mode or blocked storage: the choice lasts for this session */
+      const saved = desktop
+        ? await call<ThemePreference>("appearance_save", {
+            theme: next,
+            initializeOnly: false,
+          })
+        : next;
+      store(saved);
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setBusy(false);
     }
-    setPreferenceState(next);
   };
-  return { preference, setPreference, resolved };
+  return { preference, setPreference, resolved, error, busy };
 }

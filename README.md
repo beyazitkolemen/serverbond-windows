@@ -312,6 +312,8 @@ Elektrik kesintisi, işletim sisteminin süreci zorla kapatması veya bellek tü
 
 Arayüzün ve CLI'nın yaptığı her iş `http://127.0.0.1:18800/api/v1` altındaki yerel HTTP API'den de yapılabilir: hizmetleri başlat/durdur, proje ekle veya Git'ten klonla, sürüm çalıştır, kuyruk ve zamanlayıcıyı yönet, `.env` ve ayarları oku/yaz. API varsayılan olarak kapalıdır; **Ayarlar → API** bölümünden açılır ve bir kez gösterilen `Authorization: Bearer` jetonu oluşturulur (diskte yalnızca SHA-256 özeti kalır). Komut satırı: `serverbond api serve|token|forget|status|routes`. Tüm yollar, gövdeler ve örnekler: [docs/api.md](docs/api.md).
 
+Masaüstü uygulamasında pencere, tepsi, Windows başlangıç tercihleri, tema, yeniden başlatma ve imzalı güncellemeler de API ile yönetilir. `GET /capabilities` host desteğini bildirir; CLI sunucusunda masaüstü işlemleri `501` döner. `GET /openapi.json` kimlik doğrulamalı OpenAPI 3.1 belgesini sunar. Jeton yenileme/iptal, yapılandırma doğrulama/kurtarma ve Windows izin işlemleri de desteklenir.
+
 ## Mimari
 
 - `crates/serverbond-core`: `Manager` cephesi — katalog, güvenli indirme/arşiv açma, süreç yönetimi, MySQL, projeler, kuyruk/zamanlayıcı, sürüm, yerel API, CLI.

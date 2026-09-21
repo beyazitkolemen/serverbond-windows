@@ -72,7 +72,13 @@ const extensions = [
 ];
 
 function runtimeSlice(settings: Values) {
-  return { ...settings, projectsDir: "", backupsDir: "", startOnLaunch: false };
+  return {
+    ...settings,
+    projectsDir: "",
+    backupsDir: "",
+    startOnLaunch: false,
+    api: undefined,
+  };
 }
 
 export default function Settings({
@@ -204,9 +210,11 @@ export default function Settings({
         ))}
       </nav>
       <p className="section-note">
-        {running
-          ? "Port ve servis ayarlarını değiştirmek için sunucuyu durdurun."
-          : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
+        {section === "API"
+          ? "API ayarları sunucu çalışırken uygulanabilir."
+          : running
+            ? "Port ve servis ayarlarını değiştirmek için sunucuyu durdurun."
+            : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
       </p>
       {note && (
         <p role="status" className="settings-feedback">

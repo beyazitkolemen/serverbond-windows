@@ -4,6 +4,8 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod api;
+mod appearance;
 mod desktop;
 mod startup;
 mod tray;
@@ -632,6 +634,15 @@ async fn desktop_status(app: tauri::AppHandle) -> Result<desktop::DesktopStatus,
 }
 
 #[tauri::command]
+fn appearance_save(
+    app: tauri::AppHandle,
+    theme: appearance::Theme,
+    initialize_only: bool,
+) -> Result<appearance::Theme, String> {
+    appearance::save(&app, theme, initialize_only).map_err(|e| format!("{e:#}"))
+}
+
+#[tauri::command]
 async fn desktop_save(
     app: tauri::AppHandle,
     preferences: desktop::Preferences,
@@ -716,6 +727,8 @@ fn main() {
             let desktop = desktop::Desktop::new(&manager.home);
             app.manage(manager.clone());
             app.manage(desktop);
+            app.manage(appearance::Appearance::new(&manager.home));
+            manager.attach_desktop_api(Arc::new(api::Host::new(app.handle().clone())));
             if let Err(error) = manager.ensure_api() {
                 manager.log(format!("Yönetim API'si başlatılamadı: {error:#}"));
             }
@@ -770,6 +783,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             snapshot,
             desktop_status,
+            appearance_save,
             desktop_save,
             desktop_action,
             desktop_navigation,

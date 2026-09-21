@@ -30,6 +30,7 @@ import Services from "./components/Services";
 import EnvironmentSummary from "./components/EnvironmentSummary";
 import QuickNavigation from "./components/QuickNavigation";
 import { checkForAppUpdate, type UpdateInfo } from "./updates";
+import { useTheme } from "./hooks/useTheme";
 
 const headings: Record<AppPage, string> = {
   [Page.Overview]: "Genel bakış",
@@ -50,6 +51,10 @@ export default function App() {
   const [appUpdate, setAppUpdate] = useState<UpdateInfo | null>(null);
   const [openUpdates, setOpenUpdates] = useState(0);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const { error: themeError } = useTheme();
+  useEffect(() => {
+    if (themeError) setError(themeError);
+  }, [themeError]);
   const inFlight = useRef(false);
   const requestNumber = useRef(0);
   const refresh = useCallback(async () => {
@@ -92,6 +97,11 @@ export default function App() {
     let active = true;
     const cleanup: (() => void)[] = [];
     const navigate = (target: string | null) => {
+      if (active && target === "updates") {
+        setPage(Page.Settings);
+        setOpenUpdates((n) => n + 1);
+        return;
+      }
       if (active && target && Object.hasOwn(headings, target))
         setPage(target as AppPage);
     };

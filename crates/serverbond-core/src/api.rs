@@ -6,7 +6,7 @@
 //! listener never binds a public address; only the SHA-256 of the token is
 //! stored, and the token itself is shown once when it is created.
 //!
-//! Every response is JSON shaped as `{ "ok": true, "data": … }` or
+//! Except for the raw OpenAPI document, JSON responses are `{ "ok": true, "data": … }` or
 //! `{ "ok": false, "error": "…" }`. Manager errors are reported as `400`
 //! with the same Turkish message the interface would show.
 
@@ -30,6 +30,28 @@ use std::{
     time::Duration,
 };
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
+
+mod openapi;
+
+/// Implemented by the desktop host. The core never depends on Tauri.
+pub trait DesktopApi: Send + Sync {
+    fn call(&self, operation: &str, body: Value) -> Result<DesktopReply>;
+}
+
+pub struct DesktopReply {
+    pub data: Value,
+    /// Exit and installer launch must happen only after the HTTP response.
+    pub after_response: Option<Box<dyn FnOnce() -> Result<()> + Send>>,
+}
+
+impl DesktopReply {
+    pub fn immediate(data: Value) -> Self {
+        Self {
+            data,
+            after_response: None,
+        }
+    }
+}
 
 pub const VERSION: &str = "v1";
 const MAX_BODY: usize = 1024 * 1024;
@@ -62,6 +84,7 @@ impl Drop for ApiServer {
 #[derive(Default)]
 pub(crate) struct ApiState {
     server: Mutex<Option<ApiServer>>,
+    desktop: Mutex<Option<Arc<dyn DesktopApi>>>,
 }
 
 /// Status the interface shows in Ayarlar → API.
@@ -89,6 +112,18 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 impl Manager {
+    pub fn attach_desktop_api(&self, desktop: Arc<dyn DesktopApi>) {
+        *self.api.desktop.lock().unwrap_or_else(|e| e.into_inner()) = Some(desktop);
+    }
+
+    fn desktop_api(&self) -> Option<Arc<dyn DesktopApi>> {
+        self.api
+            .desktop
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
     fn api_token_path(&self) -> PathBuf {
         self.home.join(TOKEN_FILE)
     }
@@ -267,12 +302,14 @@ fn respond(request: Request, status: u16, body: Value) {
 struct Reply {
     status: u16,
     body: Value,
+    after_response: Option<Box<dyn FnOnce() -> Result<()> + Send>>,
 }
 
 fn ok(data: impl serde::Serialize) -> Result<Reply> {
     Ok(Reply {
         status: 200,
         body: json!({ "ok": true, "data": data }),
+        after_response: None,
     })
 }
 
@@ -280,6 +317,7 @@ fn fail(status: u16, message: impl Into<String>) -> Reply {
     Reply {
         status,
         body: json!({ "ok": false, "error": message.into() }),
+        after_response: None,
     }
 }
 
@@ -349,6 +387,11 @@ fn handle(manager: &Arc<Manager>, mut request: Request) {
         Err(error) => fail(500, format!("{error:#}")),
     };
     respond(request, reply.status, reply.body);
+    if let Some(work) = reply.after_response {
+        if let Err(error) = manager.contain(work) {
+            manager.log(format!("API ertelenmiş işlemi tamamlanamadı: {error:#}"));
+        }
+    }
 }
 
 fn health(manager: &Manager) -> Reply {
@@ -359,6 +402,7 @@ fn health(manager: &Manager) -> Reply {
         .unwrap_or((false, false));
     Reply {
         status: 200,
+        after_response: None,
         body: json!({
             "ok": true,
             "data": {
@@ -380,11 +424,11 @@ fn parse<T: for<'de> Deserialize<'de>>(body: &[u8]) -> Result<T> {
     serde_json::from_slice(body).context("JSON gövde okunamadı.")
 }
 
-fn query_value<'a>(query: &'a str, key: &str) -> Option<&'a str> {
-    query.split('&').find_map(|pair| {
-        let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
-        (k == key).then_some(v)
-    })
+fn query_value(query: &str, key: &str) -> Option<String> {
+    reqwest::Url::parse(&format!("http://localhost/?{query}"))
+        .ok()?
+        .query_pairs()
+        .find_map(|(k, v)| (k == key).then(|| v.into_owned()))
 }
 
 #[derive(Deserialize)]
@@ -467,9 +511,68 @@ struct FilePath {
     path: PathBuf,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PermissionInput {
+    defender: bool,
+}
+
+fn desktop_call(manager: &Manager, operation: &str, body: &[u8]) -> Result<Reply> {
+    let Some(host) = manager.desktop_api() else {
+        return Ok(fail(
+            501,
+            "Bu işlem masaüstü uygulamasının API'sinde kullanılabilir.",
+        ));
+    };
+    let input = if body.is_empty() {
+        json!({})
+    } else {
+        parse(body)?
+    };
+    let reply = host.call(operation, input)?;
+    Ok(Reply {
+        status: if reply.after_response.is_some() {
+            202
+        } else {
+            200
+        },
+        body: json!({ "ok": true, "data": reply.data }),
+        after_response: reply.after_response,
+    })
+}
+
 /// Human-readable route index served at `/api/v1`.
 pub fn routes() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
+        ("GET", "/api/v1", "Yol listesi"),
+        ("GET", "/api/v1/openapi.json", "OpenAPI 3.1 sözleşmesi"),
+        ("GET", "/api/v1/capabilities", "Çalışan hostun yetenekleri"),
+        ("GET", "/api/v1/api", "API durumu"),
+        ("POST", "/api/v1/api/token", "Jetonu yenile; yeni jetonu bir kez döndürür"),
+        ("DELETE", "/api/v1/api/token", "API jetonunu iptal et"),
+        ("POST", "/api/v1/settings/validate", "Settings nesnesini kaydetmeden doğrula"),
+        ("GET", "/api/v1/permissions", "Windows izin durumu"),
+        ("POST", "/api/v1/permissions/grant", "Windows izinlerini uygula {defender}; UAC gerekebilir"),
+        ("POST", "/api/v1/permissions/ensure", "Kayıtlı Windows izinlerini yeniden uygula"),
+        ("POST", "/api/v1/recovery", "Önceki geçerli yapılandırmayı kurtar"),
+        ("GET", "/api/v1/mysql/credentials", "MySQL bağlantı bilgileri; parola içerir"),
+        ("GET", "/api/v1/postgres/credentials", "PostgreSQL bağlantı bilgileri; parola içerir"),
+        ("POST", "/api/v1/system/open-home", "Veri klasörünü aç"),
+        ("POST", "/api/v1/system/runtime-download", "Visual C++ indirme sayfasını aç"),
+        ("POST", "/api/v1/tunnel/apply", "Tünel jetonunu kaydet ve başlat {token}"),
+        ("POST", "/api/v1/projects/{id}/php/repair", "Proje PHP sürümünü onar {version}"),
+        ("POST", "/api/v1/projects/{id}/open", "Projeyi tarayıcıda aç"),
+        ("POST", "/api/v1/projects/{id}/terminal", "Proje terminalini aç"),
+        ("POST", "/api/v1/services/{id}/open", "phpmyadmin veya mail arayüzünü aç"),
+        ("GET", "/api/v1/desktop", "Masaüstü tercihleri ve tepsi durumu"),
+        ("GET", "/api/v1/desktop/appearance", "Tema tercihi; null henüz taşınmadı anlamına gelir"),
+        ("PUT", "/api/v1/desktop/appearance", "Tema tercihi {theme: system|light|dark}"),
+        ("PUT", "/api/v1/desktop", "Masaüstü tercihlerini kaydet {preferences, autostart}"),
+        ("POST", "/api/v1/desktop/{show|hide|menu|exit|restart}", "Masaüstü işlemi; exit/restart yanıt sonrası uygulanır"),
+        ("POST", "/api/v1/desktop/navigate", "Sayfayı aç {page}"),
+        ("GET", "/api/v1/updates", "İmzalı uygulama güncellemesini denetle"),
+        ("GET", "/api/v1/updates/status", "Güncelleme işlem durumu"),
+        ("POST", "/api/v1/updates/install", "Onaylanan sürümü indir, doğrula ve kur {version, confirm:true}"),
         ("GET", "/api/v1/health", "Sürüm ve durum özeti (jeton gerekmez)"),
         ("GET", "/api/v1/status", "Tam durum görüntüsü (arayüzle aynı)"),
         ("GET", "/api/v1/requirements", "Windows ön koşulları"),
@@ -536,7 +639,10 @@ fn route(
     body: &[u8],
 ) -> Result<Reply> {
     let prefix = format!("/api/{VERSION}");
-    let Some(rest) = path.strip_prefix(prefix.as_str()) else {
+    let Some(rest) = path
+        .strip_prefix(prefix.as_str())
+        .filter(|rest| rest.is_empty() || rest.starts_with('/'))
+    else {
         return Ok(fail(404, "Bilinmeyen yol. /api/v1 altında istek yapın."));
     };
     let segments: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
@@ -550,6 +656,71 @@ fn route(
             .into_iter()
             .map(|(m, p, d)| json!({ "method": m, "path": p, "description": d }))
             .collect::<Vec<_>>()),
+        ["openapi.json"] if get => Ok(Reply {
+            status: 200,
+            body: openapi::document(),
+            after_response: None,
+        }),
+        ["capabilities"] if get => ok(
+            json!({ "apiVersion": VERSION, "desktop": manager.desktop_api().is_some(), "authentication": "bearer", "maxBodyBytes": MAX_BODY, "maxConcurrentRequests": MAX_IN_FLIGHT }),
+        ),
+        ["api"] if get => ok(manager.api_status()),
+        ["api", "token"] if post => ok(json!({ "token": manager.create_api_token()? })),
+        ["api", "token"] if delete => {
+            manager.clear_api_token()?;
+            ok(json!({ "revoked": true }))
+        }
+        ["settings", "validate"] if post => {
+            if body.len() > 256 * 1024 {
+                bail!("Ayar dosyası 256 KB sınırını aşıyor.");
+            }
+            let settings: Settings = parse(body)?;
+            settings.validate()?;
+            ok(settings)
+        }
+        ["permissions"] if get => ok(manager.permission_state()),
+        ["permissions", "ensure"] if post => {
+            manager.ensure_permissions()?;
+            ok(manager.permission_state())
+        }
+        ["permissions", "grant"] if post => {
+            let input: PermissionInput = parse(body)?;
+            ok(manager.grant_permissions(input.defender)?)
+        }
+        ["recovery"] if post => {
+            manager.recover_configuration()?;
+            manager.ensure_api()?;
+            ok(json!({ "recovered": true }))
+        }
+        ["mysql", "credentials"] if get => ok(json!({ "text": manager.credentials()? })),
+        ["postgres", "credentials"] if get => {
+            ok(json!({ "text": manager.postgres_credentials()? }))
+        }
+        ["system", "open-home"] if post => {
+            manager.open_home()?;
+            ok(json!({ "opened": true }))
+        }
+        ["system", "runtime-download"] if post => {
+            manager.open_runtime_download()?;
+            ok(json!({ "opened": true }))
+        }
+        ["tunnel", "apply"] if post => {
+            let input: Token = parse(body)?;
+            manager.apply_tunnel(&input.token)?;
+            ok(json!({ "started": true }))
+        }
+        ["desktop"] if get => desktop_call(manager, "status", body),
+        ["desktop", "appearance"] if get => desktop_call(manager, "appearance-get", body),
+        ["desktop", "appearance"] if put => desktop_call(manager, "appearance-save", body),
+        ["desktop"] if put => desktop_call(manager, "save", body),
+        ["desktop", action @ ("show" | "hide" | "menu" | "exit" | "restart" | "navigate")]
+            if post =>
+        {
+            desktop_call(manager, action, body)
+        }
+        ["updates"] if get => desktop_call(manager, "update-check", body),
+        ["updates", "status"] if get => desktop_call(manager, "update-status", body),
+        ["updates", "install"] if post => desktop_call(manager, "update-install", body),
         ["status"] if get => ok(manager.snapshot()?),
         ["requirements"] if get => ok(manager.requirements()),
         ["logs", id] if get => ok(json!({ "text": manager.read_log(id)? })),
@@ -645,6 +816,13 @@ fn route(
 }
 
 fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
+    if action == "open" {
+        return match id {
+            "phpmyadmin" => manager.open_phpmyadmin(),
+            "mail" => manager.open_mail(),
+            _ => bail!("Bu hizmet için açılacak arayüz yok."),
+        };
+    }
     let tool = |install: fn(&Manager) -> Result<()>,
                 repair: fn(&Manager) -> Result<()>,
                 start: fn(&Manager) -> Result<()>,
@@ -736,6 +914,19 @@ fn project_route(
             manager.select_project_php(id, &input.version)?;
             ok(json!({ "version": input.version }))
         }
+        ["php", "repair"] if post => {
+            let input: Version = parse(body)?;
+            manager.repair_project_php(id, &input.version)?;
+            ok(json!({ "version": input.version }))
+        }
+        ["open"] if post => {
+            manager.open_project(id)?;
+            ok(json!({ "opened": true }))
+        }
+        ["terminal"] if post => {
+            manager.open_project_terminal(id)?;
+            ok(json!({ "opened": true }))
+        }
         ["deploy"] if post => ok(manager.deploy_project(id)?),
         ["releases"] if get => ok(manager.list_project_releases(id)?),
         ["release"] if get => ok(manager.project(id)?.release),
@@ -791,8 +982,8 @@ fn project_route(
         }
         ["failed-jobs", "flush"] if post => ok(json!({ "text": manager.flush_failed_jobs(id)? })),
         ["logs"] if get => {
-            let source = query_value(query, "source").unwrap_or("php");
-            ok(json!({ "text": manager.read_project_log(id, source)? }))
+            let source = query_value(query, "source");
+            ok(json!({ "text": manager.read_project_log(id, source.as_deref().unwrap_or("php"))? }))
         }
         ["database", "create"] if post => {
             let name = manager.project(id)?.name;
@@ -854,7 +1045,11 @@ mod tests {
     fn query_values_are_looked_up_by_key() {
         assert_eq!(
             query_value("source=worker:abc&x=1", "source"),
-            Some("worker:abc")
+            Some("worker:abc".into())
+        );
+        assert_eq!(
+            query_value("source=worker%3Aabc&x=1", "source"),
+            Some("worker:abc".into())
         );
         assert_eq!(query_value("x=1", "source"), None);
         assert_eq!(query_value("", "source"), None);

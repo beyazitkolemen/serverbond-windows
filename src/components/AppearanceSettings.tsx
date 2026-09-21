@@ -3,12 +3,13 @@ import { useTheme, type ThemePreference } from "../hooks/useTheme";
 import SegmentedControl from "./SegmentedControl";
 
 export default function AppearanceSettings() {
-  const { preference, setPreference, resolved } = useTheme();
+  const { preference, setPreference, resolved, error, busy } = useTheme();
   return (
     <section className="settings-section">
       <h2>Görünüm</h2>
       <p className="section-note">Tema tercihi bu bilgisayarda saklanır.</p>
       <SegmentedControl<ThemePreference>
+        disabled={busy}
         label="Tema"
         value={preference}
         onChange={setPreference}
@@ -43,6 +44,11 @@ export default function AppearanceSettings() {
           },
         ]}
       />
+      {error ? (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </section>
   );
 }
