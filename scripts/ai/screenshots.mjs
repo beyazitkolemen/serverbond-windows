@@ -7,65 +7,75 @@
 //   npm run build && node scripts/ai/screenshots.mjs
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFile, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, extname, join, normalize } from "node:path";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  normalize,
+  resolve,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const dist = join(root, "dist");
 const output = join(root, "docs/screenshots");
 const width = 1440;
+let captureStatus;
 
 const shots = [
-  { file: "01-genel-bakis.png", nav: "Genel bakış", height: 1480 },
-  { file: "02-bilesenler.png", nav: "Bileşenler", height: 1240 },
+  { file: "17-proje-detay.png", nav: "Projeler" },
+  {
+    file: "18-api.png",
+    viewportOnly: true,
+    nav: "API",
+    actions: [['.api-page [role="tab"]', "Uç nokta rehberi"]],
+  },
+  { file: "19-koyu-tema.png", nav: "Projeler", theme: "dark" },
+  { file: "01-genel-bakis.png", nav: "Genel bakış" },
+  { file: "02-bilesenler.png", nav: "Bileşenler" },
   {
     file: "03-projeler-kuyruk.png",
     nav: "Projeler",
     projectTab: "Kuyruklar",
     expand: [".project-worker-more summary"],
-    height: 1400,
   },
-  { file: "16-hizmetler.png", nav: "Hizmetler", height: 1100 },
+  { file: "16-hizmetler.png", nav: "Hizmetler" },
   {
     file: "04-eposta.png",
     nav: "Hizmetler",
     service: "E-posta",
     openSettings: true,
-    height: 1360,
   },
   {
     file: "05-tunel.png",
     nav: "Hizmetler",
     service: "Tünel",
     openSettings: true,
-    height: 1400,
   },
   {
     file: "06-sistem.png",
     nav: "Ayarlar",
     tab: "Sistem",
-    height: 2100,
   },
-  { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP", height: 1560 },
+  { file: "07-php-ayarlari.png", nav: "Ayarlar", tab: "PHP" },
   {
     file: "11-postgresql.png",
     nav: "Hizmetler",
     service: "PostgreSQL",
-    height: 1800,
   },
   {
     file: "15-redis.png",
     nav: "Hizmetler",
     service: "Redis",
-    height: 1560,
   },
   {
     file: "12-github.png",
     nav: "Hizmetler",
     service: "GitHub",
     openSettings: true,
-    height: 1180,
   },
   {
     file: "13-proje-github.png",
@@ -74,31 +84,26 @@ const shots = [
       [".heading-actions .button.primary", "Proje ekle"],
       [".tabs button", "GitHub"],
     ],
-    height: 1100,
   },
   {
     file: "08-web-https.png",
     nav: "Ayarlar",
     tab: "Web sunucusu",
-    height: 1680,
   },
   {
     file: "09-proje-gunlukleri.png",
     nav: "Projeler",
     projectTab: "Günlükler",
-    height: 1200,
   },
   {
     file: "10-proje-surum.png",
     nav: "Projeler",
     projectTab: "Sürüm",
-    height: 1480,
   },
   {
     file: "14-proje-env.png",
     nav: "Projeler",
     projectTab: "Ortam",
-    height: 1280,
   },
 ];
 
@@ -129,9 +134,13 @@ addEventListener("DOMContentLoaded", () => {
       shot.service
         ? [`.service-row[data-service="${shot.service}"]`, null]
         : null,
-      shot.openSettings ? [".service-gear", "Ayarlar"] : null,
+      shot.openSettings
+        ? ['.services-workspace [role="tab"]', "Ayarlar"]
+        : null,
       shot.tab ? [".settings-tabs button", shot.tab] : null,
-      shot.projectTab ? [".project-detail-tabs button", shot.projectTab] : null,
+      shot.projectTab
+        ? ['.project-detail-nav [role="tab"]', shot.projectTab]
+        : null,
       ...(Array.isArray(shot.actions) ? shot.actions : []),
       ...(Array.isArray(shot.expand)
         ? shot.expand.map((selector) => [selector, null])
@@ -141,20 +150,39 @@ addEventListener("DOMContentLoaded", () => {
     ].filter(Boolean),
   )};
   let index = 0;
+  let attempts = 0;
   const advance = () => {
-    if (index >= steps.length) return;
+    if (index >= steps.length) {
+      document.documentElement.dataset.theme = ${JSON.stringify(shot.theme ?? "light")};
+      fetch('/__screenshot-status', {method: 'POST', body: JSON.stringify({ok: true, steps: index, height: document.documentElement.scrollHeight})});
+      return;
+    }
     const [selector, text] = steps[index];
-    if (click(selector, text)) index += 1;
+    if (click(selector, text)) { index += 1; attempts = 0; }
+    else if (++attempts > 30) {
+      fetch('/__screenshot-status', {method: 'POST', body: JSON.stringify({ok: false, selector, text})});
+      return;
+    }
     setTimeout(advance, 100);
   };
   setTimeout(advance, 300);
 });
 </script>`;
-  return html.replace("</head>", `${script}</head>`);
+  return html.replace(
+    "</head>",
+    `<style>*,*::before,*::after{animation:none!important;transition:none!important}</style>${script}</head>`,
+  );
 }
 
 async function serve() {
   const server = createServer(async (request, response) => {
+    if (request.url === "/__screenshot-status" && request.method === "POST") {
+      let body = "";
+      for await (const chunk of request) body += chunk;
+      captureStatus = JSON.parse(body);
+      response.writeHead(204).end();
+      return;
+    }
     const path = normalize(new URL(request.url, "http://x").pathname);
     const file = join(dist, path === "/" ? "index.html" : path);
     try {
@@ -173,7 +201,7 @@ async function serve() {
   return { server, port: server.address().port };
 }
 
-function capture(url, file, height) {
+function capture(url, file, height, profile) {
   return new Promise((resolve, reject) => {
     const chrome = spawn(
       process.env.CHROME ?? "/usr/bin/google-chrome-stable",
@@ -185,13 +213,13 @@ function capture(url, file, height) {
         "--no-first-run",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",
-        `--user-data-dir=${join(root, "target/screenshot-profile")}`,
+        `--user-data-dir=${profile}`,
         `--window-size=${width},${height}`,
         "--virtual-time-budget=6000",
         `--screenshot=${file}`,
         url,
       ],
-      { stdio: "ignore" },
+      { stdio: "ignore", windowsHide: true },
     );
     chrome.on("error", reject);
     chrome.on("exit", (code) =>
@@ -210,17 +238,50 @@ const html = await readFile(join(dist, "index.html"), "utf8").catch(() => {
 
 const { server, port } = await serve();
 const harnessFile = join(dist, "__screenshot.html");
+const profile = await mkdtemp(join(tmpdir(), "serverbond-screenshots-"));
 try {
   for (const shot of shots) {
+    captureStatus = undefined;
     await writeFile(harnessFile, harness(html, sample, shot));
     await capture(
       `http://127.0.0.1:${port}/__screenshot.html`,
       join(output, shot.file),
-      shot.height,
+      1000,
+      profile,
     );
+    if (!captureStatus?.ok)
+      throw new Error(
+        `${shot.file}: ekran açılamadı: ${JSON.stringify(captureStatus)}`,
+      );
+    if (!shot.viewportOnly && captureStatus.height > 1000) {
+      const height = Math.ceil(captureStatus.height);
+      captureStatus = undefined;
+      await capture(
+        `http://127.0.0.1:${port}/__screenshot.html`,
+        join(output, shot.file),
+        height,
+        profile,
+      );
+      if (!captureStatus?.ok)
+        throw new Error(`${shot.file}: tam sayfa görüntüsü doğrulanamadı`);
+    }
+    if (!(await stat(join(output, shot.file))).size)
+      throw new Error(`${shot.file}: boş görüntü`);
     console.log(`yazıldı: docs/screenshots/${shot.file}`);
   }
 } finally {
   await rm(harnessFile, { force: true });
   server.close();
+  if (
+    dirname(resolve(profile)) !== resolve(tmpdir()) ||
+    !basename(profile).startsWith("serverbond-screenshots-")
+  ) {
+    throw new Error("Geçici tarayıcı profili beklenen klasörün dışında.");
+  }
+  await rm(profile, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200,
+  });
 }

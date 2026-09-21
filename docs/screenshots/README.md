@@ -1,97 +1,149 @@
-# Uygulama ekran görüntüleri
+# Ekran görüntüleri
 
-ServerBond 1.1.0 arayüzünden 1440 piksel genişlikte tam sayfa olarak alındı. Windows pencere çerçevesi ve görev çubuğu görüntülere dahil değildir.
-
-Görüntüler `npm run build && node scripts/ai/screenshots.mjs` komutuyla üretilir. Komut, üretim derlemesini başsız tarayıcıda açar ve salt okunur tarayıcı önizlemesine `scripts/ai/screenshot-data.json` örnek verisini yükler: gösterilen proje adları, portlar ve süreç kimlikleri bu örnek veriden gelir, gerçek bir kurulumdan ölçülmez.
+Güncel `main` arayüzü, 21 Eylül 2026. Görüntüler 1440 piksel genişlikte uygulamanın salt okunur tarayıcı önizlemesinden alınmıştır. Proje adları, portlar ve süreç bilgileri örnek veridir; Windows pencere çerçevesi dahil değildir. Yayımlanmış v1.2.0 paketi bu arayüz değişikliklerinin tamamını içermez.
 
 ## Genel bakış
 
-Kontrol odası: ortam özeti, sade bileşen tablosu, kompakt proje satırları ve son kayıtlar.
+Sunucu durumu, bileşenler ve projeler.
 
 ![Genel bakış](01-genel-bakis.png)
 
-## Bileşenler
+## Proje detayı
 
-Kurulu paketler, sürümler, lisanslar, süreç kimlikleri, varsayılan PHP sürümü seçimi ve onarım işlemleri.
+Solda aramalı proje seçici ve bölüm menüsü; sağda proje bilgileri ve işlemler.
 
-![Bileşenler](02-bilesenler.png)
+![Proje detayı](17-proje-detay.png)
 
 ## Hizmetler
 
-phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli Ayarlar’dan ayrı, sol kenar çubuğundaki Hizmetler sayfasındadır. Karttan hizmete girilir; port ve jeton **Ayarlar** düğmesindedir.
+Her hizmet tek satırda; durum ve ayarlar ayrı bölümlerde.
 
-![Hizmetler listesi](16-hizmetler.png)
+![Hizmetler](16-hizmetler.png)
 
-## Projeler, kuyruk ve zamanlama
+## API
 
-Proje listesi ve sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Kuyruk sekmesinde `queue:work` işçileri, gelişmiş sınırlar ve başarısız işler.
+Bağlantı ve erişim yönetimi ile aranabilir uç nokta rehberi.
 
-![Projeler, kuyruk işçileri ve zamanlayıcı](03-projeler-kuyruk.png)
+![API uç nokta rehberi](18-api.png)
 
-## Yerel sürüm
+## Koyu tema
 
-Forge benzeri üretim sürümü aynı Windows makinesinde: git pull, Composer, `migrate --force`, `optimize:clear`, ek Artisan satırları ve kuyruk/zamanlayıcı yeniden başlatma. Uzak sunucu yoktur; `.env` yazılmaz.
+![Koyu temada proje detayı](19-koyu-tema.png)
 
-![Proje sürüm tarifi ve geçmişi](10-proje-surum.png)
+## Diğer ekranlar
 
-## Proje .env
+<details>
+<summary>Bileşenler</summary>
 
-Proje detayındaki Ortam sekmesi kök `.env` dosyasını gösterir ve yalnızca Kaydet ile yazar. ServerBond başka işlemlerde `.env` değiştirmez.
+![Bileşenler](02-bilesenler.png)
 
-![Proje .env editörü](14-proje-env.png)
+</details>
 
-## Proje günlükleri
+<details>
+<summary>Kuyruk işçileri</summary>
 
-Proje detayındaki Günlükler sekmesi PHP FastCGI, Laravel zamanlayıcı ve kuyruk işçisi kayıtlarını arama, satır numarası ve hata vurgusuyla gösterir.
+![Kuyruk işçileri](03-projeler-kuyruk.png)
 
-![Proje günlük görüntüleyicisi](09-proje-gunlukleri.png)
+</details>
 
-## Yerel e-posta yakalama
+<details>
+<summary>Sürüm tarifi ve geçmişi</summary>
 
-Hizmetler → E-posta → Ayarlar: Mailpit SMTP ve arayüz portları, saklama sınırı ve PHP `mail()` yönlendirmesi. Kurulum ve gelen kutusu hizmet kartındadır.
+![Sürüm tarifi ve geçmişi](10-proje-surum.png)
 
-![E-posta ayarları ve Mailpit servisi](04-eposta.png)
+</details>
 
-## İsteğe bağlı PostgreSQL
+<details>
+<summary>Ortam değişkenleri</summary>
 
-MySQL varsayılan kalır. Kullanıcı isterse PostgreSQL 17 kurulur: kur/başlat ve parola hizmet kartında; port Ayarlar’da; program onarımı ayrı Onarım kartındadır. `.env` yazılmaz.
+![Ortam değişkenleri](14-proje-env.png)
 
-![İsteğe bağlı PostgreSQL](11-postgresql.png)
+</details>
 
-## İsteğe bağlı Redis
+<details>
+<summary>Proje günlükleri</summary>
 
-Laravel kuyruk, önbellek ve oturum için Redis 8: kur/başlat hizmet kartında; port 16379 Ayarlar’da; program onarımı Onarım kartındadır. `.env` yazılmaz; Laravel `predis` kullanır.
+![Proje günlükleri](09-proje-gunlukleri.png)
 
-![İsteğe bağlı Redis](15-redis.png)
+</details>
 
-## GitHub hesabı ve proje ekleme
+<details>
+<summary>E-posta ayarları</summary>
 
-Özel depolar için jeton Hizmetler → GitHub → Ayarlar’da bir kez kaydedilir. Proje ekle → GitHub sekmesi depoyu çalışma alanına klonlar.
+![E-posta ayarları](04-eposta.png)
 
-![GitHub hesabı](12-github.png)
+</details>
 
-![GitHub’dan proje ekle](13-proje-github.png)
-
-## Cloudflare tüneli
-
-Cloudflared kurulumu ve tünelin başlatılması hizmet kartında; jeton ve otomatik başlatma Ayarlar’dadır.
+<details>
+<summary>Cloudflare tüneli ayarları</summary>
 
 ![Cloudflare tüneli ayarları](05-tunel.png)
 
-## Sistem: Node.js ve Windows izinleri
+</details>
 
-İsteğe bağlı Node.js LTS kurulumu; güvenlik duvarı kuralları, veri klasörü yetkisi ve isteğe bağlı Microsoft Defender istisnası için tek seferlik izin.
+<details>
+<summary>PostgreSQL</summary>
 
-![Node.js kurulumu ve Windows izinleri](06-sistem.png)
+![PostgreSQL](11-postgresql.png)
 
-## PHP ayarları
+</details>
 
-Ortam / Yönetim gruplu sekmeler; PHP profilleri, bellek ve dosya yükleme sınırları, hata gösterimi ve uzantı seçimi. İsteğe bağlı hizmetler sol kenar çubuğundaki Hizmetler sayfasındadır.
+<details>
+<summary>Redis</summary>
+
+![Redis](15-redis.png)
+
+</details>
+
+<details>
+<summary>GitHub hesabı</summary>
+
+![GitHub hesabı](12-github.png)
+
+</details>
+
+<details>
+<summary>GitHub’dan proje ekleme</summary>
+
+![GitHub’dan proje ekleme](13-proje-github.png)
+
+</details>
+
+<details>
+<summary>Sistem ayarları</summary>
+
+![Sistem ayarları](06-sistem.png)
+
+</details>
+
+<details>
+<summary>PHP ayarları</summary>
 
 ![PHP ayarları](07-php-ayarlari.png)
 
-## Web sunucusu ve yerel HTTPS
+</details>
 
-Proje adres kalıbı, FastCGI süreleri, sıkıştırma ve Laragon Auto SSL karşılığı yerel HTTPS: dahili CA, HTTPS portu, HTTP yönlendirme ve Windows kullanıcı güven deposu.
+<details>
+<summary>Web sunucusu ve HTTPS</summary>
 
-![Web sunucusu ve yerel HTTPS](08-web-https.png)
+![Web sunucusu ve HTTPS](08-web-https.png)
+
+</details>
+
+## Görüntüleri yenileme
+
+Chrome kurulu bir geliştirme ortamında:
+
+```sh
+npm run build
+node scripts/ai/screenshots.mjs
+```
+
+Windows’ta Chrome yolu gerekirse PowerShell ile belirtilir:
+
+```powershell
+$env:CHROME = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+node scripts/ai/screenshots.mjs
+```
+
+Betik üretim derlemesini `scripts/ai/screenshot-data.json` örnek verisiyle açar. Menü adımlarından biri bulunamazsa işlemi hata ile durdurur; gerçek servisleri veya kullanıcı projelerini çalıştırmaz.
