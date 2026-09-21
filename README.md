@@ -4,6 +4,8 @@ Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rus
 
 PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, GitHub’dan proje ekleme, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
+Geriye uyumluluk hedefi Windows 10 x64 ve Windows Server 2019/2022 Desktop Experience'tır. Eski makinelerde uçtan uca doğrulama henüz tamamlanmadı; bileşen sınırları ve `main` dalındaki hazırlık [Windows uyumluluğu](docs/windows-compatibility.md) belgesindedir. Windows 7/8.1 ve Server 2012 R2 desteklenmez.
+
 ## İndir — v1.1.1
 
 Uygulama sürümü **1.1.1**. Windows x64 yayını `ServerBond_1.1.1_x64-setup.exe`, `ServerBond_1.1.1_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.

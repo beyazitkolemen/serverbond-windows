@@ -33,6 +33,54 @@ impl Requirement {
     }
 }
 
+#[derive(Clone, Copy)]
+struct WindowsVersion {
+    major: u32,
+    minor: u32,
+    build: u32,
+}
+
+#[cfg(windows)]
+fn windows_version() -> Option<WindowsVersion> {
+    use windows_sys::{
+        Wdk::System::SystemServices::RtlGetVersion,
+        Win32::System::SystemInformation::OSVERSIONINFOW,
+    };
+    // RtlGetVersion reports the installed OS rather than the version implied
+    // by a compatibility manifest. The buffer remains valid throughout the call.
+    let mut version: OSVERSIONINFOW = unsafe { std::mem::zeroed() };
+    version.dwOSVersionInfoSize = std::mem::size_of::<OSVERSIONINFOW>() as u32;
+    let result = unsafe { RtlGetVersion(&mut version) };
+    (result >= 0).then_some(WindowsVersion {
+        major: version.dwMajorVersion,
+        minor: version.dwMinorVersion,
+        build: version.dwBuildNumber,
+    })
+}
+
+#[cfg(not(windows))]
+fn windows_version() -> Option<WindowsVersion> {
+    None
+}
+
+fn windows_requirement(version: Option<WindowsVersion>) -> Requirement {
+    let (status, detail) = match version {
+        Some(v) if v.major >= 10 => (
+            "ok",
+            format!("Windows NT {}.{} · derleme {}. Temel işletim sistemi gereksinimi karşılanıyor; bileşen desteği ayrıca değerlendirilir.", v.major, v.minor, v.build),
+        ),
+        Some(v) => (
+            "error",
+            format!("Windows NT {}.{} · derleme {}. Windows 10 / Server 2016 veya üzeri gerekir.", v.major, v.minor, v.build),
+        ),
+        None => (
+            "error",
+            "Windows sürümü doğrulanamadı. Windows 10 / Server 2016 veya üzeri gerekir.".into(),
+        ),
+    };
+    Requirement::new("windows-version", "Windows sürümü", status, detail, None)
+}
+
 #[cfg(windows)]
 fn vc_runtime() -> bool {
     use windows_sys::Win32::Foundation::FreeLibrary;
@@ -92,6 +140,7 @@ impl Manager {
             format!("{} / {}", std::env::consts::OS, std::env::consts::ARCH),
             None,
         ));
+        checks.push(windows_requirement(windows_version()));
         let runtime = vc_runtime();
         checks.push(Requirement::new("vc-runtime", "Visual C++ çalışma zamanı", if runtime { "ok" } else { "error" }, if runtime { "Gerekli x64 çalışma zamanı DLL dosyaları yüklenebiliyor." } else { "Microsoft Visual C++ x64 Redistributable kurulmalı; kurulumdan sonra yeniden denetleyin." }, Some("https://aka.ms/vs/17/release/vc_redist.x64.exe")));
         let writable = tempfile::NamedTempFile::new_in(&self.home)
@@ -182,7 +231,8 @@ impl Manager {
             .into_iter()
             .filter(|r| {
                 r.status == "error"
-                    && ["platform", "vc-runtime", "storage-write"].contains(&r.id.as_str())
+                    && ["platform", "windows-version", "vc-runtime", "storage-write"]
+                        .contains(&r.id.as_str())
             })
             .map(|r| format!("{}: {}", r.label, r.detail))
             .collect::<Vec<_>>();
@@ -203,5 +253,50 @@ impl Manager {
             ])
             .spawn()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_pre_windows_10_releases() {
+        for (minor, build) in [(1, 7601), (2, 9200), (3, 9600)] {
+            let check = windows_requirement(Some(WindowsVersion {
+                major: 6,
+                minor,
+                build,
+            }));
+            assert_eq!(check.status, "error");
+            assert!(check.detail.contains("Windows 10 / Server 2016"));
+        }
+    }
+
+    #[test]
+    fn accepts_nt_10_client_and_server_builds() {
+        // Win 10 RTM, Server 2016/2019/2022, Win 10 22H2, Win 11/Server 2025.
+        for build in [10240, 14393, 17763, 20348, 19045, 22000, 26100] {
+            let check = windows_requirement(Some(WindowsVersion {
+                major: 10,
+                minor: 0,
+                build,
+            }));
+            assert_eq!(check.status, "ok", "build {build}");
+            assert!(check.detail.contains(&build.to_string()));
+        }
+    }
+
+    #[test]
+    fn unknown_windows_version_is_not_reported_as_compatible() {
+        assert_eq!(windows_requirement(None).status, "error");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn reads_actual_windows_version() {
+        let version = windows_version().expect("RtlGetVersion failed");
+        assert!(version.major > 0);
+        assert!(version.build > 0);
     }
 }

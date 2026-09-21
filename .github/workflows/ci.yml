@@ -4,7 +4,11 @@ permissions:
   contents: read
 jobs:
   windows:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,5 +52,5 @@ jobs:
           Get-Content artifacts/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ServerBond-Windows-x64
+          name: ServerBond-Windows-x64-${{ matrix.os }}
           path: artifacts/*

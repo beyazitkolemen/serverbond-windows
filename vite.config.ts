@@ -8,5 +8,7 @@ export default defineConfig({
     strictPort: true,
     watch: { ignored: ["**/target/**", "**/src-tauri/**"] },
   },
-  build: { target: "es2022" },
+  // Keep in sync with bundle.windows.minimumWebview2Version.
+  // Evergreen still updates normally; this is a syntax floor, not a pinned runtime.
+  build: { target: "chrome109", cssTarget: "chrome109" },
 });

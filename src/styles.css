@@ -198,6 +198,7 @@ small {
 }
 .app-shell {
   display: flex;
+  min-height: 100vh;
   min-height: 100dvh;
 }
 .sidebar {
@@ -322,6 +323,7 @@ small {
 .workspace {
   margin-left: var(--sidebar-w);
   width: calc(100% - var(--sidebar-w));
+  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -3164,6 +3166,7 @@ kbd {
 }
 .quick-nav-dialog {
   width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
   max-height: calc(100dvh - 64px);
   margin: min(18vh, 140px) auto auto;
   padding: 0;
