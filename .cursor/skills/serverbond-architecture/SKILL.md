@@ -26,13 +26,13 @@ Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa akt
 
 ## Veri dizini
 
-Varsayılan `%LOCALAPPDATA%\ServerBond`. Geliştirmede `SERVERBOND_HOME`. Önceki kurulumların verileri `legacy.rs` okuma uyumluluğuyla korunur; `docs/naming.md` sözleşmesini izleyin. İkinci süreç `manager.lock` ile reddedilir.
+Yeni Windows kurulumlarında varsayılan `C:\ServerBond`. Önceki `%LOCALAPPDATA%\ServerBond` verileri varsa kullanılmaya devam edilir. Geliştirmede `SERVERBOND_HOME`. Önceki kurulumların verileri `legacy.rs` okuma uyumluluğuyla korunur; `docs/naming.md` sözleşmesini izleyin. İkinci süreç `manager.lock` ile reddedilir.
 
 ```text
 bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 ```
 
-`projects/` yeni Laravel köklerinin varsayılan çalışma alanıdır. `www/` eski düz yerleşim için taranmaya devam eder. Kullanıcı `projects_dir` verirse yalnızca o yol okunur.
+`www/` yeni Laravel köklerinin varsayılan çalışma alanıdır. `projects/` önceki yerleşim için varsa taranmaya devam eder. Kullanıcı `projects_dir` verirse yalnızca o yol okunur.
 
 `config.json` 2 MB, en fazla 1000 proje. Kayıt atomiktir; önceki geçerli kopya `config.last-good.json`.
 

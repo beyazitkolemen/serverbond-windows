@@ -7,7 +7,7 @@
 //   npm run build && node scripts/ai/screenshots.mjs
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
   basename,
@@ -24,6 +24,7 @@ const dist = join(root, "dist");
 const output = join(root, "docs/screenshots");
 const width = 1440;
 let captureStatus;
+let captureHtml;
 
 const shots = [
   { file: "17-proje-detay.png", nav: "Projeler" },
@@ -176,6 +177,13 @@ addEventListener("DOMContentLoaded", () => {
 
 async function serve() {
   const server = createServer(async (request, response) => {
+    // Keep the preview harness out of dist so a desktop build can never
+    // accidentally embed fixture data while screenshots are being captured.
+    if (request.url === "/__screenshot.html") {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(captureHtml);
+      return;
+    }
     if (request.url === "/__screenshot-status" && request.method === "POST") {
       let body = "";
       for await (const chunk of request) body += chunk;
@@ -237,12 +245,11 @@ const html = await readFile(join(dist, "index.html"), "utf8").catch(() => {
 });
 
 const { server, port } = await serve();
-const harnessFile = join(dist, "__screenshot.html");
 const profile = await mkdtemp(join(tmpdir(), "serverbond-screenshots-"));
 try {
   for (const shot of shots) {
     captureStatus = undefined;
-    await writeFile(harnessFile, harness(html, sample, shot));
+    captureHtml = harness(html, sample, shot);
     await capture(
       `http://127.0.0.1:${port}/__screenshot.html`,
       join(output, shot.file),
@@ -270,7 +277,6 @@ try {
     console.log(`yazıldı: docs/screenshots/${shot.file}`);
   }
 } finally {
-  await rm(harnessFile, { force: true });
   server.close();
   if (
     dirname(resolve(profile)) !== resolve(tmpdir()) ||

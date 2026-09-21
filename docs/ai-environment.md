@@ -29,3 +29,7 @@ Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ek
 - `src-tauri` ve NSIS paketleri Windows x64 ister.
 - Paket indirme, MySQL ilk kurulum ve phpMyAdmin tarayıcı akışları yok sayılmış (`ignored`) testlerdir; Cloud Agent bunları çalıştırmaz.
 - `SERVERBOND_HOME` veri dizinini taşır; testler geçici dizin kullanır.
+
+## Windows kurulum yolu testi
+
+`./scripts/ai/test-installer-paths.ps1`, NSIS şablonundaki gerçek başlangıç fonksiyonlarını geçici bir test EXE’sinde çalıştırır. Yeni kurulumda `C:\ServerBond`, güncellemede kayıtlı yol ve `/D=` ile özel klasör seçimi doğrulanır. Uygulamayı kurmaz veya çalışan servislere dokunmaz; geçici test dosyaları ve test kayıt anahtarı temizlenir. NSIS konumu gerekirse `-NsisDir` ile verilir.

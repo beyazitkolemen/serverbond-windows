@@ -40,7 +40,7 @@ Proje PHP’si ayrı `php-cgi` ve otomatik loopback port kullanır. Caddy `php_f
 - Yeni Laravel 12: `php_supports_laravel12` → PHP ≥ 8.2
 - `public/index.php` şart; kaldırmak klasörü/SQL’i silmez
 - MySQL çalışırken ekleme/oluşturma/tarama `CREATE DATABASE IF NOT EXISTS` yapar (tire → `_`). `.env` yazılmaz
-- `discover_projects` `projects_dir` veya varsayılan `projects/` (+ varsa `www/`) altında bir ve iki seviye Laravel köklerini listeler (`musteri/magaza`). `vendor`, `node_modules`, `storage` ve benzeri klasörler atlanır. Çakışan klasör adı `musteri-magaza` olur. `import_projects` tek `apply_project_config` ile ekler
+- `discover_projects` `projects_dir` veya varsayılan `www/` (+ varsa önceki `projects/`) altında bir ve iki seviye Laravel köklerini listeler (`musteri/magaza`). `vendor`, `node_modules`, `storage` ve benzeri klasörler atlanır. Çakışan klasör adı `musteri-magaza` olur. `import_projects` tek `apply_project_config` ile ekler
 - SQL geri yükleme: `.sql`, 512 MB, Unicode için geçici ASCII kopya, `mysql --one-database`
 - GitHub: jeton `config/github-token.dpapi` (DPAPI), hesap `config/github-account.json`. Hizmetler → GitHub bir kez kaydeder. `import_github_project` `git clone https://github.com/owner/repo.git` ile `projects_dir` altına yazar; özel depo için jeton `GIT_CONFIG_*` ortamında (`http.extraHeader`), komut satırına yazılmaz. `.env` yazılmaz. Sürüm `git pull` aynı jetonu kullanır.
 - `.env` editörü: `read_project_env` / `save_project_env` yalnızca proje kökü `.env` (256 KB, UTF-8, NUL yok). Otomatik yazılmaz; kullanıcı Kaydet der. İçerik günlüğe yazılmaz. `.env.example` taslak olarak okunabilir.

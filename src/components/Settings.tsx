@@ -247,14 +247,10 @@ export default function Settings({
             {section === "Genel" && (
               <section className="settings-section">
                 <h2>Çalışma alanı</h2>
-                {folder(
-                  "projectsDir",
-                  "Proje çalışma alanı",
-                  `${home}\\projects`,
-                )}
+                {folder("projectsDir", "Proje çalışma alanı", `${home}\\www`)}
                 <p className="section-note">
-                  Yeni projelerin konumu. Boşsa projects kullanılır. Mevcut
-                  projeler taşınmaz.
+                  Yeni projelerin konumu. Boşsa www kullanılır. Mevcut projeler
+                  taşınmaz.
                 </p>
                 <Toggle
                   label="ServerBond açıldığında sunucuyu otomatik başlat"

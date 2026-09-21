@@ -95,13 +95,15 @@ impl Manager {
             product::NAME
         ))?;
         for dir in [
-            "bin", "cache", "config", "data", "logs", "www", "projects", "welcome", "backups",
+            "bin", "cache", "config", "data", "logs", "www", "welcome", "backups",
         ] {
             fs::create_dir_all(home.join(dir))?;
         }
         let mut existing_data = false;
         for dir in ["bin", "data", "www", "projects"] {
-            existing_data |= fs::read_dir(home.join(dir))?.next().transpose()?.is_some();
+            if home.join(dir).is_dir() {
+                existing_data |= fs::read_dir(home.join(dir))?.next().transpose()?.is_some();
+            }
         }
         let first_run = !home.join("config.json").try_exists()?
             && !home.join("config.last-good.json").try_exists()?

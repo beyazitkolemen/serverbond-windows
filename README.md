@@ -13,9 +13,11 @@ Windows üzerinde Laravel projelerini, PHP sürümlerini ve yerel sunucu hizmetl
 3. **Proje ekle** ile Laravel klasörünüzü seçin, GitHub deposu klonlayın veya yeni proje oluşturun.
 4. **Sunucu başlat** düğmesine basın; proje detayındaki **Aç** ile uygulamanıza ulaşın.
 
+Yeni kurulumların varsayılan konumu `C:\ServerBond`, proje çalışma alanı `C:\ServerBond\www` olur. Mevcut kurulumlar ve özel klasör tercihleri korunur.
+
 Windows x64 ve internet bağlantısı gerekir. Kurulum WebView2 gereksinimini yönetir; PHP/MySQL için Microsoft Visual C++ Runtime gerekir. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
 
-Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Buradaki ekran görüntüleri güncel `main` dalını gösterir; yayımlanan paketten daha yeni arayüz iyileştirmeleri içerir. [Sürüm notları](docs/releases/v1.2.0.md) · [Güncellemeler](docs/updates.md).
+Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Buradaki varsayılanlar ve ekran görüntüleri güncel `main` dalına aittir; yayımlanan paketten sonraki değişiklikleri içerir. [Sürüm notları](docs/releases/v1.2.0.md) · [Güncellemeler](docs/updates.md).
 
 ## Neler yapabilirsiniz?
 

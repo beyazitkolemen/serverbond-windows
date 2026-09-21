@@ -903,7 +903,7 @@ fn github_import_rejects_bad_repos_and_existing_folders() {
         .unwrap_err()
         .to_string()
         .contains("kayıtlı"));
-    let dest = home.path().join("projects/magaza");
+    let dest = home.path().join("www/magaza");
     fs::create_dir_all(&dest).unwrap();
     assert!(manager
         .import_github_project("owner/magaza", "magaza".into(), String::new())
@@ -1050,7 +1050,8 @@ fn discover_uses_projects_workspace_and_nested_client_apps() {
     let home = tempfile::tempdir().unwrap();
     let manager = Manager::new(home.path().into()).unwrap();
     let workspace = manager.default_projects_dir();
-    assert!(workspace.ends_with("projects"));
+    assert!(workspace.ends_with("www"));
+    assert!(!home.path().join("projects").exists());
     fs::create_dir_all(workspace.join("shop/public")).unwrap();
     fs::write(workspace.join("shop/public/index.php"), "<?php").unwrap();
     fs::create_dir_all(workspace.join("acme/api/public")).unwrap();
@@ -1067,6 +1068,26 @@ fn discover_uses_projects_workspace_and_nested_client_apps() {
     let mut names: Vec<_> = found.iter().map(|item| item.name.clone()).collect();
     names.sort();
     assert_eq!(names, ["api", "shop"]);
+}
+
+#[test]
+fn previous_projects_workspace_is_scanned_without_moving_files() {
+    let home = tempfile::tempdir().unwrap();
+    let manager = Manager::new(home.path().into()).unwrap();
+    let previous = home.path().join("projects/old-app");
+    fs::create_dir_all(previous.join("public")).unwrap();
+    fs::write(previous.join("public/index.php"), "<?php").unwrap();
+    fs::write(previous.join(".env"), "APP_NAME=Existing").unwrap();
+    let found = manager.discover_projects().unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].path, dunce::canonicalize(&previous).unwrap());
+    let imported = manager.import_projects(vec![previous.clone()]).unwrap();
+    assert_eq!(imported[0].path, dunce::canonicalize(&previous).unwrap());
+    assert_eq!(
+        fs::read_to_string(previous.join(".env")).unwrap(),
+        "APP_NAME=Existing"
+    );
+    assert!(!manager.default_projects_dir().join("old-app").exists());
 }
 
 #[test]

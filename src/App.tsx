@@ -476,7 +476,7 @@ export default function App() {
               mysqlRunning={state.packages.some(
                 (p) => p.id === ComponentId.Mysql && p.running,
               )}
-              home={state.settings.projectsDir || `${state.home}/projects`}
+              home={state.settings.projectsDir || `${state.home}/www`}
               hostPattern={state.settings.web.hostPattern}
               github={state.github}
               compact={page === Page.Overview}

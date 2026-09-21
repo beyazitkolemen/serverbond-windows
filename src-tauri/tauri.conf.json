@@ -34,7 +34,11 @@
     "windows": {
       "webviewInstallMode": { "type": "embedBootstrapper", "silent": true },
       "minimumWebview2Version": "109.0.1518.0",
-      "nsis": { "installerHooks": "windows/installer-hooks.nsh" }
+      "nsis": {
+        "installMode": "currentUser",
+        "template": "windows/installer.nsi",
+        "installerHooks": "windows/installer-hooks.nsh"
+      }
     },
     "icon": ["icons/icon.ico", "icons/icon.png"]
   },

@@ -30,7 +30,7 @@ const preview: Snapshot = {
   })),
   projects: [],
   logs: ["ServerBond hazır. Kurulum başlatılabilir."],
-  home: "%LOCALAPPDATA%\\ServerBond",
+  home: "C:\\ServerBond",
   settings: {
     webPort: 8088,
     mysqlPort: 13306,

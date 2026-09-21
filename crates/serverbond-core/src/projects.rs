@@ -140,7 +140,7 @@ fn discover_slug(folder: &str, parent: Option<&str>, used: &HashSet<String>) -> 
 
 impl Manager {
     pub fn default_projects_dir(&self) -> PathBuf {
-        self.home.join("projects")
+        self.home.join("www")
     }
 
     pub fn project_scan_roots(&self) -> Vec<PathBuf> {
@@ -155,7 +155,7 @@ impl Manager {
             return vec![PathBuf::from(projects_dir)];
         }
         let mut roots = vec![self.default_projects_dir()];
-        let legacy = self.home.join("www");
+        let legacy = self.home.join("projects");
         if legacy.is_dir() {
             roots.push(legacy);
         }

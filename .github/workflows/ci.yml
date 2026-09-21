@@ -35,6 +35,9 @@ jobs:
         run: cargo test -p serverbond-core --tests --locked -- --ignored --nocapture --test-threads=1
       - name: Desktop executable and installer
         run: npm run desktop:build:unsigned
+      - name: Installer path defaults and upgrade compatibility
+        shell: pwsh
+        run: ./scripts/ai/test-installer-paths.ps1
       - name: Package versioned artifacts
         shell: pwsh
         run: |

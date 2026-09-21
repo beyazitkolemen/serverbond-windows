@@ -11,7 +11,7 @@ Yeni kod, paket ve üretilen yapılandırmalarda ServerBond kullanılır:
 | CLI                    | `serverbond`                                   |
 | Tauri kimliği          | `com.serverbond.desktop`                       |
 | Sistem tepsisi         | `serverbond-tray`                              |
-| Veri klasörü           | `%LOCALAPPDATA%\ServerBond`                    |
+| Veri klasörü           | `C:\ServerBond` (yeni Windows kurulumu)                    |
 | Veri yolu değişkeni    | `SERVERBOND_HOME`                              |
 | PHP uzantı değişkeni   | `SERVERBOND_PHP_EXT`                           |
 | Test indirme önbelleği | `SERVERBOND_TEST_CACHE`                        |
@@ -22,7 +22,9 @@ Yeni kod, paket ve üretilen yapılandırmalarda ServerBond kullanılır:
 
 `crates/serverbond-core/src/legacy.rs` yalnızca eski kurulumları okuyabilmek için gereken adları içerir: `F4Box` veri/başlangıç kaydı, `F4BOX_HOME`, eski phpMyAdmin adresi ve günlük kimliği. Bu adlar yeni yapılandırmalara yazılmaz. Eski veri klasörü kullanılmaya devam ediyorsa mutlak dosya yolları değiştirilmez; proje dosyaları, SQL verileri ve `.env` taşınmaz.
 
-Yeni veri klasöründe yapılandırma veya veri varsa o kullanılır. Yalnızca kurulum EXE'si bulunan yeni klasör, eski verileri gizlemez. `SERVERBOND_HOME` eski ortam değişkenine göre önceliklidir. Başlangıç ayarı kaydedildiğinde yeni kayıt ServerBond olarak yazılır ve eski ad kaldırılır.
+Veri yolu önceliği: `SERVERBOND_HOME`, eski ortam değişkeni, mevcut `C:\ServerBond` verisi, mevcut `%LOCALAPPDATA%\ServerBond` verisi, eski ürünün veri klasörü. Hiçbiri yoksa Windows üzerinde `C:\ServerBond` kullanılır.
+
+Yeni projeler `www` altında oluşturulur; önceki `projects` klasörü varsa taranır. Kullanıcının ayarladığı `projectsDir` ve kayıtlı proje yolları korunur. Kurulum paketi güncellemede kayıtlı kurulum yolunu, elle kurulumda kullanıcının seçtiği yolu korur. Veri yolu `SERVERBOND_HOME` ile ayrıca değiştirilebilir. Kaldırıcı uygulama dosyalarını siler; `www`, SQL verileri ve yedekler silinmez. Yalnızca kurulum EXE'si bulunan yeni klasör, eski verileri gizlemez. `SERVERBOND_HOME` eski ortam değişkenine göre önceliklidir. Başlangıç ayarı kaydedildiğinde yeni kayıt ServerBond olarak yazılır ve eski ad kaldırılır.
 
 PHP yapılandırması servis/terminal hazırlığında `SERVERBOND_PHP_EXT` ile yeniden üretilir. Güncellemeden önce eski uygulamadan tepsi menüsündeki **Çıkış** ile çıkın; güncelleme sonrasında eski proje terminallerini yeniden açın. Uygulama kimliği değiştiği için WebView tema tercihi yeniden seçilebilir; proje ve masaüstü ayarları veri klasöründe kalır.
 

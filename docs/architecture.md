@@ -36,7 +36,7 @@ ServerBond üç katmandan oluşur; iş kuralı tek bir yerde, Rust çekirdeğind
 
 | Alan | Görev |
 | --- | --- |
-| `home` | Veri klasörü (`%LOCALAPPDATA%\ServerBond`). |
+| `home` | Veri klasörü (`C:\ServerBond`). |
 | `config: Mutex<Config>` | Ayarlar ve projeler. Diskteki `config.json` ile eşlenir; her kayıt atomiktir ve önceki geçerli kopya `config.last-good.json` olarak saklanır. |
 | `processes: Mutex<HashMap<String, ManagedChild>>` | Çalışan çocuk süreçler. Anahtar süreç kimliğidir: `php`, `mysql`, `caddy`, `mailpit`, `postgres`, `redis`, `cloudflared`, `php-project-<id>`, `queue-<proje>-<işçi>-<n>`, `schedule-<proje>`. |
 | `operation: Mutex<()>` | İşlem kapısı. Aynı anda tek mutasyon; ikinci istek "Başka bir işlem devam ediyor" ile reddedilir, beklemez. |
@@ -93,7 +93,7 @@ Komut satırına veya yapılandırma dosyasına giden her değer `model.rs` / `p
 ## Veri klasörü
 
 ```text
-%LOCALAPPDATA%\ServerBond\
+C:\ServerBond\
   config.json               ayarlar + projeler (2 MB, ≤1000 proje)
   config.last-good.json     son geçerli kopya
   manager.lock              tek süreç kilidi
@@ -104,10 +104,10 @@ Komut satırına veya yapılandırma dosyasına giden her değer `model.rs` / `p
   backups/                  SQL yedekleri
   logs/<id>.log             her süreç için çıktı
   logs/release-<id>.jsonl   proje sürüm geçmişi
-  projects/                 yeni Laravel köklerinin varsayılan çalışma alanı
+  www/                      yeni Laravel köklerinin varsayılan çalışma alanı
 ```
 
-Yeni kurulumlarda `%LOCALAPPDATA%\ServerBond` ve `SERVERBOND_HOME` kullanılır. Önceki kurulumların veri yolu ve okuma takma adları `legacy.rs` ile korunur; [adlandırma ve uyumluluk](naming.md) belgesine bakın.
+Yeni kurulumlarda `C:\ServerBond` ve `SERVERBOND_HOME` kullanılır. Önceki kurulumların veri yolu ve okuma takma adları `legacy.rs` ile korunur; [adlandırma ve uyumluluk](naming.md) belgesine bakın.
 
 ## Ağ
 
