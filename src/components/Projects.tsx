@@ -359,7 +359,7 @@ function ProjectDialog({
   const create = mode === "create";
   const fromGithub = mode === "github";
   useEffect(() => {
-    dialog.current?.showModal();
+    if (!dialog.current?.open) dialog.current?.showModal();
   }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -406,6 +406,12 @@ function ProjectDialog({
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) close();
+      }}
+      onClose={() => {
+        // Chromium closes the element on a second Esc regardless of
+        // preventDefault; keep React state and the DOM in agreement.
+        if (busy) dialog.current?.showModal();
+        else close();
       }}
       aria-labelledby="project-dialog-title"
     >
@@ -631,7 +637,7 @@ function ConfirmRemove({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
+    if (!ref.current?.open) ref.current?.showModal();
   }, []);
   return (
     <dialog
@@ -641,6 +647,12 @@ function ConfirmRemove({
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) close();
+      }}
+      onClose={() => {
+        // Chromium closes the element on a second Esc regardless of
+        // preventDefault; keep React state and the DOM in agreement.
+        if (busy) ref.current?.showModal();
+        else close();
       }}
     >
       <h2 id="remove-title">Projeyi listeden kaldır</h2>
@@ -679,7 +691,7 @@ function ConfirmRestore({
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
-    ref.current?.showModal();
+    if (!ref.current?.open) ref.current?.showModal();
   }, []);
   return (
     <dialog
@@ -689,6 +701,12 @@ function ConfirmRestore({
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) close();
+      }}
+      onClose={() => {
+        // Chromium closes the element on a second Esc regardless of
+        // preventDefault; keep React state and the DOM in agreement.
+        if (busy) ref.current?.showModal();
+        else close();
       }}
     >
       <h2 id="restore-title">SQL yedeğini geri yükle</h2>
@@ -757,7 +775,7 @@ function DiscoverDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
+    if (!ref.current?.open) ref.current?.showModal();
   }, []);
   return (
     <dialog
@@ -767,6 +785,12 @@ function DiscoverDialog({
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) close();
+      }}
+      onClose={() => {
+        // Chromium closes the element on a second Esc regardless of
+        // preventDefault; keep React state and the DOM in agreement.
+        if (busy) ref.current?.showModal();
+        else close();
       }}
     >
       <h2 id="discover-title">Klasör taraması</h2>

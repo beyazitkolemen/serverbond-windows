@@ -1,4 +1,6 @@
 import { useState } from "react";
+import NumberField from "./NumberField";
+import { useDraft } from "../hooks/useDraft";
 import { ChevronLeft, Settings } from "lucide-react";
 import {
   ComponentId,
@@ -72,34 +74,6 @@ const catalog = [
   },
 ] as const;
 
-function NumberField({
-  label,
-  value,
-  onChange,
-  min = 1,
-  max = 65535,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-  min?: number;
-  max?: number;
-}) {
-  return (
-    <label>
-      {label}
-      <input
-        required
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </label>
-  );
-}
-
 function Toggle({
   label,
   value,
@@ -144,22 +118,21 @@ export default function Services({
   github: GithubState;
   phpmyadmin?: PackageStatus;
 }) {
-  const [values, setValues] = useState(() => structuredClone(settings));
+  const { values, setValues, dirty, reset } = useDraft(settings);
   const [service, setService] = useState<ServiceId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const dirty = JSON.stringify(values) !== JSON.stringify(settings);
   const locked = busy || running;
   const canSave = dirty && !busy && !running;
   const change = <K extends keyof Values>(key: K, value: Values[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
   const selected = catalog.find((item) => item.id === service);
   const openService = (id: ServiceId) => {
-    setValues(structuredClone(settings));
+    reset();
     setService(id);
     setSettingsOpen(false);
   };
   const closeSettings = () => {
-    setValues(structuredClone(settings));
+    reset();
     setSettingsOpen(false);
   };
   const tileState = (id: ServiceId) => {
@@ -548,7 +521,7 @@ export default function Services({
                 type="button"
                 className="button secondary small service-gear"
                 onClick={() => {
-                  setValues(structuredClone(settings));
+                  reset();
                   setSettingsOpen(true);
                 }}
               >
@@ -604,7 +577,7 @@ export default function Services({
                   type="button"
                   className="button secondary"
                   disabled={!dirty || busy}
-                  onClick={() => setValues(structuredClone(settings))}
+                  onClick={reset}
                 >
                   Vazgeç
                 </button>

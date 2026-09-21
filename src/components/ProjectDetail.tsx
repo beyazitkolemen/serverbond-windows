@@ -290,8 +290,9 @@ function DatabasePane({
   return (
     <div className="project-pane">
       <p className="section-note">
-        Veritabanı adı proje adından türetilir. ServerBond proje <code>.env</code>{" "}
-        dosyasına kendiliğinden yazmaz. Ortam sekmesinden düzenleyebilirsiniz.
+        Veritabanı adı proje adından türetilir. ServerBond proje{" "}
+        <code>.env</code> dosyasına kendiliğinden yazmaz. Ortam sekmesinden
+        düzenleyebilirsiniz.
       </p>
       <dl className="project-facts">
         <div>
@@ -362,7 +363,12 @@ export function ProjectPhp({
   anyRunning: boolean;
 }) {
   const [version, setVersion] = useState(project.phpVersion);
-  useEffect(() => setVersion(project.phpVersion), [project.phpVersion]);
+  // A pending pick must not carry over to another project that happens to
+  // run the same PHP version.
+  useEffect(
+    () => setVersion(project.phpVersion),
+    [project.id, project.phpVersion],
+  );
   const selected = versions.find((p) => p.version === version);
   const repair = Boolean(selected?.repairable && !selected.installed);
   return (

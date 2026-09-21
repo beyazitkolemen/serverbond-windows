@@ -143,10 +143,15 @@ export default function UpdateSettings({
               void run("Güncelleme indiriliyor ve kuruluyor…", async () => {
                 setError("");
                 setProgress({ downloaded: 0, total: 0 });
-                if (running) {
-                  await call("service", { id: "all", action: "stop" });
+                try {
+                  if (running) {
+                    await call("service", { id: "all", action: "stop" });
+                  }
+                  await installAppUpdate(setProgress);
+                } catch (e) {
+                  setProgress(null);
+                  throw e;
                 }
-                await installAppUpdate(setProgress);
                 return "Güncelleme kuruldu. ServerBond yeniden açılıyor.";
               })
             }

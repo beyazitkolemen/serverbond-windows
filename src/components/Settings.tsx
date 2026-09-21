@@ -15,6 +15,8 @@ import UpdateSettings from "./UpdateSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
+import NumberField from "./NumberField";
+import { useDraft } from "../hooks/useDraft";
 
 const sections = [
   "Genel",
@@ -64,33 +66,6 @@ const extensions = [
   "tidy",
   "xsl",
 ];
-function NumberField({
-  label,
-  value,
-  onChange,
-  min = 1,
-  max = 65535,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-  min?: number;
-  max?: number;
-}) {
-  return (
-    <label>
-      {label}
-      <input
-        required
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </label>
-  );
-}
 function Toggle({
   label,
   value,
@@ -145,10 +120,15 @@ export default function Settings({
   onAppUpdate: (update: UpdateInfo | null) => void;
   openUpdates: number;
 }) {
-  const [values, setValues] = useState(() => structuredClone(settings));
+  const { values, setValues, dirty, reset } = useDraft(settings);
   const [section, setSection] = useState<(typeof sections)[number]>("Genel");
+  // One-shot: jump to updates for a new request only, not on every mount.
+  const handledUpdates = useRef(0);
   useEffect(() => {
-    if (openUpdates) setSection("Güncellemeler");
+    if (openUpdates && openUpdates !== handledUpdates.current) {
+      handledUpdates.current = openUpdates;
+      setSection("Güncellemeler");
+    }
   }, [openUpdates]);
   const [version, setVersion] = useState("");
   const [password, setPassword] = useState("");
@@ -157,7 +137,6 @@ export default function Settings({
   const [showNext, setShowNext] = useState(false);
   const [note, setNote] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const dirty = JSON.stringify(values) !== JSON.stringify(settings);
   const runtimeDirty =
     JSON.stringify(runtimeSlice(values)) !==
     JSON.stringify(runtimeSlice(settings));
@@ -191,12 +170,17 @@ export default function Settings({
         <button
           type="button"
           className="button secondary"
-          onClick={() =>
-            void run("Klasör seçiliyor…", async () => {
+          disabled={busy}
+          onClick={async () => {
+            // The native picker is not a Rust operation: no busy lock, no
+            // "İşlem tamamlandı." when the user simply cancels it.
+            try {
               const path = await chooseFolder();
               if (path) change(key, path);
-            })
-          }
+            } catch (e) {
+              setNote(e instanceof Error ? e.message : String(e));
+            }
+          }}
         >
           <FolderOpen size={16} />
           Seç
@@ -477,8 +461,8 @@ export default function Settings({
               </label>
               <p className="section-note">
                 anahtar=değer biçimi kullanın. Form değerlerini burada
-                tekrarlamayın. Uzantı yolu ve FastCGI bağlantı ayarları ServerBond
-                tarafından yönetilir.
+                tekrarlamayın. Uzantı yolu ve FastCGI bağlantı ayarları
+                ServerBond tarafından yönetilir.
               </p>
             </section>
           )}
@@ -775,7 +759,7 @@ export default function Settings({
               className="button secondary"
               disabled={!dirty || busy}
               onClick={() => {
-                setValues(structuredClone(settings));
+                reset();
                 setNote("");
               }}
             >

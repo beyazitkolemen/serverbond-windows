@@ -9,6 +9,7 @@ import type {
   Run,
 } from "../types";
 import { defaultRelease } from "../types";
+import { useDraft } from "../hooks/useDraft";
 
 function normalize(release?: ProjectRelease): ProjectRelease {
   return {
@@ -27,18 +28,26 @@ export default function ReleasePane({
   busy: boolean;
   run: Run;
 }) {
-  const [draft, setDraft] = useState<ProjectRelease>(() =>
-    normalize(project.release),
-  );
+  const source = normalize(project.release);
+  const { values: saved, setValues: setSaved } = useDraft(source);
+  // The textarea keeps the raw text so Enter, indentation and trailing
+  // spaces survive typing; the command list is derived from it.
+  const [extra, setExtra] = useState(() => saved.extraArtisan.join("\n"));
+  const extraLines = extra
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const draft: ProjectRelease = { ...saved, extraArtisan: extraLines };
+  const savedExtra = saved.extraArtisan.join("\n");
+  useEffect(() => {
+    // Follow the draft when it is reset or refreshed from the snapshot.
+    setExtra(savedExtra);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedExtra, project.id]);
   const [history, setHistory] = useState<ReleaseRecord[]>([]);
   const [consoleText, setConsoleText] = useState("");
-  const extra = draft.extraArtisan.join("\n");
-  const dirty =
-    JSON.stringify(draft) !== JSON.stringify(normalize(project.release));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(source);
   const last = history[0];
-  useEffect(() => {
-    setDraft(normalize(project.release));
-  }, [project.id]);
   useEffect(() => {
     let cancelled = false;
     void call<ReleaseRecord[]>("list_project_releases", { id: project.id })
@@ -58,7 +67,7 @@ export default function ReleasePane({
   const update = <K extends keyof ProjectRelease>(
     key: K,
     value: ProjectRelease[K],
-  ) => setDraft((current) => ({ ...current, [key]: value }));
+  ) => setSaved((current) => ({ ...current, [key]: value }));
   const refreshHistory = () =>
     call<ReleaseRecord[]>("list_project_releases", { id: project.id }).then(
       (records) => {
@@ -197,15 +206,7 @@ export default function ReleasePane({
             rows={3}
             value={extra}
             placeholder={"config:cache\nroute:cache --no-ansi"}
-            onChange={(e) =>
-              update(
-                "extraArtisan",
-                e.target.value
-                  .split(/\r?\n/)
-                  .map((line) => line.trim())
-                  .filter(Boolean),
-              )
-            }
+            onChange={(e) => setExtra(e.target.value)}
           />
           <span className="muted">
             Her satır bir komut; yalnızca a-z0-9:_- ve --bayrak /
@@ -229,8 +230,8 @@ export default function ReleasePane({
         <section className="release-history" aria-label="Sürüm geçmişi">
           <h4>Geçmiş</h4>
           <ol>
-            {history.map((record) => (
-              <li key={`${record.startedAt}-${record.sha}`}>
+            {history.map((record, index) => (
+              <li key={`${index}-${record.startedAt}-${record.sha}`}>
                 <button
                   type="button"
                   className="section-link"

@@ -41,6 +41,7 @@ export default function ProjectLogs({
     .join(" · ");
   const viewer = (
     <LogViewer
+      key={project.id}
       sources={sources}
       load={load}
       label={`${project.name} günlükleri`}

@@ -28,14 +28,14 @@ export default function PermissionSettings({
       </p>
       <ul className="permission-list">
         <li>
-          Güvenlik duvarında ServerBond’ın çalıştırdığı programlar için özel ve etki
-          alanı profillerinde izin kuralı
+          Güvenlik duvarında ServerBond’ın çalıştırdığı programlar için özel ve
+          etki alanı profillerinde izin kuralı
         </li>
         <li>Veri klasöründe Windows kullanıcınıza tam erişim</li>
         <li>İsteğe bağlı: Microsoft Defender’da veri klasörü istisnası</li>
         <li>
-          Tekrar sormamak için “ServerBond Permissions” zamanlanmış görevi (en yüksek
-          yetki)
+          Tekrar sormamak için “ServerBond Permissions” zamanlanmış görevi (en
+          yüksek yetki)
         </li>
       </ul>
       <p>
@@ -48,8 +48,8 @@ export default function PermissionSettings({
           </>
         ) : permissions.declined ? (
           <>
-            Açılıştaki yetki isteği onaylanmadı. ServerBond bir daha kendiliğinden
-            sormaz; aşağıdaki düğmeyle yeniden isteyebilirsiniz.
+            Açılıştaki yetki isteği onaylanmadı. ServerBond bir daha
+            kendiliğinden sormaz; aşağıdaki düğmeyle yeniden isteyebilirsiniz.
           </>
         ) : (
           <>Henüz Windows onayı alınmadı. Sonraki açılışta bir kez sorulur.</>
@@ -69,8 +69,8 @@ export default function PermissionSettings({
       )}
       {permissions.failed.length > 0 && (
         <ul className="permission-list error" role="alert">
-          {permissions.failed.map((line) => (
-            <li key={line}>{line}</li>
+          {permissions.failed.map((line, index) => (
+            <li key={`${index}-${line}`}>{line}</li>
           ))}
         </ul>
       )}
@@ -106,8 +106,8 @@ export default function PermissionSettings({
       </button>
       {permissions.applied.length > 0 && (
         <ul className="permission-list done">
-          {permissions.applied.map((line) => (
-            <li key={line}>{line}</li>
+          {permissions.applied.map((line, index) => (
+            <li key={`${index}-${line}`}>{line}</li>
           ))}
         </ul>
       )}

@@ -47,8 +47,8 @@ export default function TunnelSettings({
         </p>
       ) : (
         <p className="section-note">
-          Jetonu buraya yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI ile
-          şifreler; günlüklere yazılmaz.
+          Jetonu buraya yapıştırın. ServerBond jetonu ayıklar ve Windows DPAPI
+          ile şifreler; günlüklere yazılmaz.
         </p>
       )}
       {showSettings && !showOps ? (

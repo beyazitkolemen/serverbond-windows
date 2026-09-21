@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Play,
   Square,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { call } from "../api";
 import type { Project, ProjectSchedule, QueueWorker, Run } from "../types";
+import NumberField from "./NumberField";
 
 function emptyWorker(name = "default"): QueueWorker {
   return {
@@ -54,6 +55,19 @@ export function useProjectJobs(project: Project) {
   );
   const [tasks, setTasks] = useState("");
   const [failed, setFailed] = useState("");
+  const sourceWorkers = JSON.stringify(
+    (project.workers ?? []).map(normalizeWorker),
+  );
+  const sourceSchedule = JSON.stringify(
+    project.schedule ?? { enabled: false, autoStart: false },
+  );
+  const dirty =
+    JSON.stringify(workers) !== sourceWorkers ||
+    JSON.stringify(schedule) !== sourceSchedule;
+  const wasDirty = useRef(false);
+  useEffect(() => {
+    wasDirty.current = dirty;
+  }, [dirty]);
   useEffect(() => {
     setWorkers(
       (project.workers ?? []).map((worker) =>
@@ -63,11 +77,21 @@ export function useProjectJobs(project: Project) {
     setSchedule(project.schedule ?? { enabled: false, autoStart: false });
     setTasks("");
     setFailed("");
+    wasDirty.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
-  const dirty =
-    JSON.stringify(workers) !==
-      JSON.stringify((project.workers ?? []).map(normalizeWorker)) ||
-    JSON.stringify(schedule) !== JSON.stringify(project.schedule);
+  useEffect(() => {
+    // Edits made outside this pane (CLI, API) replace a clean draft; unsaved
+    // edits are kept so nothing typed is lost.
+    if (wasDirty.current) return;
+    setWorkers(
+      (project.workers ?? []).map((worker) =>
+        normalizeWorker(structuredClone(worker)),
+      ),
+    );
+    setSchedule(project.schedule ?? { enabled: false, autoStart: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceWorkers, sourceSchedule]);
   const runningWorkers = (project.workerStates ?? []).filter(
     (item) => item.running > 0,
   ).length;
@@ -402,106 +426,66 @@ export function QueueSection({
                   onChange={(e) => update(index, { queue: e.target.value })}
                 />
               </label>
-              <label>
-                Süreç
-                <input
-                  type="number"
-                  min={1}
-                  max={8}
-                  value={worker.processes}
-                  onChange={(e) =>
-                    update(index, { processes: Number(e.target.value) })
-                  }
-                />
-              </label>
+              <NumberField
+                label="Süreç"
+                min={1}
+                max={8}
+                value={worker.processes}
+                onChange={(n) => update(index, { processes: n })}
+              />
             </div>
             <details className="project-worker-more">
               <summary>Gelişmiş</summary>
               <div className="project-worker-grid">
-                <label>
-                  Zaman aşımı (sn)
-                  <input
-                    type="number"
-                    min={1}
-                    max={86400}
-                    value={worker.timeout}
-                    onChange={(e) =>
-                      update(index, { timeout: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Bellek (MB)
-                  <input
-                    type="number"
-                    min={32}
-                    max={2048}
-                    value={worker.memory}
-                    onChange={(e) =>
-                      update(index, { memory: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Bekleme (sn)
-                  <input
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={worker.sleep}
-                    onChange={(e) =>
-                      update(index, { sleep: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Deneme
-                  <input
-                    type="number"
-                    min={0}
-                    max={1000}
-                    value={worker.maxTries}
-                    onChange={(e) =>
-                      update(index, { maxTries: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Geri offset (sn)
-                  <input
-                    type="number"
-                    min={0}
-                    max={3600}
-                    value={worker.backoff}
-                    onChange={(e) =>
-                      update(index, { backoff: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Azami iş (0=sınırsız)
-                  <input
-                    type="number"
-                    min={0}
-                    max={1000000}
-                    value={worker.maxJobs}
-                    onChange={(e) =>
-                      update(index, { maxJobs: Number(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Azami süre (sn)
-                  <input
-                    type="number"
-                    min={0}
-                    max={604800}
-                    value={worker.maxTime}
-                    onChange={(e) =>
-                      update(index, { maxTime: Number(e.target.value) })
-                    }
-                  />
-                </label>
+                <NumberField
+                  label="Zaman aşımı (sn)"
+                  min={1}
+                  max={86400}
+                  value={worker.timeout}
+                  onChange={(n) => update(index, { timeout: n })}
+                />
+                <NumberField
+                  label="Bellek (MB)"
+                  min={32}
+                  max={2048}
+                  value={worker.memory}
+                  onChange={(n) => update(index, { memory: n })}
+                />
+                <NumberField
+                  label="Bekleme (sn)"
+                  min={1}
+                  max={60}
+                  value={worker.sleep}
+                  onChange={(n) => update(index, { sleep: n })}
+                />
+                <NumberField
+                  label="Deneme"
+                  min={0}
+                  max={1000}
+                  value={worker.maxTries}
+                  onChange={(n) => update(index, { maxTries: n })}
+                />
+                <NumberField
+                  label="Geri offset (sn)"
+                  min={0}
+                  max={3600}
+                  value={worker.backoff}
+                  onChange={(n) => update(index, { backoff: n })}
+                />
+                <NumberField
+                  label="Azami iş (0=sınırsız)"
+                  min={0}
+                  max={1000000}
+                  value={worker.maxJobs}
+                  onChange={(n) => update(index, { maxJobs: n })}
+                />
+                <NumberField
+                  label="Azami süre (sn)"
+                  min={0}
+                  max={604800}
+                  value={worker.maxTime}
+                  onChange={(n) => update(index, { maxTime: n })}
+                />
               </div>
             </details>
             <div className="project-job-row">

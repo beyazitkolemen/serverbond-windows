@@ -161,7 +161,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [message, error]);
   const run: Run = async (label, action) => {
-    if (inFlight.current) return false;
+    if (inFlight.current) {
+      setError("Başka bir işlem sürüyor. Bitmesini bekleyip yeniden deneyin.");
+      return false;
+    }
     inFlight.current = true;
     setBusy(label);
     setError("");
@@ -472,7 +475,6 @@ export default function App() {
           {page === Page.Logs ? <Logs /> : null}
           {page === Page.Services ? (
             <Services
-              key={JSON.stringify(state.settings)}
               settings={state.settings}
               busy={disabled}
               running={running}
@@ -489,7 +491,6 @@ export default function App() {
           ) : null}
           {page === Page.Settings ? (
             <Settings
-              key={JSON.stringify(state.settings)}
               settings={state.settings}
               versions={state.phpVersions}
               phpVersion={

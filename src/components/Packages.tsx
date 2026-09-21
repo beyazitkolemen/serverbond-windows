@@ -265,8 +265,8 @@ export default function Packages({
       packages.some((p) => p.id === "phpmyadmin" && p.installed) ? (
         <p className="section-note">
           phpMyAdmin girişi: kullanıcı <strong>root</strong>; parola Ayarlar →
-          Sistem → MySQL bağlantısı bölümünde. ServerBond'ın MySQL portu otomatik
-          kullanılır. PHP, MySQL ve web sunucusu çalışırken açılabilir.
+          Sistem → MySQL bağlantısı bölümünde. ServerBond'ın MySQL portu
+          otomatik kullanılır. PHP, MySQL ve web sunucusu çalışırken açılabilir.
         </p>
       ) : null}
       {detailed ? (

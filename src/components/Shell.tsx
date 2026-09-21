@@ -14,6 +14,7 @@ import { Page, type Page as AppPage } from "../domain";
 import type { ReactNode } from "react";
 import { desktop } from "../api";
 import { APP_VERSION } from "../version";
+import ErrorBoundary from "./ErrorBoundary";
 
 type NavEntry = { id: AppPage; title: string; icon: LucideIcon };
 
@@ -31,6 +32,14 @@ const environmentNav: NavEntry[] = [
 const manageNav: NavEntry[] = [
   { id: Page.Settings, title: "Ayarlar", icon: Settings },
 ];
+
+function pageLabel(page: AppPage) {
+  return (
+    [...workspaceNav, ...environmentNav, ...manageNav].find(
+      (entry) => entry.id === page,
+    )?.title ?? "Sayfa"
+  );
+}
 
 function NavButtons({
   items,
@@ -158,7 +167,9 @@ export function Shell({
       <div className="workspace">
         {toolbar}
         <main id="main-content" tabIndex={-1}>
-          {children}
+          <ErrorBoundary scope={pageLabel(page)} resetKey={page}>
+            {children}
+          </ErrorBoundary>
         </main>
         <footer>
           <div className="content-rail">
