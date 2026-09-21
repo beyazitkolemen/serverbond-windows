@@ -14,13 +14,15 @@ Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek yeşil vurgu. U
 - **Kontrol:** birincil yükseklik `--control-h` 40, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 40. Girdi ve seçici aynı yükseklikte hizalanır.
 - **Şekil:** kontroller 8, liste ve panel dış köşeleri 12 piksel. Liste satırları tek yüzey içinde ince çizgilerle ayrılır. `--shadow-sm` kapalıdır; modal gibi yükseltilmiş katmanlarda `--shadow-md` kullanılır.
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
-- **Koyu görünüm:** aynı token adları `:root[data-theme="dark"]` altında ikinci bir değer seti alır; bileşenler renk için yalnızca token kullanır (`--console-bg`, `--console-ink`, `--sidebar-edge`, `--on-accent` dahil). Tercih Ayarlar → Genel → Görünüm'de; `system` Windows'u izler.
+- **Koyu görünüm:** aynı token adları `:root[data-theme="dark"]` altında ikinci bir değer seti alır; bileşenler renk için yalnızca token kullanır (`--console-bg`, `--console-ink`, `--sidebar-edge`, `--on-accent` dahil). Tercih Ayarlar → Görünüm'de; `system` Windows'u izler.
 
 ## Paylaşılan bileşenler
 
 | Bileşen | Kullanım |
 | --- | --- |
 | `SearchField` | Etiketli, temizlenebilir arama alanı; temizleme sonrası odak girdiye döner. |
+| `SectionTabs` | Proje, hizmet, API ve günlük bölümleri; aktif alt çizgi, tek Tab durağı, yön tuşları ve Home/End. Her sekme ilgili panelle ilişkilidir. |
+| `SaveBar` | Ayar, hizmet ve API formlarında yalnızca taslak değiştiğinde görünür; Vazgeç, Kaydet ve varsa kaydetmeyi engelleyen neden. |
 | `QuickNavigation` | `Ctrl+K` / `Cmd+K` ile açılan sayfa seçici; yön tuşları, Enter ve Escape. |
 | `StatusBadge` | Her durum hapı: `tone` = `running` / `stopped` / `issue` / `warning`. Elle `service-status` + `status-dot` yazılmaz. |
 | `Toggle` | Etiketli onay kutusu anahtarı. |
@@ -38,8 +40,11 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
 - **Projeler:** solda ad, alan adı veya klasör yoluyla aranabilen tek proje listesi, sağda sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Aç ve Terminal başlıkta kalır.
 - **Hizmetler:** her uygulama tam genişlikte bir satır. Üstte Tümü / Etkin filtresi ve arama yer alır. Etkin, çalışan servislerin yanında açık phpMyAdmin erişimini ve bağlı GitHub hesabını da kapsar. Simge/ad, açıklama, durum ve açma oku masaüstünde hizalıdır. 1100 altında açıklama adın altına; 540 altında durum da alta geçer. Satırın tamamı klavyeyle erişilebilir bir düğmedir. Hizmete girince üstte ortak denetim şeridi (durum, Kur / Başlat / Durdur / Aç); port ve jeton **Ayarlar** düğmesindedir. Onarım ayrı karttır.
-- **Ayarlar:** Sunucu / Yönetim gruplu sekmeler, kartlı formlar, altta kaydetme çubuğu.
-- **Günlükler:** kaynak sekmeli görüntüleyici.
+- **Ayarlar:** solda Çalışma alanı / Sunucu / Yönetim bölüm menüsü, sağda bölüm başlığı ve formlar. Görünüm ve Windows tercihleri ayrı sayfalardır. 1000 piksel altında menü üstte yeniden yerleşir. Kaydetme çubuğu yalnızca değişiklik olduğunda görünür; bölüm değiştirmek sunucu ayar taslağını silmez.
+- **API:** Bağlantı ve erişim / Uç nokta rehberi sekmeleri. Bağlantı formu ve gösterilen jeton sekme değişiminde korunur. Rehberde yöntem filtresi, arama ve açılabilir istek ayrıntıları bulunur.
+- **Günlükler:** kaynak sekmeleri, metin ve seviye filtresi, canlı akışı duraklat/sürdür, sona kaydırma ve görünen kayıtları kopyalama. Yükleme, boş sonuç ve okuma hatası ayrıdır. Okuma hatası son başarılı veriyi silmez; yeniden dene görünür. Bir okuma tamamlanmadan sonraki otomatik yenileme başlamaz; geç gelen eski kaynak yanıtı gösterilmez.
+
+İç sayfa stilleri `src/inner-pages.css` içinde mevcut renk ve ölçü tokenlarını kullanır. Proje detayında bilgiler çizgilerle ayrılan satırlardır; silme işlemi açıklamasıyla ayrı bir alt bölümde kalır. `.env` ve sürüm tarifi düzenleyicileri aynı proje içindeki sekme değişimlerinde taslağı korur; proje veya ana sayfa değişiminde bu geçici taslaklar kapanır. Hizmetlerin Durum ve işlemler / Ayarlar sekmeleri arasında ayar taslağı korunur.
 
 ## Davranış ve erişilebilirlik
 

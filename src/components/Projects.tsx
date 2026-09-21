@@ -113,6 +113,14 @@ export default function Projects({
         >
           Projeler
         </h2>
+        {!compact && (
+          <div className="list-summary">
+            <strong>{projects.length} proje</strong>
+            <span>
+              {projects.filter((project) => project.running).length} çalışıyor
+            </span>
+          </div>
+        )}
         <div className="heading-actions">
           {onOpen ? (
             <button type="button" className="section-link" onClick={onOpen}>

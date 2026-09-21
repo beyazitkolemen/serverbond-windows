@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 /**
  * Numeric input that lets the user clear the field or type a leading minus
@@ -26,6 +26,7 @@ export default function NumberField({
   hint?: string;
 }) {
   const [text, setText] = useState(String(value));
+  const id = useId();
   useEffect(() => {
     // Follow outside changes (reset, saved value) unless the user is mid-edit
     // on an equivalent number such as "08" or "-".
@@ -40,6 +41,8 @@ export default function NumberField({
       <input
         required
         type="number"
+        aria-label={label}
+        aria-describedby={hint ? `${id}-hint` : undefined}
         inputMode="numeric"
         min={min}
         max={max}
@@ -57,7 +60,7 @@ export default function NumberField({
           if (invalid) setText(String(value));
         }}
       />
-      {hint ? <small>{hint}</small> : null}
+      {hint ? <small id={`${id}-hint`}>{hint}</small> : null}
     </label>
   );
 }

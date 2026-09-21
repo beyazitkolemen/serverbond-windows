@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   Archive,
   Database,
@@ -15,6 +15,7 @@ import ProjectLogs from "./ProjectLogs";
 import ReleasePane, { SummaryGit } from "./ProjectRelease";
 import ProjectEnv from "./ProjectEnv";
 import StatusBadge from "./StatusBadge";
+import SectionTabs from "./SectionTabs";
 
 const tabs = [
   { id: "summary", label: "Özet" },
@@ -56,6 +57,16 @@ export default function ProjectDetail({
   onRestore: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("summary");
+  const [openedEditors, setOpenedEditors] = useState<
+    Partial<Record<Tab, string>>
+  >({});
+  const openTab = (next: Tab) => {
+    if (next === "env" || next === "release") {
+      setOpenedEditors((current) => ({ ...current, [next]: project.id }));
+    }
+    setTab(next);
+  };
+  const tabsId = useId();
   const jobs = useProjectJobs(project);
   useEffect(() => {
     setTab("summary");
@@ -66,6 +77,7 @@ export default function ProjectDetail({
     <article className="project-detail" aria-labelledby="project-detail-title">
       <header className="project-detail-head">
         <div className="project-detail-copy">
+          <span className="eyebrow">Proje çalışma alanı</span>
           <h3 id="project-detail-title">{project.name}</h3>
           <p className="project-url">{url}</p>
         </div>
@@ -104,59 +116,71 @@ export default function ProjectDetail({
           </button>
         </div>
       </header>
-      <nav className="project-detail-tabs" aria-label="Proje bölümleri">
-        {tabs.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-            {item.id === "schedule" && project.scheduleRunning ? (
-              <i className="tab-dot" aria-hidden="true" />
-            ) : null}
-            {item.id === "queue" && runningWorkers ? (
-              <i className="tab-dot" aria-hidden="true" />
-            ) : null}
-          </button>
-        ))}
-      </nav>
-      {tab === "env" ? (
-        <ProjectEnv project={project} busy={busy} run={run} />
-      ) : null}
-      {tab === "summary" ? (
-        <SummaryPane
-          project={project}
-          url={url}
-          busy={busy}
-          run={run}
-          phpVersions={phpVersions}
-          anyRunning={anyRunning}
-          runningWorkers={runningWorkers}
-          onOpenTab={setTab}
-          onRemove={onRemove}
-        />
-      ) : null}
-      {tab === "schedule" ? (
-        <ScheduleSection project={project} busy={busy} run={run} jobs={jobs} />
-      ) : null}
-      {tab === "queue" ? (
-        <QueueSection project={project} busy={busy} run={run} jobs={jobs} />
-      ) : null}
-      {tab === "release" ? (
-        <ReleasePane project={project} busy={busy} run={run} />
-      ) : null}
-      {tab === "logs" ? <ProjectLogs project={project} embedded /> : null}
-      {tab === "database" ? (
-        <DatabasePane
-          project={project}
-          busy={busy}
-          run={run}
-          mysqlRunning={mysqlRunning}
-          onRestore={onRestore}
-        />
-      ) : null}
+      <SectionTabs
+        id={tabsId}
+        label="Proje bölümleri"
+        value={tab}
+        onChange={openTab}
+        items={tabs.map((item) => ({
+          ...item,
+          indicator:
+            (item.id === "schedule" && project.scheduleRunning) ||
+            (item.id === "queue" && runningWorkers) ? (
+              <i className="tab-dot" aria-hidden />
+            ) : null,
+        }))}
+      />
+      <div
+        id={`${tabsId}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-${tab}`}
+        tabIndex={0}
+      >
+        {openedEditors.env === project.id ? (
+          <div hidden={tab !== "env"}>
+            <ProjectEnv project={project} busy={busy} run={run} />
+          </div>
+        ) : null}
+        {tab === "summary" ? (
+          <SummaryPane
+            project={project}
+            url={url}
+            busy={busy}
+            run={run}
+            phpVersions={phpVersions}
+            anyRunning={anyRunning}
+            runningWorkers={runningWorkers}
+            onOpenTab={openTab}
+            onRemove={onRemove}
+          />
+        ) : null}
+        {tab === "schedule" ? (
+          <ScheduleSection
+            project={project}
+            busy={busy}
+            run={run}
+            jobs={jobs}
+          />
+        ) : null}
+        {tab === "queue" ? (
+          <QueueSection project={project} busy={busy} run={run} jobs={jobs} />
+        ) : null}
+        {openedEditors.release === project.id ? (
+          <div hidden={tab !== "release"}>
+            <ReleasePane project={project} busy={busy} run={run} />
+          </div>
+        ) : null}
+        {tab === "logs" ? <ProjectLogs project={project} embedded /> : null}
+        {tab === "database" ? (
+          <DatabasePane
+            project={project}
+            busy={busy}
+            run={run}
+            mysqlRunning={mysqlRunning}
+            onRestore={onRestore}
+          />
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -257,9 +281,12 @@ function SummaryPane({
         anyRunning={anyRunning}
       />
       <div className="project-pane-foot">
+        <span className="section-note">
+          Kayıttan kaldırma proje dosyalarını silmez.
+        </span>
         <button
           type="button"
-          className="button secondary small"
+          className="button secondary small danger"
           disabled={busy}
           onClick={onRemove}
         >

@@ -3,6 +3,9 @@ import { apiService } from "../services";
 import { useDraft } from "../hooks/useDraft";
 import ApiSettings from "./ApiSettings";
 import ApiReference from "./ApiReference";
+import { useId, useState } from "react";
+import SectionTabs from "./SectionTabs";
+import SaveBar from "./SaveBar";
 
 export default function ApiPage({
   settings,
@@ -14,49 +17,70 @@ export default function ApiPage({
   run: Run;
 }) {
   const { values, setValues, dirty, reset } = useDraft(settings);
+  const [section, setSection] = useState<"connection" | "reference">(
+    "connection",
+  );
+  const tabsId = useId();
   return (
     <div className="api-page">
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          void run("API ayarları kaydediliyor…", () => apiService.save(values));
-        }}
+      <SectionTabs
+        id={tabsId}
+        label="API bölümleri"
+        value={section}
+        onChange={setSection}
+        items={[
+          {
+            id: "connection",
+            label: "Bağlantı ve erişim",
+            indicator: dirty ? (
+              <span
+                className="draft-dot"
+                aria-label="Kaydedilmemiş değişiklikler"
+              />
+            ) : null,
+          },
+          { id: "reference", label: "Uç nokta rehberi" },
+        ]}
+      />
+      <div
+        id={`${tabsId}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-${section}`}
+        tabIndex={0}
       >
-        <fieldset className="settings-fields" disabled={busy}>
-          <ApiSettings
-            values={values}
-            onChange={(patch) =>
-              setValues((current) => ({ ...current, ...patch }))
-            }
-            busy={busy}
-            run={run}
-            dirty={dirty}
-          />
-          <div className="settings-save">
-            <span>
-              {dirty
-                ? "Kaydedilmemiş değişiklikler var"
-                : "API ayarları güncel"}
-            </span>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={!dirty || busy}
-              onClick={reset}
-            >
-              Vazgeç
-            </button>
-            <button
-              type="submit"
-              className="button primary"
-              disabled={!dirty || busy}
-            >
-              API ayarlarını kaydet
-            </button>
-          </div>
-        </fieldset>
-      </form>
-      <ApiReference run={run} />
+        <div hidden={section !== "connection"}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run("API ayarları kaydediliyor…", () =>
+                apiService.save(values),
+              );
+            }}
+          >
+            <fieldset className="settings-fields" disabled={busy}>
+              <ApiSettings
+                values={values}
+                onChange={(patch) =>
+                  setValues((current) => ({ ...current, ...patch }))
+                }
+                busy={busy}
+                run={run}
+                dirty={dirty}
+              />
+              <SaveBar
+                dirty={dirty}
+                busy={busy}
+                canSave={dirty && !busy}
+                onReset={reset}
+                label="API ayarlarını kaydet"
+              />
+            </fieldset>
+          </form>
+        </div>
+        <div hidden={section !== "reference"}>
+          <ApiReference run={run} />
+        </div>
+      </div>
     </div>
   );
 }

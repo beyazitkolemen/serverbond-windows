@@ -5,10 +5,12 @@ export default function SearchField({
   value,
   onChange,
   label,
+  placeholder,
 }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
+  placeholder?: string;
 }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -23,7 +25,7 @@ export default function SearchField({
         id={id}
         type="search"
         value={value}
-        placeholder={label}
+        placeholder={placeholder ?? label}
         onChange={(event) => onChange(event.target.value)}
       />
       {value ? (

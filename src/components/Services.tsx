@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import NumberField from "./NumberField";
 import Toggle from "./Toggle";
 import { useDraft } from "../hooks/useDraft";
@@ -9,7 +9,6 @@ import {
   Github,
   Globe,
   Mail,
-  Settings,
   Zap,
 } from "lucide-react";
 import {
@@ -53,6 +52,8 @@ import TunnelSettings from "./TunnelSettings";
 import StatusBadge from "./StatusBadge";
 import SearchField from "./SearchField";
 import { searchText } from "../search";
+import SectionTabs from "./SectionTabs";
+import SaveBar from "./SaveBar";
 
 const catalog = [
   {
@@ -121,18 +122,17 @@ export default function Services({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(false);
+  const tabsId = useId();
   const locked = busy || running;
   const canSave = dirty && !busy && !running;
   const change = <K extends keyof Values>(key: K, value: Values[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
   const selected = catalog.find((item) => item.id === service);
   const openService = (id: ServiceId) => {
-    reset();
     setService(id);
     setSettingsOpen(false);
   };
   const closeSettings = () => {
-    reset();
     setSettingsOpen(false);
   };
   const serviceState = (id: ServiceId) => {
@@ -464,7 +464,7 @@ export default function Services({
       (!activeOnly || serviceState(item.id).on),
   );
   return (
-    <div className="settings-layout">
+    <div className="settings-layout services-workspace">
       {!selected ? (
         <>
           <div className="list-toolbar">
@@ -565,145 +565,146 @@ export default function Services({
               type="button"
               className="button secondary small"
               onClick={() => {
-                if (settingsOpen) {
-                  closeSettings();
-                  return;
-                }
                 setService(null);
                 setSettingsOpen(false);
               }}
             >
               <ChevronLeft size={16} />
-              {settingsOpen ? selected.title : "Hizmetler"}
+              Hizmetler
             </button>
-            <h2 className="service-toolbar-title">
-              {settingsOpen ? `${selected.title} ayarları` : selected.title}
-            </h2>
+            <ChevronRight
+              size={14}
+              aria-hidden
+              className="breadcrumb-separator"
+            />
+            <h2 className="service-toolbar-title">{selected.title}</h2>
+          </div>
+          <SectionTabs
+            id={tabsId}
+            label={`${selected.title} bölümleri`}
+            value={settingsOpen ? "settings" : "overview"}
+            onChange={(value) =>
+              value === "overview" ? closeSettings() : setSettingsOpen(true)
+            }
+            items={[
+              { id: "overview", label: "Durum ve işlemler" },
+              {
+                id: "settings",
+                label: "Ayarlar",
+                indicator: dirty ? (
+                  <span
+                    className="draft-dot"
+                    aria-label="Kaydedilmemiş değişiklikler"
+                  />
+                ) : null,
+              },
+            ]}
+          />
+          <div
+            id={`${tabsId}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-${settingsOpen ? "settings" : "overview"}`}
+            tabIndex={0}
+          >
             {!settingsOpen ? (
-              <button
-                type="button"
-                className="button secondary small service-gear"
-                onClick={() => {
-                  reset();
-                  setSettingsOpen(true);
+              <ServiceConsole {...serviceConsole(service as ServiceId)} />
+            ) : null}
+            {settingsOpen &&
+            (service === WorkspaceService.PhpMyAdmin ||
+              service === WorkspaceService.Mail ||
+              service === WorkspaceService.Postgres ||
+              service === WorkspaceService.Redis) ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run(
+                    "Hizmet ayarları doğrulanıyor ve kaydediliyor…",
+                    () => settingsService.save(values),
+                  );
                 }}
               >
-                <Settings size={16} />
-                Ayarlar
-              </button>
-            ) : null}
-          </div>
-          {!settingsOpen ? (
-            <ServiceConsole {...serviceConsole(service as ServiceId)} />
-          ) : null}
-          {settingsOpen &&
-          (service === WorkspaceService.PhpMyAdmin ||
-            service === WorkspaceService.Mail ||
-            service === WorkspaceService.Postgres ||
-            service === WorkspaceService.Redis) ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void run("Hizmet ayarları doğrulanıyor ve kaydediliyor…", () =>
-                  settingsService.save(values),
-                );
-              }}
-            >
-              <p className="section-note">
-                {running
-                  ? "Kaydetmek için sunucuyu durdurun."
-                  : "Değişiklikler sonraki başlangıçta uygulanır."}
-              </p>
-              <fieldset disabled={locked} className="settings-fields">
+                <p className="section-note">
+                  {running
+                    ? "Kaydetmek için sunucuyu durdurun."
+                    : "Değişiklikler sonraki başlangıçta uygulanır."}
+                </p>
+                <fieldset disabled={locked} className="settings-fields">
+                  {service === WorkspaceService.PhpMyAdmin ? (
+                    <PmaForm values={values} change={change} />
+                  ) : null}
+                  {service === WorkspaceService.Mail ? (
+                    <MailForm values={values} change={change} />
+                  ) : null}
+                  {service === WorkspaceService.Postgres ? (
+                    <PostgresForm values={values} change={change} />
+                  ) : null}
+                  {service === WorkspaceService.Redis ? (
+                    <RedisForm values={values} change={change} />
+                  ) : null}
+                </fieldset>
+                <SaveBar
+                  dirty={dirty}
+                  busy={busy}
+                  canSave={canSave}
+                  onReset={reset}
+                  label="Ayarları kaydet"
+                  blocked={
+                    running ? "Kaydetmek için sunucuyu durdurun." : undefined
+                  }
+                />
+              </form>
+            ) : settingsOpen && service === WorkspaceService.Github ? (
+              <GithubSettings
+                github={github}
+                busy={busy}
+                run={run}
+                pane="settings"
+              />
+            ) : settingsOpen && service === WorkspaceService.Tunnel ? (
+              <TunnelSettings
+                tunnel={tunnel}
+                busy={busy}
+                run={run}
+                pane="settings"
+              />
+            ) : (
+              <>
                 {service === WorkspaceService.PhpMyAdmin ? (
-                  <PmaForm values={values} change={change} />
+                  <PmaActions
+                    phpmyadmin={phpmyadmin}
+                    busy={busy}
+                    running={running}
+                    run={run}
+                  />
                 ) : null}
                 {service === WorkspaceService.Mail ? (
-                  <MailForm values={values} change={change} />
+                  <MailActions mail={mail} busy={busy} run={run} />
                 ) : null}
                 {service === WorkspaceService.Postgres ? (
-                  <PostgresForm values={values} change={change} />
+                  <PostgresSettings postgres={postgres} busy={busy} run={run} />
                 ) : null}
                 {service === WorkspaceService.Redis ? (
-                  <RedisForm values={values} change={change} />
+                  <RedisActions redis={redis} busy={busy} run={run} />
                 ) : null}
-              </fieldset>
-              <div className="settings-save">
-                <span>
-                  {dirty
-                    ? running
-                      ? "Hizmet ayarlarını kaydetmek için sunucuyu durdurun"
-                      : "Kaydedilmemiş değişiklikler var"
-                    : "Ayarlar güncel"}
-                </span>
-                <button
-                  type="button"
-                  className="button secondary"
-                  disabled={!dirty || busy}
-                  onClick={reset}
-                >
-                  Vazgeç
-                </button>
-                <button
-                  type="submit"
-                  className="button primary"
-                  disabled={!canSave}
-                >
-                  Ayarları kaydet
-                </button>
-              </div>
-            </form>
-          ) : settingsOpen && service === WorkspaceService.Github ? (
-            <GithubSettings
-              github={github}
-              busy={busy}
-              run={run}
-              pane="settings"
-            />
-          ) : settingsOpen && service === WorkspaceService.Tunnel ? (
-            <TunnelSettings
-              tunnel={tunnel}
-              busy={busy}
-              run={run}
-              pane="settings"
-            />
-          ) : (
-            <>
-              {service === WorkspaceService.PhpMyAdmin ? (
-                <PmaActions
-                  phpmyadmin={phpmyadmin}
-                  busy={busy}
-                  running={running}
-                  run={run}
-                />
-              ) : null}
-              {service === WorkspaceService.Mail ? (
-                <MailActions mail={mail} busy={busy} run={run} />
-              ) : null}
-              {service === WorkspaceService.Postgres ? (
-                <PostgresSettings postgres={postgres} busy={busy} run={run} />
-              ) : null}
-              {service === WorkspaceService.Redis ? (
-                <RedisActions redis={redis} busy={busy} run={run} />
-              ) : null}
-              {service === WorkspaceService.Github ? (
-                <GithubSettings
-                  github={github}
-                  busy={busy}
-                  run={run}
-                  pane="ops"
-                />
-              ) : null}
-              {service === WorkspaceService.Tunnel ? (
-                <TunnelSettings
-                  tunnel={tunnel}
-                  busy={busy}
-                  run={run}
-                  pane="ops"
-                />
-              ) : null}
-            </>
-          )}
+                {service === WorkspaceService.Github ? (
+                  <GithubSettings
+                    github={github}
+                    busy={busy}
+                    run={run}
+                    pane="ops"
+                  />
+                ) : null}
+                {service === WorkspaceService.Tunnel ? (
+                  <TunnelSettings
+                    tunnel={tunnel}
+                    busy={busy}
+                    run={run}
+                    pane="ops"
+                  />
+                ) : null}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -4,6 +4,7 @@ import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { applyStoredTheme } from "./hooks/useTheme";
 import "./styles.css";
+import "./inner-pages.css";
 
 applyStoredTheme();
 
