@@ -199,6 +199,24 @@ impl Default for RedisSettings {
     }
 }
 
+/// Local management API (127.0.0.1 only, bearer token). Off by default so a
+/// fresh install exposes nothing until the user turns it on and creates a token.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct ApiSettings {
+    pub enabled: bool,
+    pub port: u16,
+}
+
+impl Default for ApiSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            port: 18800,
+        }
+    }
+}
+
 fn range(value: u32, min: u32, max: u32, name: &str) -> Result<()> {
     if !(min..=max).contains(&value) {
         bail!("{name}: {min}–{max} arasında olmalı.");

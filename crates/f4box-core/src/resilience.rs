@@ -59,6 +59,7 @@ impl Manager {
     pub fn shutdown(&self) -> Result<()> {
         let _guard = self.cleanup_gate()?;
         self.shutting_down.store(true, Ordering::Release);
+        self.stop_api();
         self.stop_inner()
     }
 

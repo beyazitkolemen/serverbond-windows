@@ -2,10 +2,58 @@ use anyhow::{bail, Context, Result};
 use f4box_core::{model::Settings, Manager};
 use std::{path::PathBuf, time::Duration};
 
+/// `serverbond api …`: the same HTTP API the desktop app serves, from the
+/// terminal. `serve` keeps this process alive as the API host; `token`
+/// prints a new bearer token exactly once.
+fn api_command(manager: Manager, args: &[String]) -> Result<()> {
+    let manager = std::sync::Arc::new(manager);
+    match args.first().map(String::as_str).unwrap_or("status") {
+        "status" => println!("{}", serde_json::to_string_pretty(&manager.api_status())?),
+        "routes" => {
+            for (method, path, description) in f4box_core::api::routes() {
+                println!("{method:<6} {path:<64} {description}");
+            }
+        }
+        "token" => {
+            let token = manager.create_api_token()?;
+            println!("{token}");
+            eprintln!("Bu jeton yalnızca bir kez gösterilir; güvenli bir yerde saklayın.");
+        }
+        "forget" => {
+            manager.clear_api_token()?;
+            println!("API jetonu silindi.");
+        }
+        "serve" => {
+            let mut settings = manager.snapshot()?.settings;
+            if let Some(port) = args.get(1) {
+                settings.api.port = port.parse().context("Port sayı olmalı.")?;
+            }
+            if !settings.api.enabled || args.get(1).is_some() {
+                settings.api.enabled = true;
+                manager.save_settings(settings)?;
+            }
+            manager.ensure_api()?;
+            let status = manager.api_status();
+            if !status.token_saved {
+                eprintln!("Henüz API jetonu yok: `serverbond api token` ile oluşturun.");
+            }
+            println!(
+                "{} dinliyor. Durdurmak için Enter'a basın.",
+                status.base_url
+            );
+            let mut line = String::new();
+            std::io::stdin().read_line(&mut line)?;
+            manager.shutdown()?;
+        }
+        _ => bail!("Kullanım: api serve [port]|token|forget|status|routes"),
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "help" {
-        println!("ServerBond CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/ServerBond (SERVERBOND_HOME veya F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
+        println!("ServerBond CLI\n  status\n  install [all|php|mysql|caddy|composer|phpmyadmin]\n  php [version] (listele veya indir ve kullan)\n  serve\n  add <name> <folder>\n  create <name> <parent>\n  discover\n  import [klasör...]\n  project release <ad>\n  env <ad>\n  queue <name> start|stop|restart|failed|retry|flush|log [worker|iş]\n  schedule <name> start|stop|restart|list|log\n  logs <name> [php|schedule|worker:<id>]\n  db <name> create|backup|restore <sql>\n  db password <parola>\n  https trust|untrust\n  tunnel install|start|stop|token <jeton>|apply <jeton>|forget\n  mail install|start|stop|open\n  postgres install|start|stop|repair|password [parola]\n  redis install|start|stop|repair\n  node install|repair\n  github token <jeton>|forget|import <depo> [ad] [dal]|status\n  permissions ensure|grant [defender]\n  api serve|token|forget|status|routes\n  smoke\n\nVeri dizini: %LOCALAPPDATA%/ServerBond (SERVERBOND_HOME veya F4BOX_HOME ile değiştirilebilir).\nServisler bu işlem kapandığında durur.");
         return Ok(());
     }
     let manager = Manager::new(Manager::default_home())?;
@@ -298,8 +346,9 @@ fn main() -> Result<()> {
             ),
             _ => bail!("Kullanım: permissions ensure|grant [defender]|status"),
         },
+        "api" => api_command(manager, &args[1..])?,
         "smoke" => smoke(&manager)?,
-        _ => bail!("Bilinmeyen komut. f4box help"),
+        _ => bail!("Bilinmeyen komut. serverbond help"),
     }
     Ok(())
 }

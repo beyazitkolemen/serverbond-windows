@@ -12,10 +12,12 @@ import type {
 import Requirements from "./Requirements";
 import DesktopSettings from "./DesktopSettings";
 import UpdateSettings from "./UpdateSettings";
+import ApiSettings from "./ApiSettings";
 import NodeSettings from "./NodeSettings";
 import PermissionSettings from "./PermissionSettings";
 import type { UpdateInfo } from "../updates";
 import NumberField from "./NumberField";
+import Toggle from "./Toggle";
 import { useDraft } from "../hooks/useDraft";
 
 const sections = [
@@ -25,6 +27,7 @@ const sections = [
   "Web sunucusu",
   "Yedek ve aktarım",
   "Sistem",
+  "API",
   "Güncellemeler",
 ] as const;
 const sectionGroups = [
@@ -34,7 +37,7 @@ const sectionGroups = [
   },
   {
     label: "Yönetim",
-    items: ["Yedek ve aktarım", "Sistem", "Güncellemeler"],
+    items: ["Yedek ve aktarım", "Sistem", "API", "Güncellemeler"],
   },
 ] as const;
 const extensions = [
@@ -66,26 +69,6 @@ const extensions = [
   "tidy",
   "xsl",
 ];
-function Toggle({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="setting-toggle">
-      <input
-        type="checkbox"
-        checked={value}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
 
 function runtimeSlice(settings: Values) {
   return { ...settings, projectsDir: "", backupsDir: "", startOnLaunch: false };
@@ -924,6 +907,15 @@ export default function Settings({
             </p>
           </section>
         </>
+      )}
+      {section === "API" && (
+        <ApiSettings
+          values={values.api}
+          onChange={(patch) => change("api", { ...values.api, ...patch })}
+          busy={busy}
+          run={run}
+          dirty={JSON.stringify(values.api) !== JSON.stringify(settings.api)}
+        />
       )}
       {section === "Güncellemeler" && (
         <UpdateSettings

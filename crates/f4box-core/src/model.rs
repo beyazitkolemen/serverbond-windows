@@ -193,6 +193,8 @@ pub struct Settings {
     pub postgres: crate::preferences::PostgresSettings,
     #[serde(default)]
     pub redis: crate::preferences::RedisSettings,
+    #[serde(default)]
+    pub api: crate::preferences::ApiSettings,
     pub projects_dir: String,
     pub backups_dir: String,
     pub start_on_launch: bool,
@@ -213,6 +215,7 @@ impl Default for Settings {
             mail: Default::default(),
             postgres: Default::default(),
             redis: Default::default(),
+            api: Default::default(),
             projects_dir: String::new(),
             backups_dir: String::new(),
             start_on_launch: false,
@@ -221,7 +224,7 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub fn reserved_ports(&self) -> [u16; 8] {
+    pub fn reserved_ports(&self) -> [u16; 9] {
         [
             self.web_port,
             self.mysql_port,
@@ -231,6 +234,7 @@ impl Settings {
             self.web.https_port,
             self.postgres.port,
             self.redis.port,
+            self.api.port,
         ]
     }
 
@@ -263,6 +267,8 @@ impl Settings {
             copy.projects_dir.clear();
             copy.backups_dir.clear();
             copy.start_on_launch = false;
+            // The management API is a separate listener, not a service file.
+            copy.api = Default::default();
             copy
         }
         serde_json::to_vec(&strip(self)).ok() != serde_json::to_vec(&strip(other)).ok()

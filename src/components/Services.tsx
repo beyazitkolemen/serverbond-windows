@@ -1,5 +1,6 @@
 import { useState } from "react";
 import NumberField from "./NumberField";
+import Toggle from "./Toggle";
 import { useDraft } from "../hooks/useDraft";
 import { ChevronLeft, Settings } from "lucide-react";
 import {
@@ -73,27 +74,6 @@ const catalog = [
     copy: "Cloudflare Tunnel ile dışarı açın.",
   },
 ] as const;
-
-function Toggle({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="setting-toggle">
-      <input
-        type="checkbox"
-        checked={value}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
 
 export default function Services({
   settings,

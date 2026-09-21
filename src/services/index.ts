@@ -8,6 +8,7 @@ export {
   githubService,
 } from "./tools";
 export {
+  apiService,
   environmentService,
   packagesService,
   settingsService,

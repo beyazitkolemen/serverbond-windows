@@ -93,6 +93,7 @@ const preview: Snapshot = {
     },
     postgres: { port: 15432, autoStart: false },
     redis: { port: 16379, autoStart: false },
+    api: { enabled: false, port: 18800 },
     projectsDir: "",
     backupsDir: "",
     startOnLaunch: false,
@@ -189,6 +190,7 @@ export async function call<T = void>(
         "settings_previous",
         "settings_defaults",
         "desktop_status",
+        "api_status",
         "discover_projects",
         "list_project_releases",
         "project_git_status",
@@ -273,6 +275,14 @@ export async function call<T = void>(
       present: true,
       branch: "main",
       sha: "6f12c4a",
+    } as T;
+  if (command === "api_status")
+    return {
+      enabled: false,
+      port: 18800,
+      listening: false,
+      tokenSaved: false,
+      baseUrl: "http://127.0.0.1:18800/api/v1",
     } as T;
   if (command === "read_project_env")
     return {

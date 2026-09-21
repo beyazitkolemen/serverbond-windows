@@ -1,3 +1,4 @@
+pub mod api;
 mod domain;
 mod envfile;
 mod github;
@@ -55,6 +56,7 @@ pub struct Manager {
     faulted: AtomicBool,
     shutting_down: AtomicBool,
     startup_issue: Mutex<Option<String>>,
+    api: api::ApiState,
     _lock: File,
 }
 
@@ -150,6 +152,7 @@ impl Manager {
             faulted: AtomicBool::new(false),
             shutting_down: AtomicBool::new(false),
             startup_issue: Mutex::new(startup_issue),
+            api: api::ApiState::default(),
             _lock: lock,
         };
         manager.log(if manager.recovery_issue().is_some() {

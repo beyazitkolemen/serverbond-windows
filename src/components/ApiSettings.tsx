@@ -1,0 +1,168 @@
+import { useEffect, useState } from "react";
+import { Copy, KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { apiService } from "../services";
+import type { ApiSettings as ApiValues, ApiStatus, Run } from "../types";
+import NumberField from "./NumberField";
+import Toggle from "./Toggle";
+
+/**
+ * Ayarlar → API: switch the local management API on, pick its port, create
+ * or revoke the bearer token and copy a ready-to-run example. The token is
+ * shown once; only its hash is stored on disk.
+ */
+export default function ApiSettings({
+  values,
+  onChange,
+  busy,
+  run,
+  dirty,
+}: {
+  values: ApiValues;
+  onChange: (patch: Partial<ApiValues>) => void;
+  busy: boolean;
+  run: Run;
+  dirty: boolean;
+}) {
+  const [status, setStatus] = useState<ApiStatus | null>(null);
+  const [token, setToken] = useState("");
+  const refresh = () =>
+    apiService
+      .status()
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 5000);
+    return () => clearInterval(timer);
+  }, []);
+  const baseUrl = `http://127.0.0.1:${values.port}/api/v1`;
+  const example = `curl -H "Authorization: Bearer ${token || "<jeton>"}" ${baseUrl}/status`;
+  const copy = (label: string, text: string) =>
+    void run(`${label} kopyalanıyor…`, async () => {
+      await navigator.clipboard.writeText(text);
+      return `${label} panoya kopyalandı.`;
+    });
+  const state = !status
+    ? { dot: "", text: "Durum okunamadı" }
+    : status.listening
+      ? { dot: "green", text: `Dinliyor · ${status.baseUrl}` }
+      : status.enabled
+        ? { dot: "red", text: "Açık ama dinlemiyor · günlükleri kontrol edin" }
+        : { dot: "", text: "Kapalı" };
+  return (
+    <section className="settings-section api-settings">
+      <h2>Yönetim API'si</h2>
+      <p className="section-note">
+        Arayüzün yaptığı her şeyi yerel bir HTTP API üzerinden de
+        yapabilirsiniz: hizmetleri başlatıp durdurma, proje ekleme, sürüm
+        çalıştırma, kuyruk ve zamanlayıcı yönetimi. Yalnızca 127.0.0.1 dinlenir;
+        her istek <code>Authorization: Bearer</code> jetonu ister.
+      </p>
+      <div className="api-status">
+        <span className={`status-dot ${state.dot}`} />
+        <span>{state.text}</span>
+      </div>
+      <div className="settings-grid">
+        <Toggle
+          label="API'yi aç"
+          value={values.enabled}
+          onChange={(enabled) => onChange({ enabled })}
+        />
+        <NumberField
+          label="Port"
+          value={values.port}
+          min={1024}
+          max={65535}
+          onChange={(port) => onChange({ port })}
+          hint="Diğer hizmet portlarından farklı olmalı."
+        />
+      </div>
+      {dirty ? (
+        <p className="section-note">
+          Değişiklikler alttaki Kaydet düğmesiyle uygulanır; API ortam
+          çalışırken de açılıp kapatılabilir.
+        </p>
+      ) : null}
+      <h3>Jeton</h3>
+      <p className="section-note">
+        {status?.tokenSaved
+          ? "Bir jeton kayıtlı. Yenisini oluşturmak eskisini geçersiz kılar."
+          : "Henüz jeton yok; API tüm istekleri reddeder. Bir jeton oluşturun."}
+      </p>
+      <div className="settings-actions">
+        <button
+          type="button"
+          className="button primary small"
+          disabled={busy}
+          onClick={() =>
+            void run("API jetonu oluşturuluyor…", async () => {
+              const created = await apiService.createToken();
+              setToken(created);
+              await refresh();
+              return "Yeni jeton oluşturuldu. Yalnızca bu ekranda gösterilir.";
+            })
+          }
+        >
+          {status?.tokenSaved ? (
+            <RefreshCw size={16} />
+          ) : (
+            <KeyRound size={16} />
+          )}
+          {status?.tokenSaved ? "Jetonu yenile" : "Jeton oluştur"}
+        </button>
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy || !status?.tokenSaved}
+          onClick={() =>
+            void run("API jetonu siliniyor…", async () => {
+              await apiService.forgetToken();
+              setToken("");
+              await refresh();
+              return "Jeton silindi; API istekleri artık kabul edilmez.";
+            })
+          }
+        >
+          <Trash2 size={16} />
+          Jetonu sil
+        </button>
+      </div>
+      {token ? (
+        <div className="api-token" role="status">
+          <code>{token}</code>
+          <button
+            type="button"
+            className="button secondary small"
+            disabled={busy}
+            onClick={() => copy("Jeton", token)}
+          >
+            <Copy size={16} />
+            Kopyala
+          </button>
+          <p className="section-note">
+            Bu jeton bir daha gösterilmez. Saklayın; kaybederseniz yenisini
+            oluşturun.
+          </p>
+        </div>
+      ) : null}
+      <h3>Örnek</h3>
+      <div className="api-example">
+        <pre>{example}</pre>
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy}
+          onClick={() => copy("Örnek komut", example)}
+        >
+          <Copy size={16} />
+          Kopyala
+        </button>
+      </div>
+      <p className="section-note">
+        Yol listesi için <code>GET {baseUrl}</code>; komut satırından{" "}
+        <code>serverbond api routes</code>. Yanıtlar{" "}
+        <code>{'{ "ok": true, "data": … }'}</code> biçimindedir.
+      </p>
+    </section>
+  );
+}

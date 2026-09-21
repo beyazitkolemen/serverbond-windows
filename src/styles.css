@@ -2349,6 +2349,43 @@ td:first-child {
   gap: 12px;
   margin: 16px 0;
 }
+.api-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.api-token,
+.api-example {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  margin: 8px 0 16px;
+}
+.api-token code,
+.api-example pre {
+  margin: 0;
+  max-width: 100%;
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.api-token .section-note {
+  margin: 0;
+}
 .settings-save {
   display: flex;
   gap: 10px;

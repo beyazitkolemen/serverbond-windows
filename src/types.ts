@@ -144,6 +144,7 @@ export interface Settings {
   mail: MailSettings;
   postgres: PostgresSettings;
   redis: RedisSettings;
+  api: ApiSettings;
   projectsDir: string;
   backupsDir: string;
   startOnLaunch: boolean;
@@ -162,6 +163,17 @@ export interface PostgresSettings {
 export interface RedisSettings {
   port: number;
   autoStart: boolean;
+}
+export interface ApiSettings {
+  enabled: boolean;
+  port: number;
+}
+export interface ApiStatus {
+  enabled: boolean;
+  port: number;
+  listening: boolean;
+  tokenSaved: boolean;
+  baseUrl: string;
 }
 export interface GithubState {
   tokenSaved: boolean;

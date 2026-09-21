@@ -1,0 +1,873 @@
+//! Local management API.
+//!
+//! Everything the desktop interface and the CLI can do is reachable over HTTP
+//! on `127.0.0.1:<port>` with a bearer token, so scripts, CI runners and
+//! remote-control tools can drive the environment without the window. The
+//! listener never binds a public address; only the SHA-256 of the token is
+//! stored, and the token itself is shown once when it is created.
+//!
+//! Every response is JSON shaped as `{ "ok": true, "data": … }` or
+//! `{ "ok": false, "error": "…" }`. Manager errors are reported as `400`
+//! with the same Turkish message the interface would show.
+
+use crate::{
+    model::{ProjectRelease, ProjectSchedule, QueueWorker, Settings},
+    storage, Manager, ToolAction,
+};
+use anyhow::{bail, Context, Result};
+use serde::Deserialize;
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+use std::{
+    io::Read,
+    net::{Ipv4Addr, SocketAddr, TcpListener},
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex, Weak,
+    },
+    thread::JoinHandle,
+    time::Duration,
+};
+use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
+
+pub const VERSION: &str = "v1";
+const MAX_BODY: usize = 1024 * 1024;
+const MAX_IN_FLIGHT: usize = 8;
+const TOKEN_FILE: &str = "config/api-token.sha256";
+
+/// A running listener. Dropping it unblocks the accept loop and joins the
+/// thread, so toggling the setting off really closes the port.
+pub struct ApiServer {
+    server: Arc<Server>,
+    port: u16,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl ApiServer {
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+}
+
+impl Drop for ApiServer {
+    fn drop(&mut self) {
+        self.server.unblock();
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct ApiState {
+    server: Mutex<Option<ApiServer>>,
+}
+
+/// Status the interface shows in Ayarlar → API.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiStatus {
+    pub enabled: bool,
+    pub port: u16,
+    pub listening: bool,
+    pub token_saved: bool,
+    pub base_url: String,
+}
+
+fn hash_token(token: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+impl Manager {
+    fn api_token_path(&self) -> PathBuf {
+        self.home.join(TOKEN_FILE)
+    }
+
+    pub fn api_status(&self) -> ApiStatus {
+        let settings = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .api
+            .clone();
+        let listening = self
+            .api
+            .server
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .is_some_and(|server| server.port() == settings.port);
+        ApiStatus {
+            enabled: settings.enabled,
+            port: settings.port,
+            listening,
+            token_saved: self.api_token_path().is_file(),
+            base_url: format!("http://127.0.0.1:{}/api/{VERSION}", settings.port),
+        }
+    }
+
+    /// Create a fresh token, store only its hash and return the token once.
+    pub fn create_api_token(&self) -> Result<String> {
+        let token = format!(
+            "sb_{}{}",
+            uuid::Uuid::new_v4().simple(),
+            uuid::Uuid::new_v4().simple()
+        );
+        let path = self.api_token_path();
+        std::fs::create_dir_all(path.parent().context("Yapılandırma klasörü yok.")?)?;
+        storage::atomic_write(&path, hash_token(&token)).context("API jetonu kaydedilemedi.")?;
+        self.log("Yeni API jetonu oluşturuldu. Önceki jeton geçersiz.");
+        Ok(token)
+    }
+
+    pub fn clear_api_token(&self) -> Result<()> {
+        let path = self.api_token_path();
+        if path.exists() {
+            std::fs::remove_file(&path).context("API jetonu silinemedi.")?;
+        }
+        self.log("API jetonu silindi. API istekleri artık kabul edilmez.");
+        Ok(())
+    }
+
+    fn api_token_matches(&self, presented: &str) -> bool {
+        let Ok(stored) = storage::read_limited(&self.api_token_path(), 4096) else {
+            return false;
+        };
+        let stored = String::from_utf8_lossy(&stored).trim().to_string();
+        constant_time_eq(stored.as_bytes(), hash_token(presented).as_bytes())
+    }
+
+    /// Bring the listener in line with the saved settings: start it when
+    /// enabled, move it when the port changed, close it when disabled.
+    pub fn ensure_api(self: &Arc<Self>) -> Result<()> {
+        let settings = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .api
+            .clone();
+        let mut slot = self.api.server.lock().unwrap_or_else(|e| e.into_inner());
+        match (&*slot, settings.enabled) {
+            (Some(server), true) if server.port() == settings.port => Ok(()),
+            (_, false) => {
+                if slot.take().is_some() {
+                    self.log("Yönetim API'si kapatıldı.");
+                }
+                Ok(())
+            }
+            (_, true) => {
+                slot.take();
+                let server = start_server(Arc::downgrade(self), settings.port)?;
+                self.log(format!(
+                    "Yönetim API'si dinliyor: http://127.0.0.1:{}/api/{VERSION}",
+                    settings.port
+                ));
+                *slot = Some(server);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn stop_api(&self) {
+        self.api
+            .server
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+    }
+
+    /// Resolve a project by id or by its name so scripts can use either.
+    fn api_project_id(&self, key: &str) -> Result<String> {
+        let config = self.config.lock().unwrap_or_else(|e| e.into_inner());
+        config
+            .projects
+            .iter()
+            .find(|p| p.id == key || p.name == key)
+            .map(|p| p.id.clone())
+            .context("Proje bulunamadı.")
+    }
+}
+
+fn start_server(manager: Weak<Manager>, port: u16) -> Result<ApiServer> {
+    let address = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
+    let listener = TcpListener::bind(address)
+        .with_context(|| format!("API portu {port} bağlanamadı; başka bir uygulama kullanıyor."))?;
+    let server = Arc::new(
+        Server::from_listener(listener, None)
+            .map_err(|error| anyhow::anyhow!("API sunucusu başlatılamadı: {error}"))?,
+    );
+    let accept = server.clone();
+    let in_flight = Arc::new(AtomicUsize::new(0));
+    let thread = std::thread::Builder::new()
+        .name("serverbond-api".into())
+        .spawn(move || {
+            for request in accept.incoming_requests() {
+                let Some(manager) = manager.upgrade() else {
+                    break;
+                };
+                if in_flight.load(Ordering::Acquire) >= MAX_IN_FLIGHT {
+                    respond(
+                        request,
+                        503,
+                        json!({ "ok": false, "error": "Çok fazla eş zamanlı istek." }),
+                    );
+                    continue;
+                }
+                in_flight.fetch_add(1, Ordering::AcqRel);
+                let counter = in_flight.clone();
+                // One thread per request: a long installation must not block
+                // status polls from other clients.
+                let spawned = std::thread::Builder::new()
+                    .name("serverbond-api-request".into())
+                    .spawn(move || {
+                        handle(&manager, request);
+                        counter.fetch_sub(1, Ordering::AcqRel);
+                    });
+                if spawned.is_err() {
+                    in_flight.fetch_sub(1, Ordering::AcqRel);
+                }
+            }
+        })
+        .context("API iş parçacığı başlatılamadı.")?;
+    Ok(ApiServer {
+        server,
+        port,
+        thread: Some(thread),
+    })
+}
+
+fn respond(request: Request, status: u16, body: Value) {
+    let bytes = serde_json::to_vec(&body).unwrap_or_else(|_| b"{\"ok\":false}".to_vec());
+    let mut response = Response::from_data(bytes).with_status_code(StatusCode(status));
+    for (name, value) in [
+        ("Content-Type", "application/json; charset=utf-8"),
+        ("Cache-Control", "no-store"),
+        ("X-Content-Type-Options", "nosniff"),
+    ] {
+        if let Ok(header) = Header::from_bytes(name.as_bytes(), value.as_bytes()) {
+            response = response.with_header(header);
+        }
+    }
+    let _ = request.respond(response);
+}
+
+/// HTTP outcome of one call: status and JSON payload.
+struct Reply {
+    status: u16,
+    body: Value,
+}
+
+fn ok(data: impl serde::Serialize) -> Result<Reply> {
+    Ok(Reply {
+        status: 200,
+        body: json!({ "ok": true, "data": data }),
+    })
+}
+
+fn fail(status: u16, message: impl Into<String>) -> Reply {
+    Reply {
+        status,
+        body: json!({ "ok": false, "error": message.into() }),
+    }
+}
+
+fn handle(manager: &Arc<Manager>, mut request: Request) {
+    let method = request.method().clone();
+    let url = request.url().to_string();
+    let (path, query) = url.split_once('?').unwrap_or((url.as_str(), ""));
+    let path = path.trim_end_matches('/').to_string();
+    let query = query.to_string();
+
+    let presented = request
+        .headers()
+        .iter()
+        .find(|h| h.field.equiv("Authorization"))
+        .map(|h| h.value.as_str().to_string())
+        .and_then(|value| {
+            value
+                .strip_prefix("Bearer ")
+                .or_else(|| value.strip_prefix("bearer "))
+                .map(str::trim)
+                .map(str::to_string)
+        });
+
+    if path == format!("/api/{VERSION}/health") && method == Method::Get {
+        let reply = health(manager);
+        return respond(request, reply.status, reply.body);
+    }
+    let authorised = presented.is_some_and(|token| manager.api_token_matches(&token));
+    if !authorised {
+        return respond(
+            request,
+            401,
+            json!({
+                "ok": false,
+                "error": "Geçerli bir API jetonu gerekli (Authorization: Bearer …). Ayarlar → API bölümünden oluşturun."
+            }),
+        );
+    }
+
+    let mut body = Vec::new();
+    if request
+        .body_length()
+        .is_some_and(|length| length > MAX_BODY)
+    {
+        return respond(request, 413, fail(413, "İstek gövdesi 1 MB'ı aşıyor.").body);
+    }
+    if let Err(error) = request
+        .as_reader()
+        .take(MAX_BODY as u64 + 1)
+        .read_to_end(&mut body)
+    {
+        return respond(
+            request,
+            400,
+            fail(400, format!("Gövde okunamadı: {error}")).body,
+        );
+    }
+    if body.len() > MAX_BODY {
+        return respond(request, 413, fail(413, "İstek gövdesi 1 MB'ı aşıyor.").body);
+    }
+
+    let manager = manager.clone();
+    let reply = manager.contain(|| Ok(route(&manager, &method, &path, &query, &body)));
+    let reply = match reply {
+        Ok(Ok(reply)) => reply,
+        Ok(Err(error)) => fail(400, format!("{error:#}")),
+        Err(error) => fail(500, format!("{error:#}")),
+    };
+    respond(request, reply.status, reply.body);
+}
+
+fn health(manager: &Manager) -> Reply {
+    let snapshot = manager.snapshot();
+    let (busy, running) = snapshot
+        .as_ref()
+        .map(|s| (s.busy, s.any_running))
+        .unwrap_or((false, false));
+    Reply {
+        status: 200,
+        body: json!({
+            "ok": true,
+            "data": {
+                "name": crate::product::NAME,
+                "version": env!("CARGO_PKG_VERSION"),
+                "api": VERSION,
+                "busy": busy,
+                "anyRunning": running,
+                "recoveryIssue": manager.recovery_issue(),
+            }
+        }),
+    }
+}
+
+fn parse<T: for<'de> Deserialize<'de>>(body: &[u8]) -> Result<T> {
+    if body.is_empty() {
+        bail!("JSON gövde gerekli.");
+    }
+    serde_json::from_slice(body).context("JSON gövde okunamadı.")
+}
+
+fn query_value<'a>(query: &'a str, key: &str) -> Option<&'a str> {
+    query.split('&').find_map(|pair| {
+        let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
+        (k == key).then_some(v)
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AddProject {
+    name: String,
+    path: PathBuf,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CreateProject {
+    name: String,
+    parent: PathBuf,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ImportGit {
+    url: String,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    branch: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Paths {
+    paths: Vec<PathBuf>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Jobs {
+    workers: Vec<QueueWorker>,
+    schedule: ProjectSchedule,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Content {
+    content: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Version {
+    version: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Password {
+    password: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Token {
+    token: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AutoStart {
+    auto_start: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Job {
+    #[serde(default)]
+    job: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FilePath {
+    path: PathBuf,
+}
+
+/// Human-readable route index served at `/api/v1`.
+pub fn routes() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("GET", "/api/v1/health", "Sürüm ve durum özeti (jeton gerekmez)"),
+        ("GET", "/api/v1/status", "Tam durum görüntüsü (arayüzle aynı)"),
+        ("GET", "/api/v1/requirements", "Windows ön koşulları"),
+        ("GET", "/api/v1/logs/{id}", "Hizmet günlüğü"),
+        ("GET", "/api/v1/settings", "Ayarlar"),
+        ("PUT", "/api/v1/settings", "Ayarları kaydet (gövde: Settings)"),
+        ("GET", "/api/v1/settings/defaults", "Varsayılan ayarlar"),
+        ("GET", "/api/v1/settings/previous", "Önceki ayarlar"),
+        (
+            "POST",
+            "/api/v1/services/{id}/{install|repair|start|stop|restart}",
+            "Hizmet işlemi (all, php, mysql, caddy, composer, phpmyadmin, mail, postgres, redis, tunnel, node)",
+        ),
+        ("POST", "/api/v1/php/{version}/select", "Varsayılan PHP sürümünü seç"),
+        ("POST", "/api/v1/php/{version}/repair", "PHP sürümünü onar"),
+        ("GET", "/api/v1/projects", "Projeler"),
+        ("POST", "/api/v1/projects", "Mevcut klasörü ekle {name, path}"),
+        ("POST", "/api/v1/projects/create", "Yeni Laravel projesi {name, parent}"),
+        ("POST", "/api/v1/projects/import", "Git deposundan klonla {url, name?, branch?}"),
+        ("GET", "/api/v1/projects/discover", "Çalışma alanında Laravel kökleri"),
+        ("POST", "/api/v1/projects/import-folders", "Klasörleri içe aktar {paths}"),
+        ("GET", "/api/v1/projects/{id}", "Proje (id veya ad)"),
+        ("DELETE", "/api/v1/projects/{id}", "Projeyi listeden kaldır"),
+        ("POST", "/api/v1/projects/{id}/php", "Proje PHP sürümü {version}"),
+        ("POST", "/api/v1/projects/{id}/deploy", "Sürüm çalıştır"),
+        ("GET", "/api/v1/projects/{id}/releases", "Sürüm geçmişi"),
+        ("GET", "/api/v1/projects/{id}/release", "Sürüm tarifi"),
+        ("PUT", "/api/v1/projects/{id}/release", "Sürüm tarifini kaydet"),
+        ("GET", "/api/v1/projects/{id}/git", "Git durumu"),
+        ("GET", "/api/v1/projects/{id}/env", ".env içeriği"),
+        ("PUT", "/api/v1/projects/{id}/env", ".env kaydet {content}"),
+        ("GET", "/api/v1/projects/{id}/jobs", "Kuyruk işçileri ve zamanlayıcı"),
+        ("PUT", "/api/v1/projects/{id}/jobs", "Kaydet {workers, schedule}"),
+        (
+            "POST",
+            "/api/v1/projects/{id}/workers/{workerId}/{start|stop|restart}",
+            "Kuyruk işçisi",
+        ),
+        ("GET", "/api/v1/projects/{id}/schedule", "schedule:list çıktısı"),
+        ("POST", "/api/v1/projects/{id}/schedule/{start|stop|restart}", "Zamanlayıcı"),
+        ("GET", "/api/v1/projects/{id}/failed-jobs", "Başarısız işler"),
+        ("POST", "/api/v1/projects/{id}/failed-jobs/retry", "Yeniden dene {job?}"),
+        ("POST", "/api/v1/projects/{id}/failed-jobs/flush", "Başarısızları temizle"),
+        ("GET", "/api/v1/projects/{id}/logs?source=php|schedule|worker:{id}", "Proje günlüğü"),
+        ("POST", "/api/v1/projects/{id}/database/create", "MySQL veritabanı oluştur"),
+        ("POST", "/api/v1/projects/{id}/database/backup", "SQL yedeği al"),
+        ("POST", "/api/v1/projects/{id}/database/restore", "SQL yedeğini yükle {path}"),
+        ("POST", "/api/v1/mysql/password", "MySQL root parolası {password}"),
+        ("POST", "/api/v1/postgres/password", "PostgreSQL parolası {password}"),
+        ("POST", "/api/v1/tunnel/token", "Cloudflare jetonu {token}"),
+        ("DELETE", "/api/v1/tunnel/token", "Cloudflare jetonunu sil"),
+        ("POST", "/api/v1/tunnel/auto-start", "{autoStart}"),
+        ("POST", "/api/v1/github/token", "GitHub jetonu {token}"),
+        ("DELETE", "/api/v1/github/token", "GitHub jetonunu sil"),
+        ("POST", "/api/v1/https/{trust|untrust}", "Yerel HTTPS sertifikası"),
+    ]
+}
+
+fn route(
+    manager: &Arc<Manager>,
+    method: &Method,
+    path: &str,
+    query: &str,
+    body: &[u8],
+) -> Result<Reply> {
+    let prefix = format!("/api/{VERSION}");
+    let Some(rest) = path.strip_prefix(prefix.as_str()) else {
+        return Ok(fail(404, "Bilinmeyen yol. /api/v1 altında istek yapın."));
+    };
+    let segments: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+    let get = *method == Method::Get;
+    let post = *method == Method::Post;
+    let put = *method == Method::Put;
+    let delete = *method == Method::Delete;
+
+    match segments.as_slice() {
+        [] if get => ok(routes()
+            .into_iter()
+            .map(|(m, p, d)| json!({ "method": m, "path": p, "description": d }))
+            .collect::<Vec<_>>()),
+        ["status"] if get => ok(manager.snapshot()?),
+        ["requirements"] if get => ok(manager.requirements()),
+        ["logs", id] if get => ok(json!({ "text": manager.read_log(id)? })),
+        ["settings"] if get => ok(manager.snapshot()?.settings),
+        ["settings"] if put => {
+            let settings: Settings = parse(body)?;
+            manager.save_settings(settings)?;
+            manager.ensure_api()?;
+            ok(manager.snapshot()?.settings)
+        }
+        ["settings", "defaults"] if get => ok(manager.default_settings()),
+        ["settings", "previous"] if get => ok(manager.previous_settings()?),
+        ["services", id, action] if post => {
+            service_action(manager, id, action)?;
+            ok(json!({ "id": id, "action": action }))
+        }
+        ["php", version, "select"] if post => {
+            manager.select_php(version)?;
+            ok(json!({ "version": version }))
+        }
+        ["php", version, "repair"] if post => {
+            manager.repair_php(version)?;
+            ok(json!({ "version": version }))
+        }
+        ["projects"] if get => ok(manager.snapshot()?.projects),
+        ["projects"] if post => {
+            let input: AddProject = parse(body)?;
+            ok(manager.add_project(input.name, input.path)?)
+        }
+        ["projects", "create"] if post => {
+            let input: CreateProject = parse(body)?;
+            ok(manager.create_project(input.name, input.parent)?)
+        }
+        ["projects", "import"] if post => {
+            let input: ImportGit = parse(body)?;
+            ok(manager.import_git_project(&input.url, input.name, input.branch)?)
+        }
+        ["projects", "discover"] if get => ok(manager.discover_projects()?),
+        ["projects", "import-folders"] if post => {
+            let input: Paths = parse(body)?;
+            ok(manager.import_projects(input.paths)?)
+        }
+        ["projects", key, tail @ ..] => {
+            let id = manager.api_project_id(key)?;
+            project_route(manager, &id, method, tail, query, body)
+        }
+        ["mysql", "password"] if post => {
+            let input: Password = parse(body)?;
+            manager.change_mysql_password(&input.password)?;
+            ok(json!({ "changed": true }))
+        }
+        ["postgres", "password"] if post => {
+            let input: Password = parse(body)?;
+            manager.change_postgres_password(&input.password)?;
+            ok(json!({ "changed": true }))
+        }
+        ["tunnel", "token"] if post => {
+            let input: Token = parse(body)?;
+            manager.save_tunnel_token(&input.token)?;
+            ok(json!({ "saved": true }))
+        }
+        ["tunnel", "token"] if delete => {
+            manager.clear_tunnel_token()?;
+            ok(json!({ "saved": false }))
+        }
+        ["tunnel", "auto-start"] if post => {
+            let input: AutoStart = parse(body)?;
+            manager.save_tunnel_auto_start(input.auto_start)?;
+            ok(json!({ "autoStart": input.auto_start }))
+        }
+        ["github", "token"] if post => {
+            let input: Token = parse(body)?;
+            manager.save_github_token(&input.token)?;
+            ok(json!({ "saved": true }))
+        }
+        ["github", "token"] if delete => {
+            manager.clear_github_token()?;
+            ok(json!({ "saved": false }))
+        }
+        ["https", "trust"] if post => {
+            manager.trust_https()?;
+            ok(json!({ "trusted": true }))
+        }
+        ["https", "untrust"] if post => {
+            manager.untrust_https()?;
+            ok(json!({ "trusted": false }))
+        }
+        _ => Ok(fail(
+            404,
+            format!("Yol bulunamadı: {} {}", method.as_str(), path),
+        )),
+    }
+}
+
+fn service_action(manager: &Manager, id: &str, action: &str) -> Result<()> {
+    let tool = |install: fn(&Manager) -> Result<()>,
+                repair: fn(&Manager) -> Result<()>,
+                start: fn(&Manager) -> Result<()>,
+                stop: fn(&Manager) -> Result<()>|
+     -> Result<()> {
+        match action.parse::<ToolAction>() {
+            Ok(ToolAction::Install) => install(manager),
+            Ok(ToolAction::Repair) => repair(manager),
+            Ok(ToolAction::Start) => start(manager),
+            Ok(ToolAction::Stop) => stop(manager),
+            Ok(ToolAction::Open) => bail!("API üzerinden pencere açılamaz."),
+            Err(_) if action == "restart" => {
+                stop(manager)?;
+                start(manager)
+            }
+            Err(error) => Err(error),
+        }
+    };
+    match id {
+        "mail" => tool(
+            Manager::install_mail,
+            Manager::repair_mail,
+            Manager::start_mail,
+            Manager::stop_mail,
+        ),
+        "postgres" => tool(
+            Manager::install_postgres,
+            Manager::repair_postgres,
+            Manager::start_postgres,
+            Manager::stop_postgres,
+        ),
+        "redis" => tool(
+            Manager::install_redis,
+            Manager::repair_redis,
+            Manager::start_redis,
+            Manager::stop_redis,
+        ),
+        "tunnel" => tool(
+            Manager::install_tunnel,
+            Manager::repair_tunnel,
+            Manager::start_tunnel,
+            Manager::stop_tunnel,
+        ),
+        "node" => match action {
+            "install" => manager.install_node(),
+            "repair" => manager.repair_node(),
+            _ => bail!("Node.js yalnızca install ve repair destekler."),
+        },
+        _ => match action {
+            "install" => manager.install(id),
+            "repair" => manager.repair(id),
+            "start" => manager.start(id),
+            "stop" => manager.stop(id),
+            "restart" if id == "all" => manager.restart(),
+            "restart" => {
+                manager.stop(id)?;
+                manager.start(id)
+            }
+            _ => bail!("Bilinmeyen hizmet işlemi: {action}"),
+        },
+    }
+}
+
+fn project_route(
+    manager: &Manager,
+    id: &str,
+    method: &Method,
+    tail: &[&str],
+    query: &str,
+    body: &[u8],
+) -> Result<Reply> {
+    let get = *method == Method::Get;
+    let post = *method == Method::Post;
+    let put = *method == Method::Put;
+    let delete = *method == Method::Delete;
+    match tail {
+        [] if get => ok(manager
+            .snapshot()?
+            .projects
+            .into_iter()
+            .find(|p| p.project.id == id)
+            .context("Proje bulunamadı.")?),
+        [] if delete => {
+            manager.remove_project(id)?;
+            ok(json!({ "removed": true }))
+        }
+        ["php"] if post => {
+            let input: Version = parse(body)?;
+            manager.select_project_php(id, &input.version)?;
+            ok(json!({ "version": input.version }))
+        }
+        ["deploy"] if post => ok(manager.deploy_project(id)?),
+        ["releases"] if get => ok(manager.list_project_releases(id)?),
+        ["release"] if get => ok(manager.project(id)?.release),
+        ["release"] if put => {
+            let release: ProjectRelease = parse(body)?;
+            manager.save_project_release(id, release)?;
+            ok(manager.project(id)?.release)
+        }
+        ["git"] if get => ok(manager.project_git_status(id)?),
+        ["env"] if get => ok(manager.read_project_env(id)?),
+        ["env"] if put => {
+            let input: Content = parse(body)?;
+            manager.save_project_env(id, input.content)?;
+            ok(json!({ "saved": true }))
+        }
+        ["jobs"] if get => {
+            let project = manager.project(id)?;
+            ok(json!({ "workers": project.workers, "schedule": project.schedule }))
+        }
+        ["jobs"] if put => {
+            let input: Jobs = parse(body)?;
+            manager.save_project_jobs(id, input.workers, input.schedule)?;
+            let project = manager.project(id)?;
+            ok(json!({ "workers": project.workers, "schedule": project.schedule }))
+        }
+        ["workers", worker, action] if post => {
+            match *action {
+                "start" => manager.start_project_worker(id, worker)?,
+                "stop" => manager.stop_project_worker(id, worker)?,
+                "restart" => manager.restart_project_worker(id, worker)?,
+                other => bail!("Bilinmeyen işçi işlemi: {other}"),
+            }
+            ok(json!({ "worker": worker, "action": action }))
+        }
+        ["schedule"] if get => ok(json!({ "text": manager.list_project_schedule(id)? })),
+        ["schedule", action] if post => {
+            match *action {
+                "start" => manager.start_project_schedule(id)?,
+                "stop" => manager.stop_project_schedule(id)?,
+                "restart" => manager.restart_project_schedule(id)?,
+                other => bail!("Bilinmeyen zamanlayıcı işlemi: {other}"),
+            }
+            ok(json!({ "action": action }))
+        }
+        ["failed-jobs"] if get => ok(json!({ "text": manager.list_failed_jobs(id)? })),
+        ["failed-jobs", "retry"] if post => {
+            let input: Job = if body.is_empty() {
+                Job { job: None }
+            } else {
+                parse(body)?
+            };
+            ok(json!({ "text": manager.retry_failed_jobs(id, input.job.as_deref())? }))
+        }
+        ["failed-jobs", "flush"] if post => ok(json!({ "text": manager.flush_failed_jobs(id)? })),
+        ["logs"] if get => {
+            let source = query_value(query, "source").unwrap_or("php");
+            ok(json!({ "text": manager.read_project_log(id, source)? }))
+        }
+        ["database", "create"] if post => {
+            let name = manager.project(id)?.name;
+            manager.create_database(&name)?;
+            ok(json!({ "database": crate::model::database_name(&name) }))
+        }
+        ["database", "backup"] if post => {
+            let name = manager.project(id)?.name;
+            ok(json!({ "path": manager.backup_database(&name)? }))
+        }
+        ["database", "restore"] if post => {
+            let input: FilePath = parse(body)?;
+            let name = manager.project(id)?.name;
+            manager.restore_database(&name, input.path)?;
+            ok(json!({ "restored": true }))
+        }
+        _ => Ok(fail(
+            404,
+            format!(
+                "Proje yolu bulunamadı: {} /{}",
+                method.as_str(),
+                tail.join("/")
+            ),
+        )),
+    }
+}
+
+/// Wait until the listener answers `/health`; used by the CLI and tests.
+pub fn wait_ready(port: u16, timeout: Duration) -> bool {
+    let deadline = std::time::Instant::now() + timeout;
+    while std::time::Instant::now() < deadline {
+        if std::net::TcpStream::connect_timeout(
+            &SocketAddr::from((Ipv4Addr::LOCALHOST, port)),
+            Duration::from_millis(200),
+        )
+        .is_ok()
+        {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn token_hashes_compare_in_constant_time_by_length_and_content() {
+        let a = hash_token("sb_one");
+        assert_eq!(a, hash_token("sb_one"));
+        assert_ne!(a, hash_token("sb_two"));
+        assert!(constant_time_eq(a.as_bytes(), a.as_bytes()));
+        assert!(!constant_time_eq(a.as_bytes(), b"short"));
+    }
+
+    #[test]
+    fn query_values_are_looked_up_by_key() {
+        assert_eq!(
+            query_value("source=worker:abc&x=1", "source"),
+            Some("worker:abc")
+        );
+        assert_eq!(query_value("x=1", "source"), None);
+        assert_eq!(query_value("", "source"), None);
+    }
+
+    #[test]
+    fn route_index_covers_every_area() {
+        let index = routes();
+        for needle in ["/status", "/projects", "/services/", "/settings", "/deploy"] {
+            assert!(
+                index.iter().any(|(_, path, _)| path.contains(needle)),
+                "{needle}"
+            );
+        }
+    }
+}

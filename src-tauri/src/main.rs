@@ -132,7 +132,32 @@ async fn remove_project(state: tauri::State<'_, State>, id: String) -> Result<()
 #[tauri::command]
 async fn save_settings(state: tauri::State<'_, State>, settings: Settings) -> Result<(), String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || state.save_settings(settings)).await
+    blocking(state.clone(), move || {
+        state.save_settings(settings)?;
+        // Preferences are already persisted; a listener problem is reported
+        // without undoing the save.
+        if let Err(error) = state.ensure_api() {
+            state.log(format!("Yönetim API'si güncellenemedi: {error:#}"));
+            return Err(error);
+        }
+        Ok(())
+    })
+    .await
+}
+#[tauri::command]
+async fn api_status(state: tauri::State<'_, State>) -> Result<f4box_core::api::ApiStatus, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || Ok(state.api_status())).await
+}
+#[tauri::command]
+async fn api_token(state: tauri::State<'_, State>, action: String) -> Result<String, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || match action.as_str() {
+        "create" => state.create_api_token(),
+        "forget" => state.clear_api_token().map(|_| String::new()),
+        other => Err(anyhow::anyhow!("Bilinmeyen API jeton işlemi: {other}")),
+    })
+    .await
 }
 #[tauri::command]
 async fn read_log(state: tauri::State<'_, State>, id: String) -> Result<String, String> {
@@ -685,6 +710,9 @@ fn main() {
             let desktop = desktop::Desktop::new(&manager.home);
             app.manage(manager.clone());
             app.manage(desktop);
+            if let Err(error) = manager.ensure_api() {
+                manager.log(format!("Yönetim API'si başlatılamadı: {error:#}"));
+            }
             if let Err(error) = tray::setup(app.handle()) {
                 manager.log(format!(
                     "Tepsi kullanılamıyor; pencere açık tutuluyor: {error:#}"
@@ -740,6 +768,8 @@ fn main() {
             desktop_action,
             desktop_navigation,
             recover_configuration,
+            api_status,
+            api_token,
             install,
             repair,
             repair_php,
