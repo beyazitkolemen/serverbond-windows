@@ -12,6 +12,7 @@ pub(super) struct ServiceLog {
 }
 
 pub(super) const NAMES: &[&str] = &[
+    "system.diagnostics",
     "services.log",
     "github.auth-start",
     "github.repositories",
@@ -157,6 +158,8 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "system.diagnostics")]
+    Diagnostics(Empty),
     #[serde(rename = "services.log")]
     ServiceLog(ServiceLog),
     #[serde(rename = "github.repositories")]
@@ -288,6 +291,13 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::Diagnostics(_) => {
+                let checks: Vec<Value> = manager.requirements().into_iter().map(|check| json!({"id":check.id,"label":check.label,"status":check.status,"detail":check.detail.chars().take(4000).collect::<String>()})).collect();
+                let permissions = manager.permission_state();
+                return Ok(
+                    json!({"checks":checks,"permissions":{"granted":permissions.granted,"helper":permissions.helper,"defenderExclusion":permissions.defender_exclusion,"declined":permissions.declined,"pendingCount":permissions.pending.len(),"failedCount":permissions.failed.len()}}),
+                );
+            }
             Self::ServiceLog(input) => {
                 ensure!(
                     [
