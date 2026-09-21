@@ -1,3 +1,7 @@
+//! Package download, SHA-256 verification, archive extraction and health
+//! checks for every catalogued component, including the repair path that
+//! replaces program files while keeping data folders.
+
 use crate::domain::ComponentId;
 use crate::model::Package;
 use crate::repository::DataDir;

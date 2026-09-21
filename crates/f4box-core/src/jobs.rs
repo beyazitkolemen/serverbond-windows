@@ -1,3 +1,8 @@
+//! Laravel queue workers and the scheduler as supervised processes:
+//! `queue:work` pools, `schedule:work`, graceful restarts via
+//! `queue:restart`, planned-exit respawn, failed-job commands and per-process
+//! logs.
+
 use crate::{
     install,
     model::{php_package, Project, ProjectSchedule, QueueWorker},

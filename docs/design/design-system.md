@@ -14,6 +14,21 @@ Kurumsal ürün yüzeyi: koyu orman yeşili kenar çubuğu, açık çalışma al
 - **Kontrol:** birincil yükseklik `--control-h` 36, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 36. Girdi ve seçici aynı yükseklikte hizalanır.
 - **Şekil:** kontroller 6, kartlar 8 piksel. Gölge yalnızca kart, tablo, modal ve yapışkan çubuklarda (`--shadow-sm` / `--shadow-md`).
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
+- **Koyu görünüm:** aynı token adları `:root[data-theme="dark"]` altında ikinci bir değer seti alır; bileşenler renk için yalnızca token kullanır (`--console-bg`, `--console-ink`, `--sidebar-edge`, `--on-accent` dahil). Tercih Ayarlar → Genel → Görünüm'de; `system` Windows'u izler.
+
+## Paylaşılan bileşenler
+
+| Bileşen | Kullanım |
+| --- | --- |
+| `StatusBadge` | Her durum hapı: `tone` = `running` / `stopped` / `issue` / `warning`. Elle `service-status` + `status-dot` yazılmaz. |
+| `Toggle` | Etiketli onay kutusu anahtarı. |
+| `NumberField` | Sayı girişi; alan boşaltılabilir, sınır dışı değer üst bileşene iletilmez, `aria-invalid` işaretlenir. |
+| `SegmentedControl` | Birbirini dışlayan seçenekler (`radiogroup`). |
+| `EmptyState` | Boş liste/pano: simge, başlık, açıklama, eylemler. |
+| `ErrorBoundary` | Kökte tam ekran; `scope` verildiğinde sayfa içinde kalan ve `resetKey` değişince toparlanan yerel kutu. |
+| `ServiceConsole`, `ServiceRepair`, `LogViewer` | Hizmet denetim şeridi, onarım kartı, günlük görüntüleyici. |
+
+Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü yenilemesi girdiyi silmez, taslak temizken kaynak izlenir. Sayfa bileşenleri `key` ile yeniden bağlanarak sıfırlanmaz.
 
 ## Sayfalar
 

@@ -1,3 +1,7 @@
+//! User-editable service preferences (PHP profiles, MySQL, web server,
+//! phpMyAdmin, mail, PostgreSQL, Redis, API) with their defaults, range
+//! validation and the generated `php.ini` / `my.ini` / Caddyfile fragments.
+
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path, time::Duration};

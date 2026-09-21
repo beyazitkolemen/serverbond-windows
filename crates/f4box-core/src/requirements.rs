@@ -1,3 +1,7 @@
+//! Windows prerequisites (x64, Visual C++ runtime, WebView2, free disk,
+//! reserved ports) reported before installation so failures are explained
+//! up front.
+
 use crate::Manager;
 use serde::Serialize;
 

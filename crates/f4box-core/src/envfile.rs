@@ -1,3 +1,7 @@
+//! Read and write a project's root `.env` (and read `.env.example`) with
+//! path enclosure, size and encoding checks; nothing is written unless the
+//! user saves.
+
 use crate::{storage, Manager};
 use anyhow::{bail, Context, Result};
 use serde::Serialize;

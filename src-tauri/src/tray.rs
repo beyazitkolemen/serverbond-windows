@@ -1,3 +1,6 @@
+//! System tray icon and menu: environment start/stop, quick links, update
+//! hint and quit; refreshed from the snapshot so the menu mirrors the window.
+
 use crate::{
     desktop::{self, Desktop},
     State,

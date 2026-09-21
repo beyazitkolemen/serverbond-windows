@@ -1,3 +1,7 @@
+//! phpMyAdmin as a Caddy-served PHP app on its own `.localhost` host:
+//! generated `config.inc.php`, temp/session folders and the open-in-browser
+//! helper.
+
 use crate::{model::Settings, portable_path, product, secrets, Manager};
 use anyhow::{bail, Result};
 use std::{fs, io::Write, path::Path};

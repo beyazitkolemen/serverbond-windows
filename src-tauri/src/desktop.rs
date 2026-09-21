@@ -1,3 +1,7 @@
+//! Desktop preferences (`config/desktop.json`): close-to-tray, start
+//! minimised, Windows autostart state, pending navigation from the tray and
+//! the orderly exit sequence.
+
 use crate::{startup, State};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};

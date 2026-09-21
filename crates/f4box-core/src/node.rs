@@ -1,3 +1,7 @@
+//! Optional Node.js LTS for project terminals: verified install/repair into
+//! `bin/node` and the state shown in Ayarlar → Sistem. Never added to the
+//! system PATH.
+
 use crate::{model::tool_package, Manager};
 use anyhow::Result;
 use serde::Serialize;

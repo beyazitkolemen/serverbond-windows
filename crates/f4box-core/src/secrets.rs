@@ -1,3 +1,7 @@
+//! Secrets at rest (MySQL/PostgreSQL passwords, GitHub and tunnel tokens)
+//! encrypted with Windows DPAPI for the current user. Not available on other
+//! platforms; tests that need a secret run on Windows only.
+
 use anyhow::{Context, Result};
 use std::path::Path;
 

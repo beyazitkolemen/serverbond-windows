@@ -1,3 +1,7 @@
+//! "Open terminal here" for a project: a Windows Terminal / PowerShell
+//! session whose PATH contains the project's PHP, Composer and optional
+//! Node, built from safely quoted PowerShell literals.
+
 use crate::{install, model::php_package, Manager};
 use anyhow::{Context, Result};
 use base64::Engine;

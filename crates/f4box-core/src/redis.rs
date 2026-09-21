@@ -1,3 +1,7 @@
+//! Optional Redis 8: install/repair and a loopback-only server with
+//! persistence in `data/redis` and a no-eviction memory policy so queued
+//! jobs are never dropped silently.
+
 use crate::{model::tool_package, preferences::RedisSettings, process::command, Manager};
 use anyhow::{Context, Result};
 use serde::Serialize;

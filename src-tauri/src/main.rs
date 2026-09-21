@@ -1,3 +1,7 @@
+//! Tauri entry point. Every `#[tauri::command]` is a thin adapter: parse the
+//! action string into a domain enum, run the `Manager` call on a blocking
+//! thread inside `contain`, and return the error text the interface shows.
+
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod desktop;

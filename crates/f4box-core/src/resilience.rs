@@ -1,3 +1,7 @@
+//! Fault containment: the operation gate (one mutation at a time), panic
+//! capture that latches a restart-required state, configuration recovery
+//! from `config.last-good.json`, and shutdown ordering.
+
 use crate::{
     model::{php_package, validate_slug, Config},
     storage, Manager,

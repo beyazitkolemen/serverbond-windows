@@ -1,3 +1,7 @@
+//! Product identity constants (name, data directory, environment variables,
+//! phpMyAdmin host) including the legacy F4Box values that old installs
+//! still use.
+
 use std::path::PathBuf;
 
 pub const NAME: &str = "ServerBond";

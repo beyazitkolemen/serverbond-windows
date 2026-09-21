@@ -18,6 +18,9 @@ description: ServerBond katmanları, veri dizini ve nereye kod yazılacağı. Mi
 | `src/repositories` | `snapshotRepository.get()` |
 | `src` | React. Yeni yazma `services` üzerinden; ham `call("mail")` ekleme |
 | `crates/f4box-core/src/bin/serverbond.rs` | Aynı `Manager` ile CLI |
+| `crates/f4box-core/src/api.rs` | Yerel HTTP API (127.0.0.1, Bearer jeton); yeni yol `route()`/`project_route()` + `routes()` |
+| `src/hooks` | `useDraft` (anlık görüntüye karşı yerel taslak), `useTheme` |
+| `src/components` paylaşılanlar | `StatusBadge`, `Toggle`, `NumberField`, `SegmentedControl`, `EmptyState`, `ErrorBoundary` |
 
 Yeni iş kuralı çekirdeğe yazılır, masaüstünde yalnızca komut dışa aktarılır, arayüz `snapshot` okur. `Manager` tam rewrite edilmez. Tel dizileri değişmez: süreç `mailpit`, IPC komutu `mail`, eylem `install`/`start`. Komut adı süreç kimliği değildir. ServerBond Windows üretim ortamıdır (Forge hissi); uzak SSH ve Herd/Laragon geliştirme kopyası yoktur. Yerel sürüm tarifi `release.rs` + `Project.release`.
 
@@ -35,7 +38,7 @@ bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 
 ## Sabitler
 
-- Web `8088`, MySQL `13306`, PHP FastCGI `19000`, isteğe bağlı HTTPS `8443`, isteğe bağlı PostgreSQL `15432`, isteğe bağlı Redis `16379` (ilk açılışta boş port seçilebilir)
+- Web `8088`, MySQL `13306`, PHP FastCGI `19000`, isteğe bağlı HTTPS `8443`, isteğe bağlı PostgreSQL `15432`, isteğe bağlı Redis `16379`, API `18800` (ilk açılışta boş port seçilebilir)
 - Proje adresi `{name}.localhost` — hosts dosyası yok
 - phpMyAdmin `phpmyadmin.serverbond.localhost`
 - Ortam loopback; dışarı açılmaz
@@ -46,3 +49,5 @@ bin/  cache/  config/  data/  backups/  logs/  projects/  www/  config.json
 - Mevcut Laravel `.env` otomatik değiştirilmez; kullanıcı Ortam sekmesinden Kaydet ile yazar
 - Herd/Laragon/Docker kurulumlarına dokunulmaz
 - DPAPI parolası ve GitHub jetonu Windows kullanıcısına bağlıdır; taşıma SQL yedeği iledir
+
+Ayrıntı: `docs/architecture.md`, `docs/api.md`.

@@ -1,3 +1,8 @@
+//! Persisted and serialised shapes: `Config`, `Settings`, `Project`, queue and
+//! release recipes, the `Snapshot` the interface polls, and the validators
+//! (`validate_slug`, `validate_mysql_password`, …) that guard every input
+//! before it reaches a command line or a config file.
+
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

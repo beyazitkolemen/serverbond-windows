@@ -1,3 +1,7 @@
+//! One-time Windows permissions: firewall rules, folder ACLs, optional
+//! Defender exclusion and the `ServerBond Permissions` scheduled task that
+//! lets later installs refresh rules without another UAC prompt.
+
 #[cfg(windows)]
 use crate::process::{command, ManagedChild};
 use crate::{storage, Manager};

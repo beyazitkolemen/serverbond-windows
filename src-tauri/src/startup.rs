@@ -1,3 +1,6 @@
+//! Windows startup registration through `HKCU\…\Run`: read, write and
+//! remove the autostart command that launches ServerBond with `--autostart`.
+
 use anyhow::{bail, Context, Result};
 use std::path::Path;
 use winreg::{enums::*, RegKey, RegValue};

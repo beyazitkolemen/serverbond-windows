@@ -1,3 +1,7 @@
+//! Git-based project import: URL validation (https/file only), GitHub token
+//! storage and scoped `http.extraHeader` auth, cloning with cleanup on
+//! failure, and the Laravel-root check after cloning.
+
 use crate::{
     model::{slug_from_folder, validate_slug, Project},
     process::{command, ManagedChild},

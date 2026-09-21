@@ -1,3 +1,7 @@
+//! Project registry: add an existing Laravel root, create a new one with
+//! Composer, discover roots in the workspace, import folders, remove
+//! entries, and keep `{name}.localhost` hosts unique.
+
 use crate::{
     model::{slug_from_folder, validate_slug, DiscoveredProject, Project},
     process::ManagedChild,

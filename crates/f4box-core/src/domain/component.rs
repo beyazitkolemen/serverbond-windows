@@ -1,3 +1,6 @@
+//! `ComponentId`: the fixed identity of an installable binary. Its string
+//! form is both the process-map key and the `bin/<id>/` folder name.
+
 use anyhow::{bail, Result};
 use std::fmt;
 use std::str::FromStr;

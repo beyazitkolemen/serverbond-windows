@@ -1,3 +1,7 @@
+//! `DataDir`: where everything lives under the ServerBond home folder
+//! (`bin/`, `config/`, `data/`, `logs/`, `projects/`, …) and the config file
+//! paths, so no module hard-codes a layout.
+
 use crate::domain::ComponentId;
 use std::path::{Path, PathBuf};
 

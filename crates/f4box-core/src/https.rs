@@ -1,3 +1,7 @@
+//! Local HTTPS with Caddy's internal CA: locate the root certificate, add or
+//! remove it from the Windows user trust store with `certutil`, and remember
+//! which certificate was trusted.
+
 #[cfg(any(test, windows))]
 use crate::portable_path;
 use crate::Manager;

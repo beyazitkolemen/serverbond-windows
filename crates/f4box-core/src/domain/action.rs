@@ -1,3 +1,6 @@
+//! Action enums parsed from IPC/CLI strings: tool lifecycle, GitHub token
+//! handling and environment start/stop. Wire strings never change.
+
 use anyhow::{bail, Result};
 use std::str::FromStr;
 

@@ -1,3 +1,7 @@
+//! Small file primitives shared by every module: bounded reads, atomic
+//! writes through a sibling temp file, and free-space checks before large
+//! downloads or backups.
+
 use anyhow::{bail, Context, Result};
 use std::{
     fs::File,

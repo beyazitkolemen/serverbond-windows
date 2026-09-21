@@ -1,3 +1,7 @@
+//! Per-project PHP FastCGI processes: one `php-project-<id>` child on an
+//! automatically chosen port, version switching with rollback, and the
+//! Caddy reconfiguration that follows a project change.
+
 use crate::{
     model::{Config, Project},
     portable_path,

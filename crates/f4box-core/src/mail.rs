@@ -1,3 +1,7 @@
+//! Mailpit: install/repair, start/stop on the configured SMTP and web ports,
+//! optional `sendmail_path` relay for PHP `mail()`, and the state shown on
+//! the E-posta card.
+
 use crate::{model::tool_package, preferences::MailSettings, process::command, Manager};
 use anyhow::{Context, Result};
 use serde::Serialize;

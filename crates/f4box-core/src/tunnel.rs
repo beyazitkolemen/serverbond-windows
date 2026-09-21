@@ -1,3 +1,7 @@
+//! Cloudflare Tunnel connector: `cloudflared` install/repair, DPAPI-stored
+//! connector token, start/stop with log-based readiness detection, and the
+//! auto-start preference.
+
 use crate::{model::tool_package, process::command, process::ManagedChild, secrets, Manager};
 use anyhow::{bail, Context, Result};
 use serde::Serialize;

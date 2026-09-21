@@ -306,17 +306,21 @@ PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasın�
 
 Elektrik kesintisi, işletim sisteminin süreci zorla kapatması veya bellek tükenmesi için kesintisiz çalışma garantisi yoktur. Yapılandırma yedeği veritabanı yedeğinin yerini tutmaz; önemli veriler için SQL yedeği alın. Otomatik testler arasında bozuk/kayıp yapılandırma, geçersiz yedek, kilitli dosya, kayıp MySQL verisi/parolası, iç panik ve aşırı komut çıktısı senaryoları bulunur.
 
+## Yönetim API'si
+
+Arayüzün ve CLI'nın yaptığı her iş `http://127.0.0.1:18800/api/v1` altındaki yerel HTTP API'den de yapılabilir: hizmetleri başlat/durdur, proje ekle veya Git'ten klonla, sürüm çalıştır, kuyruk ve zamanlayıcıyı yönet, `.env` ve ayarları oku/yaz. API varsayılan olarak kapalıdır; **Ayarlar → API** bölümünden açılır ve bir kez gösterilen `Authorization: Bearer` jetonu oluşturulur (diskte yalnızca SHA-256 özeti kalır). Komut satırı: `serverbond api serve|token|forget|status|routes`. Tüm yollar, gövdeler ve örnekler: [docs/api.md](docs/api.md).
+
 ## Mimari
 
-- `crates/f4box-core`: katalog, güvenli indirme/arşiv açma, süreç yönetimi, MySQL, projeler, CLI.
-- `src-tauri`: dar kapsamlı masaüstü IPC komutları ve klasör seçimi.
-- `src`: React/TypeScript arayüzü.
-- `docs/design`: konsept ve tasarım sistemi.
-- `docs/packages.md`: paket kökeni ve SHA-256 güncelleme süreci.
+- `crates/f4box-core`: `Manager` cephesi — katalog, güvenli indirme/arşiv açma, süreç yönetimi, MySQL, projeler, kuyruk/zamanlayıcı, sürüm, yerel API, CLI.
+- `src-tauri`: dar kapsamlı masaüstü IPC komutları, tepsi ve Windows başlangıcı.
+- `src`: React/TypeScript arayüzü; `services/` IPC katmanı, `hooks/` taslak ve tema, paylaşılan bileşenler.
+- Ayrıntılı katman, işlem modeli, kurtarma ve veri klasörü: [docs/architecture.md](docs/architecture.md).
+- `docs/design`: konsept ve tasarım sistemi; `docs/api.md`: yönetim API'si; `docs/packages.md`: paket kökeni ve SHA-256 güncelleme süreci.
 
 ## Kullanıcı tarafından yönetilen ayarlar
 
-Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, Yedek ve aktarım, Sistem, Güncellemeler bölümlerine ayrılır. phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel **Hizmetler** sayfasında; port ve jeton her hizmetin **Ayarlar** düğmesindedir. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
+Ayarlar ekranı Genel, PHP, MySQL, Web sunucusu, Yedek ve aktarım, Sistem, API, Güncellemeler bölümlerine ayrılır. Genel bölümündeki **Görünüm** sistem/açık/koyu temayı seçer. phpMyAdmin, e-posta, PostgreSQL, Redis, GitHub ve tünel **Hizmetler** sayfasında; port ve jeton her hizmetin **Ayarlar** düğmesindedir. Ortamı durdurun, tercihleri düzenleyin, **Ayarları kaydet** ile doğrulatın ve ortamı yeniden başlatın. PHP ayarları ortak veya sürüme özel kaydedilebilir; uzantılar ve ek ini seçenekleri gerçek kurulu PHP ile denetlenir. Açık proje terminallerini yeniden açın.
 
 Yeni proje ve SQL yedek klasörleri seçilebilir. Adres kalıbı değişikliği tüm kayıtlı proje adreslerine uygulanır; `.env` dosyaları korunur. JSON içe aktarma, önceki ayarları getirme ve varsayılanlara dönme önce taslak oluşturur. Tercihlerin önceki sürümü `config/settings.previous.json` içinde saklanır. Onarımda kullanıcı tercihleri korunur.
 

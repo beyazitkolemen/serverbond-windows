@@ -1,3 +1,7 @@
+//! Core service lifecycle: PHP FastCGI, MySQL and Caddy start/stop/restart,
+//! port checks, generated config files, readiness probes and the MySQL
+//! database helpers (create, backup, restore, root password).
+
 use crate::{
     model::caddy_config,
     portable_path,

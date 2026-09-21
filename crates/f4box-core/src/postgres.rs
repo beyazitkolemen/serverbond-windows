@@ -1,3 +1,6 @@
+//! Optional PostgreSQL 17: `initdb` on first start, `pg_ctl` lifecycle,
+//! DPAPI-stored superuser password with safe rotation, and `psql` helpers.
+
 use crate::{
     model::{tool_package, validate_mysql_password},
     portable_path,

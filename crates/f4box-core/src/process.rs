@@ -1,3 +1,7 @@
+//! `ManagedChild`: a child process with redirected, size-capped output that
+//! is killed reliably on drop (Windows job objects), plus `command()` which
+//! hides console windows and strips inherited environment surprises.
+
 use anyhow::{bail, Context, Result};
 #[cfg(windows)]
 use std::os::windows::{io::AsRawHandle, process::CommandExt};

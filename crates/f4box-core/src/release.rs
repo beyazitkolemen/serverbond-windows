@@ -1,3 +1,7 @@
+//! Local production release ("Forge-like" deployment): git pull/branch
+//! switch, Composer install, migrations, cache rebuild, extra Artisan lines
+//! and job restarts, recorded as a JSON-lines history per project.
+
 use crate::{
     jobs::artisan_file,
     model::{Project, ProjectRelease},

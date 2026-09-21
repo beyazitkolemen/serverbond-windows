@@ -1,3 +1,8 @@
+//! ServerBond core: the `Manager` facade every front end (Tauri window, CLI,
+//! local HTTP API) drives. It owns the data directory, the configuration, the
+//! child processes and the operation gate; feature modules extend it with
+//! `impl Manager` blocks. Nothing here talks to a window or a terminal.
+
 pub mod api;
 mod domain;
 mod envfile;
