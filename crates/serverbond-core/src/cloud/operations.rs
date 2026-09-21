@@ -6,6 +6,11 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "tunnel.show",
+    "tunnel.token",
+    "tunnel.apply",
+    "tunnel.clear",
+    "tunnel.auto-start",
     "settings.show",
     "settings.save",
     "settings.validate",
@@ -137,6 +142,16 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "tunnel.show")]
+    TunnelShow(Empty),
+    #[serde(rename = "tunnel.token")]
+    TunnelToken(super::tunnel::Token),
+    #[serde(rename = "tunnel.apply")]
+    TunnelApply(super::tunnel::Token),
+    #[serde(rename = "tunnel.clear")]
+    TunnelClear(super::mysql::Confirm),
+    #[serde(rename = "tunnel.auto-start")]
+    TunnelAutoStart(super::tunnel::AutoStart),
     #[serde(rename = "settings.show")]
     SettingsShow(Empty),
     #[serde(rename = "settings.save")]
@@ -240,6 +255,11 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::TunnelShow(_) => return super::tunnel::show(manager),
+            Self::TunnelToken(input) => return super::tunnel::token(manager, input, false),
+            Self::TunnelApply(input) => return super::tunnel::token(manager, input, true),
+            Self::TunnelClear(input) => return super::tunnel::clear(manager, input),
+            Self::TunnelAutoStart(input) => return super::tunnel::auto_start(manager, input),
             Self::SettingsShow(_) => return super::settings::show(manager),
             Self::SettingsSave(input) => return super::settings::save(manager, *input),
             Self::SettingsValidate(input) => return super::settings::validate(*input),

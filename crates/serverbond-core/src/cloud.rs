@@ -21,6 +21,7 @@ mod mysql;
 mod operations;
 mod postgres;
 mod settings;
+mod tunnel;
 const SERVICES: &[&str] = &[
     "all",
     "php",
