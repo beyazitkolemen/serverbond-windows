@@ -9,12 +9,29 @@ use std::path::{Path, PathBuf};
 
 pub const ENV_LIMIT: u64 = 256 * 1024;
 
+#[derive(Debug)]
+pub(crate) struct EnvConflict;
+impl std::fmt::Display for EnvConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(".env değişti. Güncel dosyayı alın; değişiklikleriniz kaydedilmedi.")
+    }
+}
+impl std::error::Error for EnvConflict {}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectEnv {
     pub exists: bool,
     pub content: String,
     pub example: Option<String>,
+}
+
+pub(crate) fn env_revision(env: &ProjectEnv) -> String {
+    use sha2::{Digest, Sha256};
+    let mut digest = Sha256::new();
+    digest.update([u8::from(env.exists)]);
+    digest.update(env.content.as_bytes());
+    format!("{:x}", digest.finalize())
 }
 
 pub fn validate_env_contents(raw: &str) -> Result<()> {
@@ -34,11 +51,24 @@ fn read_text(path: &Path) -> Result<String> {
             path.display()
         )
     })?;
-    String::from_utf8(bytes).context(".env UTF-8 olmalı.")
+    let content = String::from_utf8(bytes).context(".env UTF-8 olmalı.")?;
+    validate_env_contents(&content)?;
+    Ok(content)
 }
 
 fn enclosed_env(root: &Path, path: &Path) -> Result<PathBuf> {
     let root = dunce::canonicalize(root).context("Proje klasörü bulunamadı.")?;
+    if let Ok(metadata) = std::fs::symlink_metadata(path) {
+        let linked = metadata.file_type().is_symlink();
+        #[cfg(windows)]
+        let linked = {
+            use std::os::windows::fs::MetadataExt;
+            linked || metadata.file_attributes() & 0x400 != 0
+        };
+        if linked {
+            bail!(".env bağlantı veya reparse noktası olamaz.");
+        }
+    }
     if !path.exists() {
         return Ok(root.join(".env"));
     }
@@ -79,8 +109,23 @@ impl Manager {
     }
 
     pub fn save_project_env(&self, id: &str, content: String) -> Result<()> {
+        self.save_project_env_checked(id, content, None).map(|_| ())
+    }
+
+    pub(crate) fn save_project_env_checked(
+        &self,
+        id: &str,
+        content: String,
+        expected: Option<&str>,
+    ) -> Result<ProjectEnv> {
         let _guard = self.gate()?;
         validate_env_contents(&content)?;
+        if let Some(expected) = expected {
+            anyhow::ensure!(
+                env_revision(&self.read_project_env(id)?) == expected,
+                EnvConflict
+            );
+        }
         let project = self.project(id)?;
         let path = enclosed_env(&project.path, &project.path.join(".env"))?;
         crate::storage::require_space(&project.path, content.len() as u64)?;
@@ -89,7 +134,7 @@ impl Manager {
             "Proje .env kaydedildi: {}. İçerik günlüğe yazılmaz.",
             project.name
         ));
-        Ok(())
+        self.read_project_env(id)
     }
 }
 

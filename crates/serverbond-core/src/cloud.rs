@@ -14,6 +14,7 @@ use std::{
     },
     time::Duration,
 };
+mod environment;
 mod jobs;
 mod operations;
 const SERVICES: &[&str] = &[
@@ -157,8 +158,13 @@ fn post(client: &Client, c: &Credentials, path: &str, body: &Value) -> Result<(u
     }
     let mut bytes = Vec::new();
     // Parameters are bounded separately; JSON escaping can expand Unicode paths.
-    response.take(262145).read_to_end(&mut bytes)?;
-    anyhow::ensure!(bytes.len() <= 262144, "Cloud yanıtı çok büyük.");
+    let limit = if path == "poll" {
+        512 * 1024
+    } else {
+        256 * 1024
+    };
+    response.take(limit as u64 + 1).read_to_end(&mut bytes)?;
+    anyhow::ensure!(bytes.len() <= limit, "Cloud yanıtı çok büyük.");
     Ok((
         status,
         serde_json::from_slice(&bytes).context("Cloud yanıtı geçersiz.")?,
@@ -383,7 +389,10 @@ impl Manager {
                         return Ok(None);
                     }
                     let bytes = secrets::read(&output_path)?;
-                    anyhow::ensure!(bytes.len() <= 256 * 1024, "Cloud sonucu çok büyük.");
+                    anyhow::ensure!(
+                        bytes.len() <= operations::output_limit(command.operation.as_deref()),
+                        "Cloud sonucu çok büyük."
+                    );
                     Ok(Some(serde_json::from_str(&bytes)?))
                 })();
                 match decoded {
@@ -457,13 +466,19 @@ impl Manager {
                 if command.operation.is_some() {
                     let output = match &result {
                         Ok(value) => json!({"data":value}),
+                        Err(error) if error.is::<crate::envfile::EnvConflict>() => {
+                            json!({"error":crate::envfile::EnvConflict.to_string()})
+                        }
                         // Raw errors can contain repository URLs or local secrets.
                         Err(_) => {
                             json!({"error":"İşlem tamamlanamadı. Girdileri, kurulu bileşenleri ve Windows uygulamasını kontrol edin."})
                         }
                     };
                     let encoded = serde_json::to_string(&output)?;
-                    anyhow::ensure!(encoded.len() <= 256 * 1024, "Cloud sonucu çok büyük.");
+                    anyhow::ensure!(
+                        encoded.len() <= operations::output_limit(command.operation.as_deref()),
+                        "Cloud sonucu çok büyük."
+                    );
                     secrets::save(&m.cloud_output_path(&c, &command.id)?, &encoded)?;
                 }
                 let mut journal = m.journal(&c)?;

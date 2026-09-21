@@ -31,7 +31,17 @@ pub(super) const NAMES: &[&str] = &[
     "jobs.flush",
     "jobs.tasks",
     "projects.log",
+    "env.read",
+    "env.write",
 ];
+
+pub(super) fn output_limit(name: Option<&str>) -> usize {
+    if matches!(name, Some("env.read" | "env.write")) {
+        768 * 1024
+    } else {
+        256 * 1024
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -112,6 +122,10 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "env.read")]
+    EnvRead(Remove),
+    #[serde(rename = "env.write")]
+    EnvWrite(super::environment::Write),
     #[serde(rename = "jobs.failed")]
     JobsFailed(Remove),
     #[serde(rename = "jobs.retry")]
@@ -167,7 +181,12 @@ pub(super) enum Operation {
 impl Operation {
     pub(super) fn parse(name: &str, parameters: &Value) -> Result<Self> {
         ensure!(
-            serde_json::to_vec(parameters)?.len() <= 32768,
+            serde_json::to_vec(parameters)?.len()
+                <= if name == "env.write" {
+                    384 * 1024
+                } else {
+                    32768
+                },
             "İşlem parametreleri çok büyük."
         );
         Ok(serde_json::from_value(
@@ -176,6 +195,8 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::EnvRead(input) => return super::environment::read(manager, &input.id),
+            Self::EnvWrite(input) => return super::environment::write(manager, input),
             Self::JobsFailed(input) => {
                 uuid::Uuid::parse_str(&input.id)?;
                 return Ok(super::jobs::text_result(

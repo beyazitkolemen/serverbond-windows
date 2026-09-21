@@ -8,6 +8,8 @@ Yerel geliştirme: Cloud projesinde HTTP sunucusunu 127.0.0.1:19876, Reverb'i 12
 
 # Cloud protokolü v1
 
+Ortam dosyası işlemleri: `env.read` proje UUID'siyle `.env` ve varsa `.env.example` içeriğini alır. `env.write`, `id`, `contentBase64`, `expectedRevision` ve `confirm: true` ister. Dosyalar ayrı ayrı 256 KB UTF-8 ile sınırlıdır; NUL reddedilir. İçerik base64 taşıma kodlaması kullanır, şifreleme HTTPS ve DPAPI katmanlarındadır. Sonuç `projectId`, `exists`, `revision`, `contentBase64`, `exampleBase64` alanlarını içerir. Revizyon SHA-256(varlık baytı + içerik) olarak hesaplanır; eksik dosya ile boş dosya farklıdır. Kayıt Manager kilidi altında revizyonu denetler ve atomik yazılır. Harici editörlere dosya kilidi uygulanmaz. Çakışma sabit, sırsız bir hata mesajıyla döner. Normal 32 KB parametre / 256 KB sonuç sınırları korunur; yalnızca `env.write` parametreleri 384 KB, iki ortam işleminin sonuçları 768 KB olabilir. Poll yanıt sınırı 512 KB'dir. Cloud'u bu iki yeteneği kabul eden sürüme önce güncelleyin.
+
 ## Taşıma
 
 Windows yalnızca dışarı doğru HTTPS ve Reverb WSS bağlantısı açar. Yerel yönetim API'si bu protokolün parçası değildir. Debug derlemede açık SERVERBOND_CLOUD_ALLOW_HTTP=1 ile loopback HTTP/WS kullanılabilir. Sertifika doğrulaması kapatılamaz; HTTP yönlendirmeleri izlenmez.
