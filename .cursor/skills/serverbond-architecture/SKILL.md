@@ -19,6 +19,7 @@ description: ServerBond katmanları, veri dizini ve nereye kod yazılacağı. Mi
 | `src` | React. Yeni yazma `services` üzerinden; ham `call("mail")` ekleme |
 | `crates/serverbond-core/src/bin/serverbond.rs` | Aynı `Manager` ile CLI |
 | `crates/serverbond-core/src/api.rs` | Yerel HTTP API (127.0.0.1, Bearer jeton); yeni yol `route()`/`project_route()` + `routes()` |
+| `crates/serverbond-core/src/api/mcp.rs` | `/mcp` Streamable HTTP; araçlar OpenAPI sözleşmesinden türetilir ve aynı API dispatcher'ını kullanır |
 | `src/hooks` | `useDraft` (anlık görüntüye karşı yerel taslak), `useTheme` |
 | `src/components` paylaşılanlar | `StatusBadge`, `Toggle`, `NumberField`, `SegmentedControl`, `EmptyState`, `ErrorBoundary` |
 

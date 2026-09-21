@@ -40,7 +40,7 @@ const headings: Record<AppPage, string> = {
   [Page.Projects]: "Projeler",
   [Page.Logs]: "Günlükler",
   [Page.Services]: "Hizmetler",
-  [Page.Api]: "API",
+  [Page.Api]: "API ve MCP",
   [Page.Settings]: "Ayarlar",
 };
 
@@ -230,7 +230,7 @@ export default function App() {
                     projects: "Projeler",
                     logs: "Günlükler",
                     services: "Hizmetler",
-                    api: "API",
+                    api: "API ve MCP",
                     settings: "Ayarlar",
                   }[page]
                 }

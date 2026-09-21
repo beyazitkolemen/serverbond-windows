@@ -21,3 +21,5 @@ jobs:
         run: npm ci
       - name: Cloud Agent checks
         run: npm run test:ai
+      - name: MCP SDK interoperability
+        run: npm run test:mcp

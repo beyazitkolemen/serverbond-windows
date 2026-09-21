@@ -31,7 +31,7 @@ const shots = [
   {
     file: "18-api.png",
     viewportOnly: true,
-    nav: "API",
+    nav: "API ve MCP",
     actions: [['.api-page [role="tab"]', "Uç nokta rehberi"]],
   },
   { file: "19-koyu-tema.png", nav: "Projeler", theme: "dark" },

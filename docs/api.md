@@ -14,6 +14,8 @@ ServerBond'un servis, proje, yapılandırma ve masaüstü işlemleri yerel HTTP 
 
 ## Açma ve jeton
 
+**API ve MCP** sayfasındaki MCP anahtarı, aynı jetonla `/mcp` adresini açar. [İstemci yapılandırması ve araçlar](mcp.md). API ayarlarındaki `mcpEnabled` alanı varsayılan olarak `false`; `/api` durum yanıtı `mcpEnabled` ve `mcpUrl` alanlarını da içerir.
+
 Arayüz: **Sol menü → API** → "API'yi aç" anahtarı, port (varsayılan `18800`) ve **Jeton oluştur**. Kaydet düğmesi ayarı uygular; dinleyici ortam çalışırken de açılıp kapatılabilir.
 
 API sayfası etkin bağlantı adresini, dinleyici/jeton durumunu, bağlantı örneğini ve tüm uç noktaları gösterir. Yol veya açıklamaya göre arama ve HTTP yöntemi filtresi kullanılabilir. Satırı açarak açıklamayı ve varsa JSON gövdesi şemasını inceleyin. **OpenAPI indir** dinleyici kapalıyken de sözleşmeyi verir; bu işlem jeton üretmez veya yenilemez. Tarayıcı önizlemesi aynı yol kataloğunu gösterir, yönetim işlemleri ve sözleşme indirme masaüstünde çalışır.
@@ -67,7 +69,7 @@ Uzun işlemler (kurulum, `composer install`, sürüm) yanıt dönmeden önce tam
 | GET | `/openapi.json` | Kimlik doğrulamalı OpenAPI 3.1 sözleşmesi; doğrudan JSON belge |
 | GET | `/capabilities` | `desktop`, `apiVersion`, kimlik doğrulama ve istek sınırları |
 | GET | `/api` | Dinleyici ve jeton kayıt durumu |
-| PUT | `/api` | `{ "enabled": true, "port": 18800 }`; yalnızca API ayarlarını değiştirir, diğer tercihler korunur |
+| PUT | `/api` | `{ "enabled": true, "port": 18800, "mcpEnabled": true }`; yalnızca API/MCP ayarlarını değiştirir, diğer tercihler korunur. `mcpEnabled` verilmezse MCP kapanır |
 | POST | `/api/token` | Yeni jetonu `{token}` olarak bir kez döndürür; mevcut jeton geçersiz olur |
 | DELETE | `/api/token` | Jetonu iptal eder; yeniden erişim için arayüz/CLI'dan jeton üretin |
 | GET | `/status` | Arayüzün kullandığı tam `Snapshot` |

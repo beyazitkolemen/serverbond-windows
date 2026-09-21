@@ -2,7 +2,7 @@
 
 Windows üzerinde Laravel projelerini, PHP sürümlerini ve yerel sunucu hizmetlerini tek panelden yönetin.
 
-**[Windows için indir](https://github.com/beyazitkolemen/serverbond-windows/releases/latest)** · [Ekran görüntüleri](docs/screenshots/README.md) · [API rehberi](docs/api.md)
+**[Windows için indir](https://github.com/beyazitkolemen/serverbond-windows/releases/latest)** · [Ekran görüntüleri](docs/screenshots/README.md) · [API rehberi](docs/api.md) · [MCP bağlantısı](docs/mcp.md)
 
 ![ServerBond genel bakış](docs/screenshots/01-genel-bakis.png)
 
@@ -25,7 +25,7 @@ Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otom
 - **Sunucu yönetimi:** PHP, MySQL ve Caddy; yerel HTTPS ve SQL yedekleme/geri yükleme.
 - **Laravel işlemleri:** kuyruk işçileri, zamanlayıcı ve Git/Composer/Artisan adımlarından oluşan sürüm tarifi.
 - **Ek hizmetler:** phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli.
-- **API:** proje, hizmet ve masaüstü işlemleri için jetonla korunan yerel HTTP API ve OpenAPI rehberi.
+- **API ve MCP:** proje, hizmet ve masaüstü işlemleri için yerel HTTP API, OpenAPI rehberi ve yapay zekâ istemcilerine MCP bağlantısı.
 - **Masaüstü:** açık/koyu tema, sistem tepsisi ve Windows başlangıç tercihleri.
 
 ![Solda bölüm menüsüyle proje detayı](docs/screenshots/17-proje-detay.png)
@@ -34,7 +34,7 @@ Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otom
 
 ## API
 
-Sol menüdeki **API** sayfasından erişimi açın ve jeton oluşturun. Varsayılan adres `http://127.0.0.1:18800/api/v1`; istekler `Authorization: Bearer <jeton>` başlığını kullanır. API varsayılan olarak kapalıdır.
+Sol menüdeki **API ve MCP** sayfasından erişimi açın ve jeton oluşturun. Varsayılan API adresi `http://127.0.0.1:18800/api/v1`; istekler `Authorization: Bearer <jeton>` başlığını kullanır. **MCP erişimini aç** ile aynı jetonu kullanan `http://127.0.0.1:18800/mcp` bağlantısı etkinleşir. API ve MCP varsayılan olarak kapalıdır.
 
 [Uç noktalar, istek gövdeleri ve örnekler →](docs/api.md)
 

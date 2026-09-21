@@ -22,7 +22,7 @@
   {
     "method": "PUT",
     "path": "/api/v1/api",
-    "description": "Yalnızca API ayarlarını kaydet {enabled, port}"
+    "description": "API ve MCP ayarlarını kaydet {enabled, port, mcpEnabled?}; mcpEnabled verilmezse MCP kapanır"
   },
   {
     "method": "GET",

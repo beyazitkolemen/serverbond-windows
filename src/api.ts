@@ -94,7 +94,7 @@ const preview: Snapshot = {
     },
     postgres: { port: 15432, autoStart: false },
     redis: { port: 16379, autoStart: false },
-    api: { enabled: false, port: 18800 },
+    api: { enabled: false, port: 18800, mcpEnabled: false },
     projectsDir: "",
     backupsDir: "",
     startOnLaunch: false,
@@ -286,6 +286,8 @@ export async function call<T = void>(
       listening: false,
       tokenSaved: false,
       baseUrl: "http://127.0.0.1:18800/api/v1",
+      mcpEnabled: false,
+      mcpUrl: "http://127.0.0.1:18800/mcp",
     } as T;
   if (command === "api_documentation")
     return { routes: apiRoutes, document: null } as T;

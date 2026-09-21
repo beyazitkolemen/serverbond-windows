@@ -5,6 +5,7 @@ import type { ApiSettings as ApiValues, ApiStatus, Run } from "../types";
 import NumberField from "./NumberField";
 import Toggle from "./Toggle";
 import StatusBadge, { type StatusTone } from "./StatusBadge";
+import McpConnection from "./McpConnection";
 
 /**
  * API: switch the local management API on, pick its port, create
@@ -179,6 +180,14 @@ export default function ApiSettings({
           Yetenekler: <code>GET /capabilities</code>.
         </p>
       </details>
+      <McpConnection
+        values={values}
+        status={status}
+        token={token}
+        busy={busy}
+        onChange={onChange}
+        copy={copy}
+      />
     </section>
   );
 }

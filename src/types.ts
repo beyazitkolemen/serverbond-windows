@@ -167,6 +167,7 @@ export interface RedisSettings {
 export interface ApiSettings {
   enabled: boolean;
   port: number;
+  mcpEnabled: boolean;
 }
 export interface ApiStatus {
   enabled: boolean;
@@ -174,6 +175,8 @@ export interface ApiStatus {
   listening: boolean;
   tokenSaved: boolean;
   baseUrl: string;
+  mcpEnabled: boolean;
+  mcpUrl: string;
 }
 export interface ApiRoute {
   method: string;

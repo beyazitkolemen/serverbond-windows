@@ -189,7 +189,7 @@
     },
     "postgres": { "port": 15432, "autoStart": false },
     "redis": { "port": 16379, "autoStart": false },
-    "api": { "enabled": false, "port": 18800 },
+    "api": { "enabled": false, "port": 18800, "mcpEnabled": false },
     "projectsDir": "",
     "backupsDir": "",
     "startOnLaunch": true

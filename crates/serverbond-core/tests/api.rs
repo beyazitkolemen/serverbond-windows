@@ -5,6 +5,8 @@ use serde_json::Value;
 use serverbond_core::{api, model::Settings, Manager};
 use std::{net::TcpListener, sync::Arc, time::Duration};
 
+mod mcp;
+
 fn free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
         .unwrap()

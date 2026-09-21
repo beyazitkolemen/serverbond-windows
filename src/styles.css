@@ -2653,6 +2653,12 @@ td:first-child {
   color: var(--muted);
   margin-bottom: 12px;
 }
+
+.mcp-connection {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
 .api-token,
 .api-example {
   display: grid;

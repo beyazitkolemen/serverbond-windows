@@ -31,6 +31,7 @@ use std::{
 };
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
+mod mcp;
 mod openapi;
 
 /// Implemented by the desktop host. The core never depends on Tauri.
@@ -96,6 +97,8 @@ pub struct ApiStatus {
     pub listening: bool,
     pub token_saved: bool,
     pub base_url: String,
+    pub mcp_enabled: bool,
+    pub mcp_url: String,
 }
 
 fn hash_token(token: &str) -> String {
@@ -149,6 +152,8 @@ impl Manager {
             listening,
             token_saved: self.api_token_path().is_file(),
             base_url: format!("http://127.0.0.1:{}/api/{VERSION}", settings.port),
+            mcp_enabled: settings.mcp_enabled,
+            mcp_url: format!("http://127.0.0.1:{}/mcp", settings.port),
         }
     }
 
@@ -355,6 +360,10 @@ fn handle(manager: &Arc<Manager>, mut request: Request) {
                 "error": "Geçerli bir API jetonu gerekli (Authorization: Bearer …). Sol menü → API bölümünden oluşturun."
             }),
         );
+    }
+
+    if path == "/mcp" {
+        return mcp::handle(manager, request);
     }
 
     let mut body = Vec::new();
@@ -604,7 +613,7 @@ fn route(
             after_response: None,
         }),
         ["capabilities"] if get => ok(
-            json!({ "apiVersion": VERSION, "desktop": manager.desktop_api().is_some(), "authentication": "bearer", "maxBodyBytes": MAX_BODY, "maxConcurrentRequests": MAX_IN_FLIGHT }),
+            json!({ "apiVersion": VERSION, "desktop": manager.desktop_api().is_some(), "authentication": "bearer", "maxBodyBytes": MAX_BODY, "maxConcurrentRequests": MAX_IN_FLIGHT, "mcp": {"enabled":manager.api_status().mcp_enabled,"url":manager.api_status().mcp_url,"protocolVersion":mcp::PROTOCOL_VERSION} }),
         ),
         ["api"] if get => ok(manager.api_status()),
         ["api"] if put => {

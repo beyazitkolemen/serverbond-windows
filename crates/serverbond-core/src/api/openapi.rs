@@ -68,7 +68,7 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
             &["repository"],
         ),
         ("PUT", "/api") => fields(
-            json!({"enabled":boolean,"port":{"type":"integer","minimum":1024,"maximum":65535}}),
+            json!({"enabled":boolean,"port":{"type":"integer","minimum":1024,"maximum":65535},"mcpEnabled":{"type":"boolean","default":false}}),
             &["enabled", "port"],
         ),
         ("POST", "/projects/import-folders") => {

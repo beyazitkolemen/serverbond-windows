@@ -211,6 +211,7 @@ impl Default for RedisSettings {
 pub struct ApiSettings {
     pub enabled: bool,
     pub port: u16,
+    pub mcp_enabled: bool,
 }
 
 impl Default for ApiSettings {
@@ -218,6 +219,7 @@ impl Default for ApiSettings {
         Self {
             enabled: false,
             port: 18800,
+            mcp_enabled: false,
         }
     }
 }

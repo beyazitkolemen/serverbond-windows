@@ -12,6 +12,7 @@
     "desktop:build": "tauri build",
     "desktop:build:unsigned": "tauri build --config .github/tauri-unsigned.json",
     "test:core": "cargo test -p serverbond-core",
+    "test:mcp": "cargo build -p serverbond-core --bin serverbond && node scripts/ai/test-mcp.mjs",
     "test:ai": "bash scripts/ai/test.sh",
     "test:integration": "cargo run -p serverbond-core --bin serverbond -- smoke",
     "check": "npm run build && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
@@ -26,6 +27,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
