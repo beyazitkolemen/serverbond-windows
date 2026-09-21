@@ -14,6 +14,13 @@ fn live_reverb_device_roundtrip() {
     let url = std::env::var("SERVERBOND_CLOUD_SMOKE_URL").unwrap();
     let home = tempfile::tempdir().unwrap();
     let manager = Arc::new(Manager::new(home.path().to_path_buf()).unwrap());
+    if std::env::var("SMOKE_LOGS").as_deref() == Ok("1") {
+        std::fs::write(
+            home.path().join("logs/redis.log"),
+            "Cloud günlük testi: <script>throw new Error('unsafe')</script>\nTürkçe kayıt ✓",
+        )
+        .unwrap();
+    }
     if std::env::var("SMOKE_SETTINGS").as_deref() == Ok("1") {
         let listeners: Vec<_> = (0..3)
             .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())

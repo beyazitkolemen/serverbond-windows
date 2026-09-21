@@ -5,7 +5,14 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ServiceLog {
+    service: String,
+}
+
 pub(super) const NAMES: &[&str] = &[
+    "services.log",
     "github.auth-start",
     "github.repositories",
     "github.branches",
@@ -150,6 +157,8 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "services.log")]
+    ServiceLog(ServiceLog),
     #[serde(rename = "github.repositories")]
     GithubRepositories(super::github::Page),
     #[serde(rename = "github.branches")]
@@ -279,6 +288,20 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::ServiceLog(input) => {
+                ensure!(
+                    [
+                        "php", "mysql", "caddy", "composer", "tunnel", "mail", "postgres", "redis",
+                        "github"
+                    ]
+                    .contains(&input.service.as_str()),
+                    "Geçersiz servis günlüğü."
+                );
+                let text = manager.read_log(&input.service)?;
+                let count = text.chars().count();
+                let text: String = text.chars().skip(count.saturating_sub(32000)).collect();
+                return Ok(json!({"service":input.service,"text":text,"truncated":count>32000}));
+            }
             Self::GithubAuthStart(input) => return super::github::start(manager, input),
             Self::GithubRepositories(input) => return super::github::repositories(manager, input),
             Self::GithubBranches(input) => return super::github::branches(manager, input),
@@ -498,6 +521,30 @@ fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn service_logs_reject_paths_and_bound_unicode_output() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        assert!(Operation::ServiceLog(ServiceLog {
+            service: "../config".into()
+        })
+        .execute(&manager)
+        .is_err());
+        std::fs::write(
+            home.path().join("logs/redis.log"),
+            format!("{}son", "x".repeat(40000)),
+        )
+        .unwrap();
+        let result = Operation::ServiceLog(ServiceLog {
+            service: "redis".into(),
+        })
+        .execute(&manager)
+        .unwrap();
+        assert_eq!(result["service"], "redis");
+        assert_eq!(result["text"].as_str().unwrap().chars().count(), 32000);
+        assert!(result["text"].as_str().unwrap().ends_with("son"));
+        assert_eq!(result["truncated"], true);
+    }
     #[test]
     fn php_catalog_is_safe_and_unknown_versions_do_not_change_selection() {
         let home = tempfile::tempdir().unwrap();
