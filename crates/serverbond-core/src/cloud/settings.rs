@@ -19,14 +19,21 @@ pub(super) struct Validate {
 
 pub(super) fn show(manager: &Manager) -> Result<Value> {
     let (settings, revision) = manager.settings_with_revision()?;
-    Ok(json!({"settings":settings,"revision":revision}))
+    Ok(json!({"settings":settings,"revision":revision,"versions":versions()}))
 }
 
 pub(super) fn save(manager: &Manager, input: Save) -> Result<Value> {
     ensure!(input.confirm, "Ayar kaydı için açık onay gerekli.");
     let (settings, revision) =
         manager.save_settings_checked(input.settings, &input.expected_revision)?;
-    Ok(json!({"settings":settings,"revision":revision}))
+    Ok(json!({"settings":settings,"revision":revision,"versions":versions()}))
+}
+
+fn versions() -> Vec<String> {
+    crate::model::php_versions()
+        .into_iter()
+        .map(|package| package.version)
+        .collect()
 }
 
 pub(super) fn validate(input: Validate) -> Result<Value> {
