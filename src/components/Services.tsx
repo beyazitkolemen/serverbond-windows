@@ -2,7 +2,16 @@ import { useState } from "react";
 import NumberField from "./NumberField";
 import Toggle from "./Toggle";
 import { useDraft } from "../hooks/useDraft";
-import { ChevronLeft, Settings } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Github,
+  Globe,
+  Mail,
+  Settings,
+  Zap,
+} from "lucide-react";
 import {
   ComponentId,
   ToolAction,
@@ -47,31 +56,37 @@ const catalog = [
   {
     id: WorkspaceService.PhpMyAdmin,
     title: "phpMyAdmin",
+    icon: Database,
     copy: "MySQL veritabanlarını tarayıcıdan yönetin.",
   },
   {
     id: WorkspaceService.Mail,
     title: "E-posta",
+    icon: Mail,
     copy: "Mailpit yerel SMTP yakalayıcı ve gelen kutusu.",
   },
   {
     id: WorkspaceService.Postgres,
     title: "PostgreSQL",
+    icon: Database,
     copy: "İsteğe bağlı PostgreSQL 17 · Laravel pgsql.",
   },
   {
     id: WorkspaceService.Redis,
     title: "Redis",
+    icon: Zap,
     copy: "Kuyruk, önbellek ve oturum için Redis 8.",
   },
   {
     id: WorkspaceService.Github,
     title: "GitHub",
+    icon: Github,
     copy: "Özel depolar için bir kez jeton kaydı.",
   },
   {
     id: WorkspaceService.Tunnel,
     title: "Tünel",
+    icon: Globe,
     copy: "Cloudflare Tunnel ile dışarı açın.",
   },
 ] as const;
@@ -116,7 +131,7 @@ export default function Services({
     reset();
     setSettingsOpen(false);
   };
-  const tileState = (id: ServiceId) => {
+  const serviceState = (id: ServiceId) => {
     switch (id) {
       case WorkspaceService.PhpMyAdmin:
         return {
@@ -443,33 +458,58 @@ export default function Services({
     <div className="settings-layout">
       {!selected ? (
         <>
-          <p className="section-note">
-            İsteğe bağlı hizmetler ortamın çalışması için gerekli değildir. Bir
-            hizmete girin; port ve jeton Ayarlar düğmesindedir.
-          </p>
-          <div className="service-grid">
+          <div className="service-list-heading" aria-hidden="true">
+            <span>Uygulama</span>
+            <span>Açıklama</span>
+            <span>Durum</span>
+          </div>
+          <ul className="service-list" aria-label="Hizmetler">
             {catalog.map((item) => {
-              const state = tileState(item.id);
+              const state = serviceState(item.id);
+              const Icon = item.icon;
               return (
-                <button
-                  type="button"
-                  key={item.id}
-                  className="service-tile"
-                  data-service={item.title}
-                  aria-label={`${item.title} hizmetini aç`}
-                  onClick={() => openService(item.id)}
-                >
-                  <span className="service-tile-head">
-                    <strong>{item.title}</strong>
-                    <StatusBadge tone={state.on ? "running" : "stopped"}>
-                      {state.label}
-                    </StatusBadge>
-                  </span>
-                  <span className="service-tile-copy">{item.copy}</span>
-                </button>
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="service-row"
+                    data-service={item.title}
+                    aria-label={`${item.title} hizmetini aç`}
+                    aria-describedby={`service-${item.id}-copy service-${item.id}-state`}
+                    onClick={() => openService(item.id)}
+                  >
+                    <span className="service-row-name">
+                      <span className="service-row-icon" aria-hidden="true">
+                        <Icon size={20} strokeWidth={1.6} />
+                      </span>
+                      <strong>{item.title}</strong>
+                    </span>
+                    <span
+                      className="service-row-copy"
+                      id={`service-${item.id}-copy`}
+                    >
+                      {item.copy}
+                    </span>
+                    <span
+                      className="service-row-state"
+                      id={`service-${item.id}-state`}
+                    >
+                      <StatusBadge tone={state.on ? "running" : "stopped"}>
+                        {state.label}
+                      </StatusBadge>
+                    </span>
+                    <ChevronRight
+                      className="service-row-arrow"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
+          <p className="section-note">
+            Kurulum, bağlantı ve ayarlar için bir uygulama seçin.
+          </p>
         </>
       ) : (
         <>

@@ -7,7 +7,7 @@ globs: src/**/*.{ts,tsx,css}
 
 - Durum kaynağı Rust `snapshot` komutudur; arayüz `snapshotRepository.get()` okur. Tarayıcı önizlemesi (`api.ts`) kurulum uydurmaz.
 - Hizmet IPC’si `src/services` üzerindedir (`mailService.start()`). Yeni `call("mail", { action })` yazma; tel dizileri `src/domain` enum’larında durur.
-- Tasarım: zemin `#f7f9f8`, vurgu `#157557`, kenar çubuğu 224px. [docs/design/design-system.md](../../docs/design/design-system.md).
+- Tasarım: nötr zemin `#f8fafb`, yeşil vurgu `#147a56`, kenar çubuğu 224px. Hizmetler her biri ayrı satırda; gezinme grupları kutusuz. Renkler açık/koyu tema tokenlarından gelir. [docs/design/design-system.md](../../docs/design/design-system.md).
 - Uzun yazma işlemlerini UI zaman aşımıyla yeniden başlatma; `call()` bunu zaten ayırır.
 - Ayar formu `key={JSON.stringify(settings)}` ile sunucu ayarı değişince sıfırlanır; taslağı poll ile ezme.
 - Yeni Laravel 12 için PHP karşılaştırması `phpSupportsLaravel12` ile yapılır; `Number("8.10")` kullanma.

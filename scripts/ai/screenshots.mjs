@@ -127,7 +127,7 @@ addEventListener("DOMContentLoaded", () => {
     [
       [".nav-item", shot.nav],
       shot.service
-        ? [`.service-tile[data-service="${shot.service}"]`, null]
+        ? [`.service-row[data-service="${shot.service}"]`, null]
         : null,
       shot.openSettings ? [".service-gear", "Ayarlar"] : null,
       shot.tab ? [".settings-tabs button", shot.tab] : null,
