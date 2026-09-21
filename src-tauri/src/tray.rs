@@ -104,7 +104,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
         .default_window_icon()
         .context("Tepsi simgesi bulunamadı.")?
         .clone();
-    TrayIconBuilder::with_id("f4box-tray")
+    TrayIconBuilder::with_id("serverbond-tray")
         .icon(icon)
         .tooltip("ServerBond · Windows Laravel üretimi")
         .menu(&menu)
@@ -156,7 +156,7 @@ pub fn setup(app: &AppHandle) -> Result<()> {
     Ok(())
 }
 
-fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()> {
+fn refresh(app: &AppHandle, snapshot: &serverbond_core::model::Snapshot) -> Result<()> {
     let menu = app.state::<TrayMenu>();
     let desktop = app.state::<Desktop>().status();
     let busy = snapshot.busy || desktop.quitting;
@@ -182,7 +182,7 @@ fn refresh(app: &AppHandle, snapshot: &f4box_core::model::Snapshot) -> Result<()
         "Ortam durduruldu".into()
     };
     menu.status.set_text(&status)?;
-    if let Some(tray) = app.tray_by_id("f4box-tray") {
+    if let Some(tray) = app.tray_by_id("serverbond-tray") {
         tray.set_tooltip(Some(format!("ServerBond · {status}")))?;
     }
     menu.start

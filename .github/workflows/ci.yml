@@ -28,7 +28,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Real Windows environment tests
         if: github.event_name == 'workflow_dispatch'
-        run: cargo test -p f4box-core --tests --locked -- --ignored --nocapture --test-threads=1
+        run: cargo test -p serverbond-core --tests --locked -- --ignored --nocapture --test-threads=1
       - name: Desktop executable and installer
         run: npm run desktop:build:unsigned
       - name: Package versioned artifacts
@@ -36,8 +36,8 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          Copy-Item target/release/f4box-desktop.exe "artifacts/ServerBond_${version}_x64.exe"
-          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          Copy-Item target/release/serverbond-desktop.exe "artifacts/ServerBond_${version}_x64.exe"
+          $setup = Get-Item "target/release/bundle/nsis/ServerBond_${version}_x64-setup.exe" -ErrorAction SilentlyContinue
           if (-not $setup) {
             throw "NSIS kurulum paketi bulunamadı."
           }

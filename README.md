@@ -4,15 +4,15 @@ Windows x64 üzerinde Laravel uygulamasını **üretim gibi** çalıştıran Rus
 
 PHP sürümü seçimi, proje PHP’si, kuyruk ve zamanlama süreçleri, phpMyAdmin, Mailpit, isteğe bağlı PostgreSQL, GitHub’dan proje ekleme, Cloudflare tüneli, sistem tepsisi ve Windows başlangıç tercihleri aynı panelden yönetilir.
 
-## İndir — v1.1.0
+## İndir — v1.1.1
 
-Uygulama sürümü **1.1.0**. Windows x64 yayını `ServerBond_1.1.0_x64-setup.exe`, `ServerBond_1.1.0_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.
+Uygulama sürümü **1.1.1**. Windows x64 yayını `ServerBond_1.1.1_x64-setup.exe`, `ServerBond_1.1.1_x64.exe` ve `SHA256SUMS.txt` dosyalarını içerir.
 
-- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.0/ServerBond_1.1.0_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
-- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.0/ServerBond_1.1.0_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
-- [v1.1.0 sürüm notları](docs/releases/v1.1.md)
+- [Windows x64 kurulum EXE'si](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.1/ServerBond_1.1.1_x64-setup.exe): ServerBond'ı kurar ve WebView2 gereksinimini yönetir.
+- [Doğrudan çalıştırılabilir EXE](https://github.com/beyazitkolemen/serverbond-windows/releases/download/v1.1.1/ServerBond_1.1.1_x64.exe): WebView2 kurulu bir Windows x64 bilgisayarda açılabilir; verileri `%LOCALAPPDATA%\ServerBond` altında saklar.
+- [v1.1.1 sürüm notları](docs/releases/v1.1.1.md)
 
-Bu sürüm elle kurulur; otomatik güncelleme için imzalı paket içermez. Eski F4Box veri klasörü varsa kullanılmaya devam edilir.
+Bu sürüm elle kurulur; otomatik güncelleme için imzalı paket içermez. Önceki kurulumların verileri korunur; ayrıntılar [adlandırma ve uyumluluk](docs/naming.md) belgesindedir.
 
 Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir.
 
@@ -70,7 +70,7 @@ Paketler uygulama kurulum paketine gömülmez; ilk kullanımda resmî kaynaklar�
 
 Genel bakış veya Bileşenler ekranındaki **PHP sürümü** listesinden sürümü seçip **İndir ve kullan** düğmesine basın. Yalnızca seçilen Windows x64 NTS paketi indirilir ve resmî SHA-256 özetiyle doğrulanır. Kurulu sürüm için **Bu sürümü kullan** düğmesi görünür; tekrar indirilmez. Varsayılan sürüm 8.4.25'tir.
 
-7.4 ve 8.0–8.5 serilerinin katalogdaki sabit yama sürümleri sunulur. Sürüm listesi `crates/f4box-core/php-versions.json` dosyasından gelir; çevrimiçi en son sürüme kendiliğinden güncellenmez. 7.4/8.0/8.1, eski projelerle uyumluluk için bulunur ve resmî güvenlik desteği sona ermiştir.
+7.4 ve 8.0–8.5 serilerinin katalogdaki sabit yama sürümleri sunulur. Sürüm listesi `crates/serverbond-core/php-versions.json` dosyasından gelir; çevrimiçi en son sürüme kendiliğinden güncellenmez. 7.4/8.0/8.1, eski projelerle uyumluluk için bulunur ve resmî güvenlik desteği sona ermiştir.
 
 **Varsayılan PHP sürümü** yeni projeler ve genel CLI için kullanılır. Her proje kartındaki PHP listesinden ayrı sürüm seçilebilir; örneğin bir proje PHP 7.4, diğeri PHP 8.4 ile aynı anda çalışabilir. Eksik paket **İndir ve uygula** ile indirilir. Her proje ayrı bir PHP FastCGI süreci ve otomatik seçilen yerel port kullanır. Seçim uygulama yeniden açıldığında korunur. Önceki yapılandırmalar açılışta mevcut varsayılan sürüme sabitlenir; proje dosyaları değiştirilmez.
 
@@ -159,7 +159,7 @@ Yükseltilmiş yetkiyle yalnızca ServerBond'ın ürettiği bu betik çalışır
 
 Her sürüm `bin/php/<sürüm>/` altında, üretilen PHP ayarları `config/php/<sürüm>/php.ini` altında tutulur. Uzantı dizini kullanılan PHP paketine aittir; eski kurulumların ortak `config/php.ini` dosyası artık kullanılmaz. ServerBond bu ayar dosyalarını başlangıçta yeniden üretir. Windows genel PATH ayarı değiştirilmez.
 
-PHP CLI ve FastCGI uzantıları sürüm geçişinden önce ayrı ayrı doğrulanır. Türkçe karakterli veri yolları için ServerBond uzantı yolunu süreç argümanı ve `F4BOX_PHP_EXT` ortam değişkeniyle geçirir; Composer alt süreçleri aynı ayarı devralır. Üretilen `php.ini` başka bir terminalde kullanılacaksa bu ortam değişkeni de seçilen sürümün `ext` klasörünü göstermelidir.
+PHP CLI ve FastCGI uzantıları sürüm geçişinden önce ayrı ayrı doğrulanır. Türkçe karakterli veri yolları için ServerBond uzantı yolunu süreç argümanı ve `SERVERBOND_PHP_EXT` ortam değişkeniyle geçirir; Composer alt süreçleri aynı ayarı devralır. Üretilen `php.ini` başka bir terminalde kullanılacaksa bu ortam değişkeni de seçilen sürümün `ext` klasörünü göstermelidir.
 
 **Yeni Laravel projesi** Laravel 12 oluşturduğu için PHP 8.2 veya üzeri gerektirir. Daha eski PHP seçiliyken işlem dosya oluşturmadan açıklama gösterir; mevcut projeler eklenebilir.
 
@@ -232,7 +232,7 @@ npm run desktop
 npm run desktop:build
 ```
 
-Çalıştırılabilir dosya `target/release/f4box-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Yerel veya CI imzasız paketi `npm run desktop:build:unsigned` ile üretilir. İmzalı güncelleme paketi ve `latest.json` için `TAURI_SIGNING_PRIVATE_KEY` ile `npm run desktop:build` veya `.github/workflows/release.yml` kullanılır. Windows CI imzasız `ServerBond_<sürüm>_x64.exe`, `ServerBond_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
+Çalıştırılabilir dosya `target/release/serverbond-desktop.exe`; NSIS kurulum paketi `target/release/bundle/nsis/` altında üretilir. Yerel veya CI imzasız paketi `npm run desktop:build:unsigned` ile üretilir. İmzalı güncelleme paketi ve `latest.json` için `TAURI_SIGNING_PRIVATE_KEY` ile `npm run desktop:build` veya `.github/workflows/release.yml` kullanılır. Windows CI imzasız `ServerBond_<sürüm>_x64.exe`, `ServerBond_<sürüm>_x64-setup.exe` ve `SHA256SUMS.txt` yükler.
 
 ### Doğrulama
 
@@ -244,7 +244,7 @@ Linux Cloud Agent ve çekirdek denetimleri `npm run test:ai` ile çalışır. Ta
 
 ```powershell
 npm run build
-cargo test -p f4box-core
+cargo test -p serverbond-core
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
@@ -261,26 +261,26 @@ Bu test boş portlar seçer; geçici projeyle PHP FastCGI yönlendirmesini, PDO 
 CLI de aynı çekirdeği kullanır:
 
 ```powershell
-cargo run -p f4box-core --bin serverbond -- status
-cargo run -p f4box-core --bin serverbond -- install all
-cargo run -p f4box-core --bin serverbond -- php
-cargo run -p f4box-core --bin serverbond -- php 7.4.33
-cargo run -p f4box-core --bin serverbond -- serve
-cargo run -p f4box-core --bin serverbond -- add benim-projem C:\Projeler\benim-projem
-cargo run -p f4box-core --bin serverbond -- queue benim-projem start default
-cargo run -p f4box-core --bin serverbond -- queue benim-projem failed
-cargo run -p f4box-core --bin serverbond -- schedule benim-projem list
-cargo run -p f4box-core --bin serverbond -- logs benim-projem php
+cargo run -p serverbond-core --bin serverbond -- status
+cargo run -p serverbond-core --bin serverbond -- install all
+cargo run -p serverbond-core --bin serverbond -- php
+cargo run -p serverbond-core --bin serverbond -- php 7.4.33
+cargo run -p serverbond-core --bin serverbond -- serve
+cargo run -p serverbond-core --bin serverbond -- add benim-projem C:\Projeler\benim-projem
+cargo run -p serverbond-core --bin serverbond -- queue benim-projem start default
+cargo run -p serverbond-core --bin serverbond -- queue benim-projem failed
+cargo run -p serverbond-core --bin serverbond -- schedule benim-projem list
+cargo run -p serverbond-core --bin serverbond -- logs benim-projem php
 ```
 
 Tüm PHP paketlerini indirerek FastCGI, uzantılar, Composer, çalışan ortamda sürüm geçişi, başarısız geçişten geri dönüş ve seçim kalıcılığı testi (ayrı geçici veri dizini kullanır):
 
 ```powershell
-cargo test -p f4box-core --test php_matrix -- --ignored --nocapture
-cargo test -p f4box-core --test environment -- --ignored --nocapture
+cargo test -p serverbond-core --test php_matrix -- --ignored --nocapture
+cargo test -p serverbond-core --test environment -- --ignored --nocapture
 ```
 
-`environment` testi ayrı ve geçici MySQL veri dizininde ilk kurulumu, Türkçe SQL verisini, yedekleri ve MySQL program onarımından sonra verinin korunmasını sınar. İsteğe bağlı `F4BOX_TEST_CACHE` mevcut bir indirme önbelleğini gösterir; dosyalar test klasörüne kopyalanıp yeniden doğrulanır, mevcut veritabanı kullanılmaz.
+`environment` testi ayrı ve geçici MySQL veri dizininde ilk kurulumu, Türkçe SQL verisini, yedekleri ve MySQL program onarımından sonra verinin korunmasını sınar. İsteğe bağlı `SERVERBOND_TEST_CACHE` mevcut bir indirme önbelleğini gösterir; dosyalar test klasörüne kopyalanıp yeniden doğrulanır, mevcut veritabanı kullanılmaz.
 
 PHP matrisi testi ayrıca iki projenin eşzamanlı farklı sürüm kullanmasını, diğer projenin süreç kimliğinin korunmasını, proje terminalindeki PHP ve Composer alt süreçlerini, Türkçe/kesme işaretli yolları ve proje sürümü geçişinin geri alınmasını sınar. Proje PHP günlükleri proje kartından açılabilir. Bozuk bir proje PHP paketi, ortam durdurulduktan sonra **Onar ve uygula** ile varsayılan sürüm değiştirilmeden onarılabilir.
 
@@ -312,7 +312,7 @@ Arayüzün ve CLI'nın yaptığı her iş `http://127.0.0.1:18800/api/v1` altın
 
 ## Mimari
 
-- `crates/f4box-core`: `Manager` cephesi — katalog, güvenli indirme/arşiv açma, süreç yönetimi, MySQL, projeler, kuyruk/zamanlayıcı, sürüm, yerel API, CLI.
+- `crates/serverbond-core`: `Manager` cephesi — katalog, güvenli indirme/arşiv açma, süreç yönetimi, MySQL, projeler, kuyruk/zamanlayıcı, sürüm, yerel API, CLI.
 - `src-tauri`: dar kapsamlı masaüstü IPC komutları, tepsi ve Windows başlangıcı.
 - `src`: React/TypeScript arayüzü; `services/` IPC katmanı, `hooks/` taslak ve tema, paylaşılan bileşenler.
 - Ayrıntılı katman, işlem modeli, kurtarma ve veri klasörü: [docs/architecture.md](docs/architecture.md).
@@ -329,7 +329,7 @@ Yeni proje ve SQL yedek klasörleri seçilebilir. Adres kalıbı değişikliği 
 Gerçek PHP/MySQL/Caddy ayar testi:
 
 ```powershell
-cargo test -p f4box-core --test preferences_runtime -- --ignored --nocapture
+cargo test -p serverbond-core --test preferences_runtime -- --ignored --nocapture
 ```
 
 ## Windows masaüstü ve sistem tepsisi

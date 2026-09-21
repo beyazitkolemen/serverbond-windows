@@ -2,13 +2,13 @@
 //! remove the autostart command that launches ServerBond with `--autostart`.
 
 use anyhow::{bail, Context, Result};
+use serverbond_core::legacy::STARTUP_NAME as LEGACY_NAME;
 use std::path::Path;
 use winreg::{enums::*, RegKey, RegValue};
 
 const RUN: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const APPROVED: &str = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
 const NAME: &str = "ServerBond";
-const LEGACY_NAME: &str = "F4Box";
 
 pub struct Registration {
     run_key: String,
@@ -190,13 +190,28 @@ mod tests {
         assert!(Registration::read_at(&run, &approved).unwrap().enabled());
         old.restore().unwrap();
         assert!(!Registration::read_at(&run, &approved).unwrap().enabled());
+
+        // Existing installations are read under the former name, but the next
+        // saved command uses ServerBond and removes the duplicate startup entry.
+        use winreg::types::ToRegValue;
+        write_named(&run, LEGACY_NAME, Some(&"old executable".to_reg_value())).unwrap();
+        let legacy = Registration::read_at(&run, &approved).unwrap();
+        assert!(legacy.enabled());
+        legacy.apply(true, &command).unwrap();
+        assert!(read_named(&run, LEGACY_NAME).unwrap().is_none());
+        assert!(read_named(&approved, LEGACY_NAME).unwrap().is_none());
+        assert_eq!(
+            read_named(&run, NAME).unwrap().unwrap().bytes,
+            command.to_reg_value().bytes
+        );
+        old.restore().unwrap();
         RegKey::predef(HKEY_CURRENT_USER)
             .delete_subkey_all(&name)
             .unwrap();
     }
     #[test]
     fn startup_command_roundtrips_spaces_unicode_and_drive_root() {
-        for home in [r"C:\Türkçe O'Brien\F4 Box", r"C:\"] {
+        for home in [r"C:\Türkçe O'Brien\ServerBond", r"C:\"] {
             let exe = r"C:\Program Files\ServerBond\ServerBond.exe";
             let text = command(Path::new(exe), Path::new(home));
             let wide: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();

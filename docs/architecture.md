@@ -15,7 +15,7 @@ ServerBond üç katmandan oluşur; iş kuralı tek bir yerde, Rust çekirdeğind
 └──────────────┬───────────────┘             │                          │
                ▼                             ▼                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│ crates/f4box-core  Manager (Arc)                                                    │
+│ crates/serverbond-core  Manager (Arc)                                                    │
 │  config: Mutex<Config>  processes: Mutex<HashMap<String, ManagedChild>>              │
 │  operation gate  ·  contain()  ·  snapshot()  ·  log()                              │
 │  services · projects · project_runtime · jobs · release · github · envfile          │
@@ -28,7 +28,7 @@ ServerBond üç katmandan oluşur; iş kuralı tek bir yerde, Rust çekirdeğind
    cloudflared.exe · php.exe artisan queue:work / schedule:work · git · composer
 ```
 
-## Çekirdek: `crates/f4box-core`
+## Çekirdek: `crates/serverbond-core`
 
 ### `Manager`
 
@@ -107,7 +107,7 @@ Komut satırına veya yapılandırma dosyasına giden her değer `model.rs` / `p
   projects/                 yeni Laravel köklerinin varsayılan çalışma alanı
 ```
 
-Eski `%LOCALAPPDATA%\F4Box` klasörü varsa ve yenisi yoksa o kullanılır; `F4BOX_HOME` ortam değişkeni de okunur.
+Yeni kurulumlarda `%LOCALAPPDATA%\ServerBond` ve `SERVERBOND_HOME` kullanılır. Önceki kurulumların veri yolu ve okuma takma adları `legacy.rs` ile korunur; [adlandırma ve uyumluluk](naming.md) belgesine bakın.
 
 ## Ağ
 
@@ -115,8 +115,8 @@ Her şey loopback'tir. Varsayılan portlar: web `8088`, HTTPS `8443`, MySQL `133
 
 ## Yeni özellik eklerken
 
-1. İş kuralını `crates/f4box-core/src/<modül>.rs` içinde `impl Manager` olarak yazın; girdi doğrulamasını `model.rs`'e koyun.
-2. Testini `crates/f4box-core/tests/` altına ekleyin (Windows'a bağımlıysa `#[cfg(windows)]` veya `#[ignore]`).
+1. İş kuralını `crates/serverbond-core/src/<modül>.rs` içinde `impl Manager` olarak yazın; girdi doğrulamasını `model.rs`'e koyun.
+2. Testini `crates/serverbond-core/tests/` altına ekleyin (Windows'a bağımlıysa `#[cfg(windows)]` veya `#[ignore]`).
 3. `src-tauri/src/main.rs` içinde ince bir komut, `generate_handler!` listesinde kayıt.
 4. `api.rs` `route()`/`project_route()` içine yol ve `routes()` listesine satır.
 5. `bin/serverbond.rs` içine CLI alt komutu.

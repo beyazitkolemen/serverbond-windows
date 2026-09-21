@@ -10,5 +10,5 @@ export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:/usr/local/cargo/bin:${PATH}"
 
 npm run build
 cargo fmt --all -- --check
-cargo test -p f4box-core --locked
-cargo clippy -p f4box-core --all-targets --locked -- -D warnings
+cargo test -p serverbond-core --locked
+cargo clippy -p serverbond-core --all-targets --locked -- -D warnings

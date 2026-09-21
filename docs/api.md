@@ -179,7 +179,7 @@ Tipik dağıtım betiği: `GET /health` → `POST /projects/{ad}/deploy` → yan
 
 ## Uygulama notları
 
-- Kod: `crates/f4box-core/src/api.rs`. Yönlendirme `route()` ve `project_route()` içindeki desen eşlemeleridir; yeni yol eklerken `routes()` listesini de güncelleyin.
+- Kod: `crates/serverbond-core/src/api.rs`. Yönlendirme `route()` ve `project_route()` içindeki desen eşlemeleridir; yeni yol eklerken `routes()` listesini de güncelleyin.
 - Sunucu `tiny_http` üzerinde çalışır; kabul döngüsü `serverbond-api` iş parçacığında, her istek `serverbond-api-request` iş parçacığındadır. `ApiServer` düşürüldüğünde `unblock()` ile döngü kapanır ve iş parçacığı birleştirilir.
 - `Manager::ensure_api` ayarı dinleyiciyle eşitler: açılışta (Tauri `setup`), her `save_settings` sonrasında ve API'nin kendi `PUT /settings` yolunda çağrılır. `shutdown()` dinleyiciyi kapatır.
-- Testler: `crates/f4box-core/tests/api.rs` gerçek bir dinleyici açar; yetkilendirme, yol listesi, JSON hata gövdeleri, ada göre proje, jeton yenileme ve dinleyicinin ayarlarla kapanmasını doğrular.
+- Testler: `crates/serverbond-core/tests/api.rs` gerçek bir dinleyici açar; yetkilendirme, yol listesi, JSON hata gövdeleri, ada göre proje, jeton yenileme ve dinleyicinin ayarlarla kapanmasını doğrular.

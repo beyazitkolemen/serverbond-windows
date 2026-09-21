@@ -1,8 +1,8 @@
 # Paket kataloğu
 
-`crates/f4box-core/catalog.json` indirilecek kesin URL, sürüm, SHA-256, arşiv kökü ve çalıştırılabilir dosyayı içerir. Kaynaklar 20 Eylül 2026 tarihinde kontrol edildi.
+`crates/serverbond-core/catalog.json` indirilecek kesin URL, sürüm, SHA-256, arşiv kökü ve çalıştırılabilir dosyayı içerir. Kaynaklar 20 Eylül 2026 tarihinde kontrol edildi.
 
-Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her 7.4, 8.0, 8.1, 8.2, 8.3, 8.4 ve 8.5 serisi için bir Windows x64 NTS derlemesi sabitlenir. Tüm PHP özetleri resmî JSON listesindeki ilgili `nts-<derleyici>-x64.zip.sha256` alanından alınır. 7.4–8.1 paketleri resmî `archives/` dizininden, 8.2–8.5 paketleri `releases/` dizininden indirilir.
+Seçilebilir PHP paketleri `crates/serverbond-core/php-versions.json` içindedir. Her 7.4, 8.0, 8.1, 8.2, 8.3, 8.4 ve 8.5 serisi için bir Windows x64 NTS derlemesi sabitlenir. Tüm PHP özetleri resmî JSON listesindeki ilgili `nts-<derleyici>-x64.zip.sha256` alanından alınır. 7.4–8.1 paketleri resmî `archives/` dizininden, 8.2–8.5 paketleri `releases/` dizininden indirilir.
 
 | Paket | Sürüm / hash kaynağı |
 | --- | --- |
@@ -12,7 +12,7 @@ Seçilebilir PHP paketleri `crates/f4box-core/php-versions.json` içindedir. Her
 | phpMyAdmin | [Resmî 5.2.3 all-languages ZIP SHA-256](https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip.sha256) |
 | MySQL | `https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.10-winx64.zip`, resmî HTTPS kaynağından indirilen 280672277 baytlık dosyanın yerelde hesaplanan SHA-256 özeti |
 
-İsteğe bağlı araçlar `crates/f4box-core/tools.json` içindedir ve ortamın çalışması için gerekmez.
+İsteğe bağlı araçlar `crates/serverbond-core/tools.json` içindedir ve ortamın çalışması için gerekmez.
 
 | Araç | Dosya / sürüm | Özet kaynağı | Kurulum yeri |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ Cloudflared, Mailpit ve PostgreSQL yayımlanmış bir özet dosyası sunmadığ�
 4. Ayrı `SERVERBOND_HOME` altında bütünleşme testini çalıştırın.
 5. MySQL için veri yükseltme akışını ayrıca tasarlamadan mevcut veri dizininde sürüm değiştirmeyin.
 
-PHP güncellemelerinde `cargo test -p f4box-core --test php_matrix -- --ignored --nocapture` çalıştırın. PHP varsayılanı değiştirilirse `catalog.json` girdisi de PHP kataloğundaki aynı paketle eşleşmelidir. Önceki kayıtlı sürümleri katalogdan çıkarmayın; uygulama mevcut kullanıcının seçimini çözerken bu girdilere ihtiyaç duyar.
+PHP güncellemelerinde `cargo test -p serverbond-core --test php_matrix -- --ignored --nocapture` çalıştırın. PHP varsayılanı değiştirilirse `catalog.json` girdisi de PHP kataloğundaki aynı paketle eşleşmelidir. Önceki kayıtlı sürümleri katalogdan çıkarmayın; uygulama mevcut kullanıcının seçimini çözerken bu girdilere ihtiyaç duyar.
 
 Paketlerin lisansları kendilerine aittir. ServerBond internetten resmî paketleri indirir; paketleri kaynak deposunda yeniden dağıtmaz.
 

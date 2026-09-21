@@ -1029,45 +1029,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "f4box-core"
-version = "1.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "chrono",
- "dunce",
- "fs2",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tiny_http",
- "uuid",
- "windows-sys 0.59.0",
- "zip 2.4.2",
-]
-
-[[package]]
-name = "f4box-desktop"
-version = "1.1.0"
-dependencies = [
- "anyhow",
- "f4box-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-process",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tempfile",
- "windows-sys 0.59.0",
- "winreg 0.10.1",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3621,6 +3582,45 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "serverbond-core"
+version = "1.1.1"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "dunce",
+ "fs2",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tiny_http",
+ "uuid",
+ "windows-sys 0.59.0",
+ "zip 2.4.2",
+]
+
+[[package]]
+name = "serverbond-desktop"
+version = "1.1.1"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "serverbond-core",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-process",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tempfile",
+ "windows-sys 0.59.0",
+ "winreg 0.10.1",
 ]
 
 [[package]]

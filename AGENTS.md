@@ -27,7 +27,7 @@ Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md).
 
 ## Kod
 
-- `crates/f4box-core`: katalog, indirme, süreç, MySQL, projeler, kuyruk/zamanlayıcı, Cloudflare tüneli, Mailpit, Windows izinleri. Domain enum’ları `crates/f4box-core/src/domain`, yerleşim `crates/f4box-core/src/repository` (`DataDir`). `Manager` cephe olarak kalır.
+- `crates/serverbond-core`: katalog, indirme, süreç, MySQL, projeler, kuyruk/zamanlayıcı, Cloudflare tüneli, Mailpit, Windows izinleri. Domain enum’ları `crates/serverbond-core/src/domain`, yerleşim `crates/serverbond-core/src/repository` (`DataDir`). `Manager` cephe olarak kalır.
 - `src-tauri`: dar IPC, tepsi, GitHub güncelleyici eklentileri; eylem dizeleri `ToolAction` / `GithubAction` / `EnvironmentAction`
 - `src`: React. `src/domain` (Page, WorkspaceService, ToolCommand), `src/services` (IPC), `src/repositories/snapshot.ts`. Ham `call("mail")` ekleme. `src/updates.ts` GitHub sürüm denetimi.
 - Sabit paketler `catalog.json` / `php-versions.json` / `tools.json`; SHA-256 olmadan güncellenmez
@@ -35,14 +35,14 @@ Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md).
 
 ## Cursor skill ve kurallar
 
-Kurallar (otomatik): `.cursor/rules/` — `f4box.mdc`, `git-main.mdc`, `catalog.mdc`, `frontend.mdc`.
+Kurallar (otomatik): `.cursor/rules/` — `serverbond.mdc`, `git-main.mdc`, `catalog.mdc`, `frontend.mdc`.
 
 Skill’ler (konuya göre oku):
 
 | Skill | Ne zaman |
 | --- | --- |
-| `f4box-architecture` | Katman, veri dizini, yeni özellik yeri |
-| `f4box-catalog` | PHP/MySQL/Caddy/Composer/phpMyAdmin sürüm ve hash |
-| `f4box-runtime` | Servis, proje, port, onarım, phpMyAdmin |
-| `f4box-desktop` | Tauri, tepsi, Windows başlangıç |
-| `f4box-testing` | Hangi testi nerede çalıştıracağın |
+| `serverbond-architecture` | Katman, veri dizini, yeni özellik yeri |
+| `serverbond-catalog` | PHP/MySQL/Caddy/Composer/phpMyAdmin sürüm ve hash |
+| `serverbond-runtime` | Servis, proje, port, onarım, phpMyAdmin |
+| `serverbond-desktop` | Tauri, tepsi, Windows başlangıç |
+| `serverbond-testing` | Hangi testi nerede çalıştıracağın |

@@ -11,7 +11,7 @@ mod tray;
 use std::sync::atomic::Ordering;
 use tauri::Manager as _;
 
-use f4box_core::{
+use serverbond_core::{
     model::{
         DiscoveredProject, Project, ProjectRelease, ProjectSchedule, QueueWorker, Settings,
         Snapshot,
@@ -91,7 +91,7 @@ async fn repair_project_php(
 #[tauri::command]
 async fn requirements(
     state: tauri::State<'_, State>,
-) -> Result<Vec<f4box_core::requirements::Requirement>, String> {
+) -> Result<Vec<serverbond_core::requirements::Requirement>, String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || Ok(state.requirements())).await
 }
@@ -149,7 +149,9 @@ async fn save_settings(state: tauri::State<'_, State>, settings: Settings) -> Re
     .await
 }
 #[tauri::command]
-async fn api_status(state: tauri::State<'_, State>) -> Result<f4box_core::api::ApiStatus, String> {
+async fn api_status(
+    state: tauri::State<'_, State>,
+) -> Result<serverbond_core::api::ApiStatus, String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || Ok(state.api_status())).await
 }
@@ -612,7 +614,7 @@ async fn save_tunnel_auto_start(
 async fn grant_permissions(
     state: tauri::State<'_, State>,
     defender: bool,
-) -> Result<f4box_core::permissions::PermissionState, String> {
+) -> Result<serverbond_core::permissions::PermissionState, String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || state.grant_permissions(defender)).await
 }

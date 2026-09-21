@@ -51,9 +51,9 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          $exe = Get-ChildItem target/release/f4box-desktop.exe | Select-Object -First 1
+          $exe = Get-ChildItem target/release/serverbond-desktop.exe | Select-Object -First 1
           Copy-Item $exe.FullName "artifacts/ServerBond_${version}_x64.exe"
-          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          $setup = Get-Item "target/release/bundle/nsis/ServerBond_${version}_x64-setup.exe"
           Copy-Item $setup.FullName "artifacts/ServerBond_${version}_x64-setup.exe"
           Get-ChildItem artifacts/*.exe | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"

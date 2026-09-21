@@ -14,15 +14,15 @@ Git kuralı: yalnızca `main`. **PR oluşturma yok** (`gh pr create`, ManagePull
 
 | Komut | Nerede | Ne yapar |
 | --- | --- | --- |
-| `npm run test:ai` | Linux Cloud Agent, yerel Linux/macOS | Vite/TypeScript derlemesi, `f4box-core` testleri, rustfmt, clippy |
-| `npm run test:core` | Her yer | Yalnızca `f4box-core` birim/entegrasyon testleri |
+| `npm run test:ai` | Linux Cloud Agent, yerel Linux/macOS | Vite/TypeScript derlemesi, `serverbond-core` testleri, rustfmt, clippy |
+| `npm run test:core` | Her yer | Yalnızca `serverbond-core` birim/entegrasyon testleri |
 | `npm run check` | Windows geliştirme | Arayüz + tüm workspace clippy (Tauri masaüstü dahil) |
 | `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS + EXE (`createUpdaterArtifacts` kapalı) |
 | `.github/workflows/release.yml` | GitHub tag `v*` | İmzalı kurulum, `latest.json`, otomatik güncelleme |
 | `npm run test:integration` | Windows, ServerBond kapalı | Gerçek PHP/MySQL/Caddy duman testi |
-| `cargo test -p f4box-core --tests -- --ignored` | Windows | İndirme ve servis bütünleşme testleri |
+| `cargo test -p serverbond-core --tests -- --ignored` | Windows | İndirme ve servis bütünleşme testleri |
 
-Yeni çekirdek davranışı için `crates/f4box-core/tests` altına test ekleyin. Masaüstü IPC veya tepsi davranışı Windows CI / `npm run desktop` ile doğrulanır.
+Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ekleyin. Masaüstü IPC veya tepsi davranışı Windows CI / `npm run desktop` ile doğrulanır.
 
 ## Sınırlar
 

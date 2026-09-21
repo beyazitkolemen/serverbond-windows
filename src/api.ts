@@ -1,8 +1,8 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { Snapshot } from "./types";
-import catalog from "../crates/f4box-core/catalog.json";
-import phpVersions from "../crates/f4box-core/php-versions.json";
-import tools from "../crates/f4box-core/tools.json";
+import catalog from "../crates/serverbond-core/catalog.json";
+import phpVersions from "../crates/serverbond-core/php-versions.json";
+import tools from "../crates/serverbond-core/tools.json";
 
 const toolVersion = (id: string) =>
   tools.find((tool) => tool.id === id)?.version ?? "";

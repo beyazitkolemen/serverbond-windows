@@ -1,6 +1,6 @@
 ---
 description: Sabit paket kataloğu ve SHA-256
-globs: crates/f4box-core/catalog.json,crates/f4box-core/php-versions.json,docs/packages.md
+globs: crates/serverbond-core/catalog.json,crates/serverbond-core/php-versions.json,docs/packages.md
 ---
 
 # Paket kataloğu
@@ -9,4 +9,4 @@ globs: crates/f4box-core/catalog.json,crates/f4box-core/php-versions.json,docs/p
 - PHP varsayılanı değişirse `catalog.json` içindeki `php` kaydı `php-versions.json` ile aynı paket olmalıdır.
 - Kullanıcının kayıtlı sürümünü kırmak için eski yama sürümünü katalogdan çıkarma.
 - MySQL veri dizinini başka bir MySQL sürümüyle açacak güncelleme yapma.
-- Kaynak ve doğrulama adımları: [docs/packages.md](../../docs/packages.md). Skill: `f4box-catalog`.
+- Kaynak ve doğrulama adımları: [docs/packages.md](../../docs/packages.md). Skill: `serverbond-catalog`.

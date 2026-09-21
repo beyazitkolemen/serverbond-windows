@@ -10,7 +10,7 @@ ServerBond, yayımlanmış GitHub sürümlerindeki imzalı NSIS paketini `latest
 
 Kaynak: `https://github.com/beyazitkolemen/serverbond-windows/releases/latest/download/latest.json`
 
-**v1.1.0:** GitHub Actions hesap ödeme/limit engeli ve tanımlanmamış imza anahtarı nedeniyle paketler Windows'ta yerel olarak derlenip yayımlandı. Bu sürüm `latest.json` ve `.sig` içermez; GitHub Releases sayfasındaki kurulum EXE'si elle çalıştırılır. Aşağıdaki imzalı yayın akışı, Actions ve imza anahtarı hazır olduğunda kullanılabilir.
+**v1.1.0 ve v1.1.1:** Paketler Windows'ta yerel olarak derlenip yayımlandı. Güncelleme imza anahtarı tanımlı olmadığından bu sürümler `latest.json` ve `.sig` içermez; GitHub Releases sayfasındaki kurulum EXE'si elle çalıştırılır. Aşağıdaki imzalı yayın akışı, Actions ve imza anahtarı hazır olduğunda kullanılabilir.
 
 Depo herkese açık olmalıdır. Özel depoda `latest.json` oturumsuz indirilemez; uygulama “güncelleme yok” veya ağ hatası gösterir.
 
@@ -35,7 +35,7 @@ git push origin v1.2.0
 Anahtar üretmek:
 
 ```powershell
-npx @tauri-apps/cli signer generate -w f4box-updater.key
+npx @tauri-apps/cli signer generate -w serverbond-updater.key
 ```
 
 Açık anahtarı `src-tauri/tauri.conf.json` → `plugins.updater.pubkey` alanına yazın. Özel anahtarı depoya eklemeyin (`.gitignore` `*.key` dosyalarını dışlar). Açık anahtarı değiştirecekseniz daha önce imzalanmış kurulumlar yeni sürümü doğrulayamaz; ilk yayımlanan güncelleyici anahtarını saklayın.
@@ -45,7 +45,7 @@ Açık anahtarı `src-tauri/tauri.conf.json` → `plugins.updater.pubkey` alanı
 İmzalı üretim paketi anahtar ister:
 
 ```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\f4box-updater.key
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\serverbond-updater.key
 npm run desktop:build
 ```
 
