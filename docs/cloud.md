@@ -32,8 +32,10 @@ Tarayıcı Laravel oturumu ve CSRF ile /broadcasting/auth üzerinden private-cus
 
 ## İşlem kuralları
 
-Servisler: all, php, mysql, caddy, mail, postgres, redis, tunnel.
-Eylemler: start, stop, restart. Her iki taraf da izin listesini doğrular.
+Servisler: all, php, mysql, caddy, mail, postgres, redis, tunnel, composer, phpmyadmin, node.
+Eylemler: install, repair, start, stop, restart. Her iki taraf da servis/eylem eşleşmesini doğrular.
+
+Servis raporu id/running yanında desteklenen actions, varsa installed ve version içerir. Cloud yalnızca kendi izin listesiyle cihazın eylemlerinin kesişimini kabul eder. Eski istemciler actions göndermediğinde yalnızca start/stop/restart kullanılır. Tam snapshot, proje yolları ve sırlar rapora dahil edilmez. Önce 11 servisli raporu kabul eden Cloud sürümünü, sonra Windows güncellemesini yayınlayın.
 
 Cloud durumları: pending → delivered → succeeded / failed / uncertain / expired.
 Teslim edilmemiş pending işlemi 60 saniye sonra expired olur. Bağlantı iptalinde pending → cancelled, delivered → uncertain. İptal, zaten başlamış işlemi geri almaz.

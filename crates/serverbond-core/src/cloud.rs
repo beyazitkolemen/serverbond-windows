@@ -15,8 +15,51 @@ use std::{
     time::Duration,
 };
 const SERVICES: &[&str] = &[
-    "all", "php", "mysql", "caddy", "mail", "postgres", "redis", "tunnel",
+    "all",
+    "php",
+    "mysql",
+    "caddy",
+    "mail",
+    "postgres",
+    "redis",
+    "tunnel",
+    "composer",
+    "phpmyadmin",
+    "node",
 ];
+const SERVICE_ACTIONS: &[&str] = &["install", "repair", "start", "stop", "restart"];
+
+// Project paths, credentials and raw snapshot fields never enter the heartbeat.
+fn service_report(inventory: Vec<Value>) -> Vec<Value> {
+    inventory
+        .into_iter()
+        .filter_map(|item| {
+            let id = item["id"].as_str()?;
+            if !SERVICES.contains(&id) {
+                return None;
+            }
+            let actions: Vec<&str> = item["actions"]
+                .as_array()?
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|action| SERVICE_ACTIONS.contains(action))
+                .collect();
+            let state = &item["state"];
+            let mut report = json!({
+                "id": id,
+                "running": state["running"].as_bool().unwrap_or(false),
+                "actions": actions,
+            });
+            if let Some(installed) = state["installed"].as_bool() {
+                report["installed"] = installed.into();
+            }
+            if let Some(version) = state["version"].as_str() {
+                report["version"] = version.into();
+            }
+            Some(report)
+        })
+        .collect()
+}
 #[derive(Default)]
 pub(crate) struct CloudState {
     started: AtomicBool,
@@ -275,16 +318,7 @@ impl Manager {
             base_url(&c.url, allow_http())?;
             c
         };
-        // Only service IDs and booleans leave the computer.
-        let services: Vec<Value> = crate::api::service_inventory(self)?
-            .into_iter()
-            .filter_map(|v| {
-                let id = v["id"].as_str()?;
-                SERVICES.contains(&id).then(
-                    || json!({"id":id,"running":v["state"]["running"].as_bool().unwrap_or(false)}),
-                )
-            })
-            .collect();
+        let services = service_report(crate::api::service_inventory(self)?);
         let http = client()?;
         let (status, reply) = post(
             &http,
@@ -343,7 +377,13 @@ impl Manager {
         }
         let expires = chrono::DateTime::parse_from_rfc3339(&command.expires_at)?;
         let invalid = !SERVICES.contains(&command.service.as_str())
-            || !["start", "stop", "restart"].contains(&command.action.as_str());
+            || !SERVICE_ACTIONS.contains(&command.action.as_str())
+            || !services.iter().any(|service| {
+                service["id"] == command.service
+                    && service["actions"].as_array().is_some_and(|actions| {
+                        actions.iter().any(|action| action == &command.action)
+                    })
+            });
         let state = if invalid {
             "failed"
         } else if expires <= chrono::Utc::now() {
@@ -662,6 +702,24 @@ mod windows_cloud_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn service_report_exposes_capabilities_without_snapshot_secrets() {
+        let report = service_report(vec![
+            json!({"id":"node","actions":["install","repair"],"state":{"installed":true,"version":"24.0.0","directory":"private-path","token":"secret"}}),
+            json!({"id":"mail","actions":["install","repair","start","stop","restart","open"],"state":{"running":true,"installed":true,"smtpPassword":"secret"}}),
+            json!({"id":"unknown","actions":["start"],"state":{}}),
+        ]);
+        assert_eq!(report.len(), 2);
+        assert_eq!(
+            report[0],
+            json!({"id":"node","actions":["install","repair"],"running":false,"installed":true,"version":"24.0.0"})
+        );
+        assert_eq!(
+            report[1]["actions"],
+            json!(["install", "repair", "start", "stop", "restart"])
+        );
+        assert!(!serde_json::to_string(&report).unwrap().contains("secret"));
+    }
     #[test]
     fn cloud_urls_require_https_and_never_allow_embedded_credentials() {
         assert_eq!(
