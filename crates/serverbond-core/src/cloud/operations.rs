@@ -6,6 +6,10 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "database.show",
+    "database.create",
+    "database.backup",
+    "database.restore",
     "projects.list",
     "projects.add",
     "projects.remove",
@@ -122,6 +126,14 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "database.show")]
+    DatabaseShow(Remove),
+    #[serde(rename = "database.create")]
+    DatabaseCreate(Remove),
+    #[serde(rename = "database.backup")]
+    DatabaseBackup(Remove),
+    #[serde(rename = "database.restore")]
+    DatabaseRestore(super::database::Restore),
     #[serde(rename = "env.read")]
     EnvRead(Remove),
     #[serde(rename = "env.write")]
@@ -195,6 +207,16 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::DatabaseShow(input) => {
+                return super::database::execute(manager, &input.id, "show")
+            }
+            Self::DatabaseCreate(input) => {
+                return super::database::execute(manager, &input.id, "create")
+            }
+            Self::DatabaseBackup(input) => {
+                return super::database::execute(manager, &input.id, "backup")
+            }
+            Self::DatabaseRestore(input) => return super::database::restore(manager, input),
             Self::EnvRead(input) => return super::environment::read(manager, &input.id),
             Self::EnvWrite(input) => return super::environment::write(manager, input),
             Self::JobsFailed(input) => {

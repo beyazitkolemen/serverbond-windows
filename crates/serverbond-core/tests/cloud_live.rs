@@ -14,6 +14,13 @@ fn live_reverb_device_roundtrip() {
     let url = std::env::var("SERVERBOND_CLOUD_SMOKE_URL").unwrap();
     let home = tempfile::tempdir().unwrap();
     let manager = Arc::new(Manager::new(home.path().to_path_buf()).unwrap());
+    if std::env::var("SMOKE_DATABASE").as_deref() == Ok("1") {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let mut settings = manager.snapshot().unwrap().settings;
+        settings.mysql_port = listener.local_addr().unwrap().port();
+        drop(listener);
+        manager.save_settings(settings).unwrap();
+    }
     if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
         for entry in std::fs::read_dir(cache).unwrap() {
             let entry = entry.unwrap();
@@ -113,6 +120,7 @@ fn live_reverb_device_roundtrip() {
                 < Duration::from_secs(
                     if std::env::var("SMOKE_PHP").as_deref() == Ok("1")
                         || std::env::var("SMOKE_JOBS").as_deref() == Ok("1")
+                        || std::env::var("SMOKE_DATABASE").as_deref() == Ok("1")
                     {
                         600
                     } else {
@@ -125,6 +133,15 @@ fn live_reverb_device_roundtrip() {
         std::thread::sleep(Duration::from_millis(200));
     }
     manager.cloud_disconnect().unwrap();
+    if std::env::var("SMOKE_DATABASE").as_deref() == Ok("1") {
+        assert_eq!(
+            manager
+                .mysql_query("SELECT value FROM remote_git.cloud_probe WHERE id=1")
+                .unwrap(),
+            "restored-marker"
+        );
+        manager.stop("mysql").unwrap();
+    }
     if std::env::var("SMOKE_PHP").as_deref() == Ok("1") {
         assert_eq!(
             manager
