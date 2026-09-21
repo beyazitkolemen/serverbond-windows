@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "github.show",
+    "github.client",
+    "github.disconnect",
     "tunnel.show",
     "tunnel.token",
     "tunnel.apply",
@@ -142,6 +145,12 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "github.show")]
+    GithubShow(Empty),
+    #[serde(rename = "github.client")]
+    GithubClient(super::github::Client),
+    #[serde(rename = "github.disconnect")]
+    GithubDisconnect(super::mysql::Confirm),
     #[serde(rename = "tunnel.show")]
     TunnelShow(Empty),
     #[serde(rename = "tunnel.token")]
@@ -255,6 +264,9 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::GithubShow(_) => return Ok(super::github::show(manager)),
+            Self::GithubClient(input) => return super::github::client(manager, input),
+            Self::GithubDisconnect(input) => return super::github::disconnect(manager, input),
             Self::TunnelShow(_) => return super::tunnel::show(manager),
             Self::TunnelToken(input) => return super::tunnel::token(manager, input, false),
             Self::TunnelApply(input) => return super::tunnel::token(manager, input, true),

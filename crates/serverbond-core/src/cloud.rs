@@ -16,6 +16,7 @@ use std::{
 };
 mod database;
 mod environment;
+mod github;
 mod jobs;
 mod mysql;
 mod operations;
