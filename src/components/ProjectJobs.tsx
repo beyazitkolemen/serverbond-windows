@@ -207,7 +207,7 @@ export function ScheduleSection({
               }))
             }
           />
-          <span>Ortamla başlat</span>
+          <span>Sunucuyla başlat</span>
         </label>
         <div className="project-job-actions">
           <StatusBadge tone={project.scheduleRunning ? "running" : "stopped"}>
@@ -498,7 +498,7 @@ export function QueueSection({
                     update(index, { autoStart: e.target.checked })
                   }
                 />
-                <span>Ortamla başlat</span>
+                <span>Sunucuyla başlat</span>
               </label>
             </div>
             {state?.issue ? (

@@ -101,7 +101,7 @@ export function Shell({
             onPage={onPage}
           />
           <NavGroup
-            label="Ortam"
+            label="Sunucu"
             items={environmentNav}
             page={page}
             onPage={onPage}

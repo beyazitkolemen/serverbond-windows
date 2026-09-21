@@ -75,8 +75,9 @@ impl Manager {
     }
 
     pub fn trust_https(&self) -> Result<()> {
-        let cert = find_local_ca(&self.home)
-            .context("Yerel HTTPS sertifikası henüz yok. HTTPS açıkken ortamı bir kez başlatın.")?;
+        let cert = find_local_ca(&self.home).context(
+            "Yerel HTTPS sertifikası henüz yok. HTTPS açıkken sunucuyu bir kez başlatın.",
+        )?;
         self.trust_certificate(&cert)
     }
 

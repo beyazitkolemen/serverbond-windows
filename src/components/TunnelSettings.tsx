@@ -164,7 +164,7 @@ export default function TunnelSettings({
               )
             }
           />
-          <span>Ortam başlatıldığında tüneli de başlat</span>
+          <span>Sunucu başlatıldığında tüneli de başlat</span>
         </label>
       ) : null}
       <p className="section-note">

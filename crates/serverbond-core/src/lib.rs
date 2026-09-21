@@ -539,7 +539,7 @@ impl Manager {
         let _guard = self.gate()?;
         let package = self.package(id)?;
         if self.snapshot()?.any_running {
-            bail!("Onarmadan önce çalışan ortamı durdurun. MySQL verileri korunur.");
+            bail!("Onarmadan önce çalışan sunucuyu durdurun. MySQL verileri korunur.");
         }
         install::repair(&self.home, &package, |line| self.log(line))?;
         if id == "php" {
@@ -591,7 +591,7 @@ impl Manager {
         let runtime = current.runtime_changed(&settings);
         let running = self.snapshot()?.any_running;
         if running && runtime {
-            bail!("Portları ve sunucu ayarlarını değiştirmeden önce ortamı durdurun.");
+            bail!("Portları ve sunucu ayarlarını değiştirmeden önce sunucuyu durdurun.");
         }
         if !running {
             for port in [settings.web_port, settings.mysql_port, settings.php_port] {

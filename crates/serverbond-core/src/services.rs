@@ -90,7 +90,7 @@ impl Manager {
         let _guard = self.gate()?;
         let package = crate::model::php_package(version)?;
         if self.snapshot()?.any_running {
-            bail!("PHP onarımı için önce çalışan ortamı durdurun.");
+            bail!("PHP onarımı için önce çalışan sunucuyu durdurun.");
         }
         crate::install::repair(&self.home, &package, |line| self.log(line))?;
         self.select_php_inner(version)
@@ -698,7 +698,7 @@ impl Manager {
             bail!("Parolayı değiştirmek için önce MySQL'i başlatın.");
         }
         if !self.home.join("config/mysql-ready").is_file() {
-            bail!("MySQL henüz ilk kurulumu bitirmedi. Önce ortamı bir kez başlatın.");
+            bail!("MySQL henüz ilk kurulumu bitirmedi. Önce sunucuyu bir kez başlatın.");
         }
         self.mysql_query(&format!(
             "ALTER USER 'root'@'localhost' IDENTIFIED BY '{password}'"

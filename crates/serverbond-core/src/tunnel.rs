@@ -142,7 +142,7 @@ impl Manager {
         config.settings.tunnel.auto_start = auto_start;
         self.save_config(&config)?;
         self.log(if auto_start {
-            "Cloudflare tüneli ortamla birlikte başlatılacak."
+            "Cloudflare tüneli sunucuyla birlikte başlatılacak."
         } else {
             "Cloudflare tüneli yalnızca elle başlatılacak."
         });

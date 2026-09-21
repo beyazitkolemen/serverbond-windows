@@ -87,7 +87,7 @@ export default function Packages({
               }
               title={
                 needsRepair && running
-                  ? "Onarmak için önce ortamı durdurun"
+                  ? "Onarmak için önce sunucuyu durdurun"
                   : undefined
               }
               onClick={() =>
@@ -232,7 +232,7 @@ export default function Packages({
                         disabled={busy || running}
                         title={
                           running
-                            ? "Onarmak için ortamı durdurun"
+                            ? "Onarmak için sunucuyu durdurun"
                             : "Program dosyalarını doğrulanmış paketten yeniden kur"
                         }
                         aria-label={`${p.name} onar`}
@@ -260,7 +260,7 @@ export default function Packages({
       ) : null}
       {detailed ? (
         <p className="section-note">
-          Onarım için ortamı durdurun. Veriler ve önceki program kopyası
+          Onarım için sunucuyu durdurun. Veriler ve önceki program kopyası
           korunur.
         </p>
       ) : null}

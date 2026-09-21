@@ -296,7 +296,7 @@ export default function Services({
                 ? "Ayarlar’dan phpMyAdmin erişimini açın"
                 : running
                   ? "phpMyAdmin'i tarayıcıda aç"
-                  : "Önce ortamı başlatın",
+                  : "Önce sunucuyu başlatın",
               onClick: () =>
                 void run("phpMyAdmin açılıyor…", () =>
                   packagesService.openPhpMyAdmin(),
@@ -611,7 +611,7 @@ export default function Services({
             >
               <p className="section-note">
                 {running
-                  ? "Kaydetmek için ortamı durdurun."
+                  ? "Kaydetmek için sunucuyu durdurun."
                   : "Değişiklikler sonraki başlangıçta uygulanır."}
               </p>
               <fieldset disabled={locked} className="settings-fields">
@@ -632,7 +632,7 @@ export default function Services({
                 <span>
                   {dirty
                     ? running
-                      ? "Hizmet ayarlarını kaydetmek için ortamı durdurun"
+                      ? "Hizmet ayarlarını kaydetmek için sunucuyu durdurun"
                       : "Kaydedilmemiş değişiklikler var"
                     : "Ayarlar güncel"}
                 </span>
@@ -737,7 +737,7 @@ function PmaActions({
         ]}
         action={() => packagesService.repair(ComponentId.PhpMyAdmin)}
         blocked={running}
-        blockedReason="Onarmak için ortamı durdurun. phpMyAdmin dosyaları web sunucusu açıkken kilitlenebilir."
+        blockedReason="Onarmak için sunucuyu durdurun. phpMyAdmin dosyaları web sunucusu açıkken kilitlenebilir."
       />
       <p className="section-note">
         Kullanıcı: <strong>root</strong> · Parola: Ayarlar → Sistem.
@@ -852,7 +852,7 @@ function MailForm({
         />
       </div>
       <Toggle
-        label="Ortam başlatıldığında Mailpit'i de başlat"
+        label="Sunucu başlatıldığında Mailpit'i de başlat"
         value={values.mail.autoStart}
         onChange={(v) => change("mail", { ...values.mail, autoStart: v })}
       />
@@ -884,7 +884,7 @@ function PostgresForm({
         />
       </div>
       <Toggle
-        label="Ortam başlatıldığında PostgreSQL'i de başlat"
+        label="Sunucu başlatıldığında PostgreSQL'i de başlat"
         value={values.postgres.autoStart}
         onChange={(v) =>
           change("postgres", { ...values.postgres, autoStart: v })
@@ -913,7 +913,7 @@ function RedisForm({
         />
       </div>
       <Toggle
-        label="Ortam başlatıldığında Redis'i de başlat"
+        label="Sunucu başlatıldığında Redis'i de başlat"
         value={values.redis.autoStart}
         onChange={(v) => change("redis", { ...values.redis, autoStart: v })}
       />

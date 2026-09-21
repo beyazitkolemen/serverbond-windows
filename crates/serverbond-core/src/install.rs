@@ -230,7 +230,7 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
     }
     if !repair && destination.exists() {
         bail!(
-            "Eksik kurulum klasörü bulundu: {}. Ortamı durdurup Bileşenler ekranındaki Onar düğmesini kullanın.",
+            "Eksik kurulum klasörü bulundu: {}. Sunucuyu durdurup Bileşenler ekranındaki Onar düğmesini kullanın.",
             destination.display()
         );
     }
@@ -321,7 +321,7 @@ fn install_inner(home: &Path, package: &Package, repair: bool, log: impl Fn(Stri
     let replaced = destination.exists();
     if replaced {
         fs::rename(&destination, &backup)
-            .context("Paket klasörü kullanılıyor; çalışan ortamı durdurun.")?;
+            .context("Paket klasörü kullanılıyor; çalışan sunucuyu durdurun.")?;
     }
     if let Err(error) = fs::rename(stage.path(), &destination) {
         if replaced {

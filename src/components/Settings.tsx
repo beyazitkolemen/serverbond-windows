@@ -33,7 +33,7 @@ const sections = [
 ] as const;
 const sectionGroups = [
   {
-    label: "Ortam",
+    label: "Sunucu",
     items: ["Genel", "PHP", "MySQL", "Web sunucusu"],
   },
   {
@@ -205,7 +205,7 @@ export default function Settings({
       </nav>
       <p className="section-note">
         {running
-          ? "Port ve servis ayarlarını değiştirmek için ortamı durdurun."
+          ? "Port ve servis ayarlarını değiştirmek için sunucuyu durdurun."
           : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
       </p>
       {note && (
@@ -241,7 +241,7 @@ export default function Settings({
                 projeler taşınmaz.
               </p>
               <Toggle
-                label="ServerBond açıldığında ortamı otomatik başlat"
+                label="ServerBond açıldığında sunucuyu otomatik başlat"
                 value={values.startOnLaunch}
                 onChange={(v) => change("startOnLaunch", v)}
               />
@@ -685,7 +685,8 @@ export default function Settings({
           <section className="settings-section">
             <h2>Sertifika güveni</h2>
             <p className="section-note">
-              HTTPS açıkken ortamı başlatın, ardından yerel sertifikaya güvenin.
+              HTTPS açıkken sunucuyu başlatın, ardından yerel sertifikaya
+              güvenin.
             </p>
             <div className="settings-grid">
               <button
@@ -720,7 +721,7 @@ export default function Settings({
             <span>
               {dirty
                 ? running && runtimeDirty
-                  ? "Sunucu ayarlarını kaydetmek için ortamı durdurun"
+                  ? "Sunucu ayarlarını kaydetmek için sunucuyu durdurun"
                   : "Kaydedilmemiş değişiklikler var"
                 : "Ayarlar güncel"}
             </span>

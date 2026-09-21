@@ -16,16 +16,16 @@ export default function EnvironmentSummary({
   const ready = services.length === 3 && active === 3;
   const issue = services.some((p) => p.issue);
   const status = issue
-    ? "Ortamı kontrol edin"
+    ? "Sunucuyu kontrol edin"
     : ready
-      ? "Ortam çalışıyor"
+      ? "Sunucu çalışıyor"
       : active
-        ? "Servisler kısmen açık"
+        ? "Servisler kısmen çalışıyor"
         : "Servisler kapalı";
   return (
     <section
       className={`environment-summary ${ready && !issue ? "is-running" : ""}`}
-      aria-label="Ortam özeti"
+      aria-label="Sunucu özeti"
     >
       <div className="environment-summary-copy">
         <div className="summary-symbol">

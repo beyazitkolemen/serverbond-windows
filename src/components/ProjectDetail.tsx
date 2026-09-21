@@ -395,7 +395,7 @@ export function ProjectPhp({
           }
           title={
             repair && anyRunning
-              ? "Onarmak için önce ortamı durdurun"
+              ? "Onarmak için önce sunucuyu durdurun"
               : undefined
           }
           onClick={() =>

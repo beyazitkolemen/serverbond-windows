@@ -62,7 +62,7 @@ export default function App() {
       }
     } catch (error) {
       if (request === requestNumber.current) {
-        setConnectionError(`Ortam bilgileri alınamadı: ${String(error)}`);
+        setConnectionError(`Sunucu bilgileri alınamadı: ${String(error)}`);
       }
       throw error;
     }
@@ -203,7 +203,7 @@ export default function App() {
           <div className="workspace-toolbar-inner">
             <div className="breadcrumb">
               <Monitor size={16} />
-              <span>Yerel ortam</span>
+              <span>Yerel sunucu</span>
               <ChevronRight size={16} />
               <strong>
                 {
@@ -286,7 +286,7 @@ export default function App() {
           }
           onClick={() =>
             void run(
-              running ? "Ortam durduruluyor…" : "Ortam başlatılıyor…",
+              running ? "Sunucu durduruluyor…" : "Sunucu başlatılıyor…",
               () => environmentService.toggle(running),
             )
           }
@@ -296,7 +296,7 @@ export default function App() {
           ) : (
             <Play size={18} fill="currentColor" />
           )}
-          {running ? "Ortamı durdur" : "Ortamı başlat"}
+          {running ? "Sunucu durdur" : "Sunucu başlat"}
         </button>
       </header>
       <Notice
@@ -311,7 +311,7 @@ export default function App() {
       {!state ? (
         <div className="loading-state">
           <RefreshCw className="spin" size={24} />
-          <p>Ortam bilgileri alınıyor…</p>
+          <p>Sunucu bilgileri alınıyor…</p>
           <button
             className="button secondary"
             onClick={() => void refresh().catch((e) => setError(String(e)))}
@@ -397,7 +397,7 @@ export default function App() {
                   <strong>2. Proje ekle</strong>
                 </li>
                 <li>
-                  <strong>3. Ortamı başlat</strong>
+                  <strong>3. Sunucu başlat</strong>
                 </li>
               </ol>
               <button
@@ -546,7 +546,7 @@ function LeaveDialog({
         <h2 id="leave-title">ServerBond kapatılsın mı?</h2>
       </div>
       <p className="dialog-copy">
-        Ortam çalışıyor. Çıkış PHP, MySQL ve web sunucusunu durdurur.
+        Sunucu çalışıyor. Çıkış PHP, MySQL ve web sunucusunu durdurur.
       </p>
       <div className="modal-actions">
         <button type="button" className="button secondary" onClick={close}>

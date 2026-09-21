@@ -76,7 +76,7 @@ fn main() -> Result<()> {
         }
         "serve" => {
             manager.start("all")?;
-            println!("Ortam çalışıyor. Durdurmak için Enter'a basın.");
+            println!("Sunucu çalışıyor. Durdurmak için Enter'a basın.");
             let mut line = String::new();
             std::io::stdin().read_line(&mut line)?;
             manager.stop("all")?;

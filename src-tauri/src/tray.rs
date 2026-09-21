@@ -30,11 +30,11 @@ pub struct TrayMenu {
 pub fn setup(app: &AppHandle) -> Result<()> {
     let item = |id: &str, text: &str| MenuItem::with_id(app, id, text, true, None::<&str>);
     let open = item("open", "ServerBond'ı aç")?;
-    let status = item("status", "Ortam denetleniyor…")?;
+    let status = item("status", "Sunucu denetleniyor…")?;
     status.set_enabled(false)?;
-    let start = item("start", "Tümünü başlat")?;
-    let stop = item("stop", "Tümünü durdur")?;
-    let restart = item("restart", "Tümünü yeniden başlat")?;
+    let start = item("start", "Sunucu başlat")?;
+    let stop = item("stop", "Sunucu durdur")?;
+    let restart = item("restart", "Sunucuyu yeniden başlat")?;
     let pma = item("pma", "phpMyAdmin'i aç")?;
     let mail = item("mail", "Gelen kutusunu aç")?;
     let services_page = item("services", "Hizmetler")?;
@@ -175,11 +175,11 @@ fn refresh(app: &AppHandle, snapshot: &serverbond_core::model::Snapshot) -> Resu
     } else if busy {
         "İşlem devam ediyor…".into()
     } else if running == 3 {
-        "Ortam çalışıyor".into()
+        "Sunucu çalışıyor".into()
     } else if snapshot.any_running {
-        format!("Ortam kısmen çalışıyor ({running}/3)")
+        format!("Sunucu kısmen çalışıyor ({running}/3)")
     } else {
-        "Ortam durduruldu".into()
+        "Sunucu durduruldu".into()
     };
     menu.status.set_text(&status)?;
     if let Some(tray) = app.tray_by_id("serverbond-tray") {

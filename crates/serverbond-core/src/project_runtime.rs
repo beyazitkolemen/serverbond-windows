@@ -163,7 +163,7 @@ impl Manager {
             anyhow::bail!("Proje bulunamadı.");
         }
         if self.snapshot()?.any_running {
-            anyhow::bail!("PHP onarımı için önce çalışan ortamı durdurun.");
+            anyhow::bail!("PHP onarımı için önce çalışan sunucuyu durdurun.");
         }
         self.check_install_requirements()?;
         let package = crate::model::php_package(version)?;
@@ -252,7 +252,7 @@ impl Manager {
                 Ok(())
             })();
             restore.with_context(|| {
-                format!("Proje değişikliği başarısız ({error:#}); eski ortam başlatılamadı")
+                format!("Proje değişikliği başarısız ({error:#}); önceki sunucu yapılandırması başlatılamadı")
             })?;
             return Err(error.context("Proje değişikliği geri alındı."));
         }

@@ -10,7 +10,7 @@ Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek yeşil vurgu. U
 - **Yazı:** Segoe UI Variable → Segoe UI → system-ui. Sayfa başlığı 32/650 (1150 altında 28), bölüm 18/650, gövde 14, kontroller 13/600. Sürümler ve ölçümler tabular. Ürün satırı yalnızca kenar çubuğundadır; sayfa kaşı tekrarlanmaz.
 - **Izgara:** 4 piksel. Aralıklar `--space-1`…`--space-9` (4–36). Kenar boşluğu dışı 9, 11, 13, 15, 17, 19, 22, 25 kullanılmaz.
 - **Yerleşim:** kenar çubuğu `--sidebar-w` 224 (850 altında 76, 540 altında 60). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 36 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; marka, gezinme ve alt bilgi aynı dikey hatta durur.
-- **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Ortam (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar kutu yerine boşluk ve küçük başlıklarla ayrılır; seçili satır dolu yeşil yüzey ve açık metinle belirtilir.
+- **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Sunucu (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar kutu yerine boşluk ve küçük başlıklarla ayrılır; seçili satır dolu yeşil yüzey ve açık metinle belirtilir.
 - **Kontrol:** birincil yükseklik `--control-h` 40, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 40. Girdi ve seçici aynı yükseklikte hizalanır.
 - **Şekil:** kontroller 8, liste ve panel dış köşeleri 12 piksel. Liste satırları tek yüzey içinde ince çizgilerle ayrılır. `--shadow-sm` kapalıdır; modal gibi yükseltilmiş katmanlarda `--shadow-md` kullanılır.
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
@@ -34,18 +34,18 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 
 ## Sayfalar
 
-- **Genel bakış:** ortam durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
+- **Genel bakış:** sunucu durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
 - **Projeler:** solda ad, alan adı veya klasör yoluyla aranabilen tek proje listesi, sağda sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Aç ve Terminal başlıkta kalır.
 - **Hizmetler:** her uygulama tam genişlikte bir satır. Üstte Tümü / Etkin filtresi ve arama yer alır. Etkin, çalışan servislerin yanında açık phpMyAdmin erişimini ve bağlı GitHub hesabını da kapsar. Simge/ad, açıklama, durum ve açma oku masaüstünde hizalıdır. 1100 altında açıklama adın altına; 540 altında durum da alta geçer. Satırın tamamı klavyeyle erişilebilir bir düğmedir. Hizmete girince üstte ortak denetim şeridi (durum, Kur / Başlat / Durdur / Aç); port ve jeton **Ayarlar** düğmesindedir. Onarım ayrı karttır.
-- **Ayarlar:** Ortam / Yönetim gruplu sekmeler, kartlı formlar, altta kaydetme çubuğu.
+- **Ayarlar:** Sunucu / Yönetim gruplu sekmeler, kartlı formlar, altta kaydetme çubuğu.
 - **Günlükler:** kaynak sekmeli görüntüleyici.
 
 ## Davranış ve erişilebilirlik
 
-Bilgilendirmeler kısa ve eyleme dönüktür. Sayfa başlıklarının altında tekrarlayan açıklamalar yoktur. Metinler yalnızca kullanıcının kararını veya sonraki adımını etkileyen bilgiyi içerir. Laravel bağlantı örnekleri kapalı başlayan “Laravel bağlantısı” bölümlerinde açılır. Silme/geri yükleme etkileri, yeniden başlatma gereksinimleri, güvenlik izinleri ve hata ayrıntıları kısaltma uğruna kaldırılmaz.
+Bilgilendirmeler kısa ve eyleme dönüktür. Yerel servis grubunun kullanıcıya görünen adı “Sunucu”dur: “Sunucu başlat”, “Sunucu durdur”, “Sunucu çalışıyor”. Başlatma tercihleri, tepsi menüsü ve hata mesajları aynı terminolojiyi kullanır. `.env` düzenleyicisinin “Ortam” sekmesi ortam değişkenlerini ifade eder. Sayfa başlıklarının altında tekrarlayan açıklamalar yoktur. Metinler yalnızca kullanıcının kararını veya sonraki adımını etkileyen bilgiyi içerir. Laravel bağlantı örnekleri kapalı başlayan “Laravel bağlantısı” bölümlerinde açılır. Silme/geri yükleme etkileri, yeniden başlatma gereksinimleri, güvenlik izinleri ve hata ayrıntıları kısaltma uğruna kaldırılmaz.
 
-Başarı bildirimi dört saniyede kapanır; hata kullanıcı kapatana kadar kalır. Çalışan ortamdan çıkış onay ister. Boş proje durumunda tara ve ekle eylemleri görünür.
+Başarı bildirimi dört saniyede kapanır; hata kullanıcı kapatana kadar kalır. Çalışan sunucudan çıkış onay ister. Boş proje durumunda tara ve ekle eylemleri görünür.
 
 Checkbox anahtarları klavye ve etiket ilişkisini korur. Görünür odak, içeriğe geç, native dialog/Escape ve reduced-motion desteklenir.
 
