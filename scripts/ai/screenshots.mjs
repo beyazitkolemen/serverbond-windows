@@ -27,6 +27,7 @@ let captureStatus;
 let captureHtml;
 
 const shots = [
+  { file: "20-cloud.png", nav: "Ayarlar", tab: "Cloud" },
   { file: "17-proje-detay.png", nav: "Projeler" },
   {
     file: "18-api.png",

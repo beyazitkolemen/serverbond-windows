@@ -6,7 +6,7 @@ import type { ApiDocumentation, ApiRoute, Run } from "../types";
 import ApiRequestSchema from "./ApiRequestSchema";
 
 function expand(route: ApiRoute): ApiRoute[] {
-  const [path, query] = route.path.split("?");
+  const [path, query = ""] = route.path.split("?");
   const choice = path.match(/\{([^{}]*\|[^{}]*)\}/);
   if (choice)
     return choice[1].split("|").flatMap((value) =>

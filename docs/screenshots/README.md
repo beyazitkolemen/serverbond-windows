@@ -2,7 +2,7 @@
 
 Güncel `main` arayüzü, 21 Eylül 2026. Görüntüler 1440 piksel genişlikte uygulamanın salt okunur tarayıcı önizlemesinden alınmıştır. Proje adları, portlar ve süreç bilgileri örnek veridir; Windows pencere çerçevesi dahil değildir. Yayımlanmış v1.2.0 paketi bu arayüz değişikliklerinin tamamını içermez.
 
-Kaynak sürüm: [`a14159c`](https://github.com/beyazitkolemen/serverbond-windows/tree/a14159c). Görüntüler `C:\ServerBond` veri klasörünü ve `C:\ServerBond\www` varsayılan proje yolunu gösterir; farklı konumdaki mevcut projeler de korunur.
+Kaynak sürüm: [`v1.3.0`](https://github.com/beyazitkolemen/serverbond-windows/tree/v1.3.0). Görüntüler `C:\ServerBond` veri klasörünü ve `C:\ServerBond\www` varsayılan proje yolunu gösterir; farklı konumdaki mevcut projeler de korunur.
 
 ## Genel bakış
 
@@ -27,6 +27,12 @@ Her hizmet tek satırda; durum ve ayarlar ayrı bölümlerde.
 Bağlantı ve erişim yönetimi ile aranabilir uç nokta rehberi.
 
 ![API uç nokta rehberi](18-api.png)
+
+## Cloud ba�lant�s�
+
+Cloud adresi ve tek kullan�ml�k e�le�tirme koduyla ba�lant� kurulumu. G�r�nt� e�le�tirilmemi� durumu g�sterir.
+
+![Cloud ba�lant�s�](20-cloud.png)
 
 ## Koyu tema
 
