@@ -4,6 +4,34 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Page {
+    page: u32,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Branches {
+    repository: String,
+    page: u32,
+}
+
+pub(super) fn repositories(manager: &Manager, input: Page) -> Result<Value> {
+    let page = serde_json::to_value(manager.github_repositories(input.page)?)?;
+    let repositories: Vec<Value> = page["repositories"].as_array().unwrap().iter().map(|repo| {
+        json!({"fullName":repo["fullName"],"private":repo["private"],"archived":repo["archived"],"empty":repo["empty"],"defaultBranch":repo["defaultBranch"]})
+    }).collect();
+    Ok(json!({"page":input.page,"nextPage":page["nextPage"],"repositories":repositories}))
+}
+
+pub(super) fn branches(manager: &Manager, input: Branches) -> Result<Value> {
+    let page = serde_json::to_value(manager.github_branches(&input.repository, input.page)?)?;
+    Ok(
+        json!({"repository":input.repository,"page":input.page,"nextPage":page["nextPage"],"defaultBranch":page["defaultBranch"],"branches":page["branches"]}),
+    )
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct Client {
     client_id: String,
@@ -75,6 +103,29 @@ pub(super) fn disconnect(manager: &Manager, input: super::mysql::Confirm) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn github_catalog_rejects_invalid_pages_before_network_access() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        assert!(repositories(&manager, Page { page: 0 }).is_err());
+        assert!(repositories(&manager, Page { page: 1 }).is_err());
+        assert!(branches(
+            &manager,
+            Branches {
+                repository: "owner/repo".into(),
+                page: 10001
+            }
+        )
+        .is_err());
+        assert!(branches(
+            &manager,
+            Branches {
+                repository: "https://invalid.test/repo".into(),
+                page: 1
+            }
+        )
+        .is_err());
+    }
     #[test]
     fn github_account_settings_require_confirmation_and_return_no_tokens() {
         let home = tempfile::tempdir().unwrap();

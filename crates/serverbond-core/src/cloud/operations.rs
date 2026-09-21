@@ -7,6 +7,8 @@ use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
     "github.auth-start",
+    "github.repositories",
+    "github.branches",
     "github.auth-poll",
     "github.auth-cancel",
     "github.show",
@@ -148,6 +150,10 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "github.repositories")]
+    GithubRepositories(super::github::Page),
+    #[serde(rename = "github.branches")]
+    GithubBranches(super::github::Branches),
     #[serde(rename = "github.auth-start")]
     GithubAuthStart(super::mysql::Confirm),
     #[serde(rename = "github.auth-poll")]
@@ -274,6 +280,8 @@ impl Operation {
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
             Self::GithubAuthStart(input) => return super::github::start(manager, input),
+            Self::GithubRepositories(input) => return super::github::repositories(manager, input),
+            Self::GithubBranches(input) => return super::github::branches(manager, input),
             Self::GithubAuthPoll(input) => return super::github::poll(manager, input),
             Self::GithubAuthCancel(input) => return super::github::cancel(manager, input),
             Self::GithubShow(_) => return Ok(super::github::show(manager)),
