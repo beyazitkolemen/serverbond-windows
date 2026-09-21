@@ -28,13 +28,31 @@ pub(crate) fn atomic_write(path: &Path, bytes: impl AsRef<[u8]>) -> Result<()> {
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     temporary.write_all(bytes.as_ref())?;
     temporary.as_file().sync_all()?;
-    temporary.persist(path).with_context(|| {
-        format!(
-            "Dosya kaydedilemedi; önceki dosya korundu: {}",
-            path.display()
-        )
-    })?;
-    Ok(())
+    for attempt in 0..=5 {
+        match temporary.persist(path) {
+            Ok(_) => return Ok(()),
+            Err(failure) => {
+                // MoveFileEx can report ACCESS_DENIED as well as a sharing
+                // violation when a reader or antivirus briefly prevents replacement.
+                let retry = cfg!(windows)
+                    && matches!(failure.error.raw_os_error(), Some(5 | 32 | 33))
+                    && attempt < 5;
+                if !retry {
+                    let error = failure.error;
+                    drop(failure.file);
+                    return Err(error).with_context(|| {
+                        format!(
+                            "Dosya kaydedilemedi; önceki dosya korundu: {}",
+                            path.display()
+                        )
+                    });
+                }
+                temporary = failure.file;
+                std::thread::sleep(std::time::Duration::from_millis(25 << attempt));
+            }
+        }
+    }
+    unreachable!("bounded persist retries return on the last attempt")
 }
 
 pub(crate) fn require_space(path: &Path, bytes: u64) -> Result<()> {

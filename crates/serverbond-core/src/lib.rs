@@ -33,6 +33,9 @@ mod storage;
 mod terminal;
 pub mod tunnel;
 pub mod updates;
+#[cfg(test)]
+#[path = "../tests/windows_resilience/mod.rs"]
+mod windows_resilience;
 
 pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
 pub use envfile::ProjectEnv;
@@ -288,12 +291,12 @@ impl Manager {
         Ok(())
     }
 
-    fn package_status(&self, package: Package, process: Option<&ManagedChild>) -> PackageStatus {
+    fn package_status(&self, package: Package, pid: Option<u32>) -> PackageStatus {
         let health = install::health(&self.home, &package);
         PackageStatus {
             installed: health.installed,
-            running: process.is_some(),
-            pid: process.map(|p| p.child.id()),
+            running: pid.is_some(),
+            pid,
             repairable: health.repairable,
             issue: health.issue.or_else(|| {
                 self.service_errors
@@ -352,25 +355,33 @@ impl Manager {
     }
 
     pub fn snapshot(&self) -> Result<Snapshot> {
-        let planned = self.reap_exited_children();
-        if !planned.is_empty()
-            && !self
-                .shutting_down
-                .load(std::sync::atomic::Ordering::Acquire)
-            && self.recovery_issue().is_none()
-        {
-            self.respawn_planned_workers(&planned);
+        // Restart is a mutation too. Defer both reaping and planned restart
+        // while an operation owns the gate, so Stop cannot race a new worker.
+        // Keep exited handles until the next idle poll to preserve restart intent.
+        if let Ok(_maintenance) = self.gate() {
+            let planned = self.reap_exited_children();
+            if !planned.is_empty() {
+                self.respawn_planned_workers(&planned);
+            }
         }
         let config = self
             .config
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
-        let processes = self.processes.lock().unwrap_or_else(|e| e.into_inner());
+        // Copy only live PIDs, then release the process lock before disk checks
+        // and DPAPI reads. Exited/deferred workers must not appear as running.
+        let processes: HashMap<String, u32> = self
+            .processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter_mut()
+            .filter_map(|(id, child)| child.alive().then(|| (id.clone(), child.child.id())))
+            .collect();
         let packages = selected_catalog(&config.php_version)?
             .into_iter()
             .map(|package| {
-                let process = processes.get(&package.id);
+                let process = processes.get(&package.id).copied();
                 self.package_status(package, process)
             })
             .collect();
@@ -380,6 +391,22 @@ impl Manager {
         let redis = self.redis_state_with(&processes, &config.settings.redis);
         let github = self.github_state();
         let node = self.node_state();
+        // Projects often share a PHP build. Check each version once per snapshot,
+        // rather than reopening the same receipt and executable for every project.
+        let mut php_issues = HashMap::new();
+        for project in &config.projects {
+            php_issues
+                .entry(project.php_version.clone())
+                .or_insert_with(|| {
+                    let package = php_package(&project.php_version).ok()?;
+                    install::validate_installation(
+                        &self.home.join("bin/php").join(&project.php_version),
+                        &package,
+                    )
+                    .err()
+                    .map(|e| format!("PHP {}: {e:#}", project.php_version))
+                });
+        }
         Ok(Snapshot {
             packages,
             php_versions: php_versions()
@@ -395,7 +422,7 @@ impl Manager {
                                 .filter(|p| p.php_version == package.version)
                                 .find_map(|p| processes.get(&Self::project_service_id(&p.id)))
                         });
-                    self.package_status(package, process)
+                    self.package_status(package, process.copied())
                 })
                 .collect(),
             settings: config.settings,
@@ -410,16 +437,11 @@ impl Manager {
                         .unwrap_or_else(|e| e.into_inner());
                     let id = Self::project_service_id(&project.id);
                     let running = processes.contains_key(&id);
-                    let pid = processes.get(&id).map(|p| p.child.id());
-                    let issue = errors.get(&id).cloned().or_else(|| {
-                        let package = php_package(&project.php_version).ok()?;
-                        install::validate_installation(
-                            &self.home.join("bin/php").join(&project.php_version),
-                            &package,
-                        )
-                        .err()
-                        .map(|e| format!("PHP {}: {e:#}", project.php_version))
-                    });
+                    let pid = processes.get(&id).copied();
+                    let issue = errors
+                        .get(&id)
+                        .cloned()
+                        .or_else(|| php_issues.get(&project.php_version).cloned().flatten());
                     let php_port = self
                         .project_ports
                         .lock()
@@ -433,7 +455,7 @@ impl Manager {
                         for index in 0..worker.processes {
                             let sid = crate::jobs::queue_service_id(&project.id, &worker.id, index);
                             if let Some(child) = processes.get(&sid) {
-                                pids.push(child.child.id());
+                                pids.push(*child);
                             }
                             if let Some(error) = errors.get(&sid) {
                                 worker_issue = Some(error.clone());
@@ -448,7 +470,7 @@ impl Manager {
                     }
                     let schedule_id = crate::jobs::schedule_service_id(&project.id);
                     let schedule_running = processes.contains_key(&schedule_id);
-                    let schedule_pid = processes.get(&schedule_id).map(|p| p.child.id());
+                    let schedule_pid = processes.get(&schedule_id).copied();
                     let schedule_issue = errors
                         .get(&schedule_id)
                         .or_else(|| errors.get(&format!("jobs-{}", project.id)))

@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{bail, Context, Result};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     time::Duration,
@@ -82,6 +82,9 @@ fn collect_candidates(root: &Path, registered: &HashSet<PathBuf>, out: &mut Vec<
         let Some(folder) = folder_name(&path) else {
             continue;
         };
+        if is_skippable_folder(&folder) {
+            continue;
+        }
         let Ok(path) = dunce::canonicalize(&path) else {
             continue;
         };
@@ -95,9 +98,6 @@ fn collect_candidates(root: &Path, registered: &HashSet<PathBuf>, out: &mut Vec<
                 parent: None,
                 depth: 1,
             });
-            continue;
-        }
-        if is_skippable_folder(&folder) {
             continue;
         }
         for child in list_dirs(&path) {
@@ -232,7 +232,11 @@ impl Manager {
             }
         }
         candidates.sort_by(|a, b| a.depth.cmp(&b.depth).then_with(|| a.path.cmp(&b.path)));
+        let mut seen = HashSet::new();
         for candidate in candidates {
+            if !seen.insert(candidate.path.clone()) {
+                continue;
+            }
             if config.projects.len() + found.len() >= 1000 {
                 break;
             }
@@ -269,6 +273,13 @@ impl Manager {
             .clone();
         let mut config = original.clone();
         let mut added = Vec::new();
+        // Resolve the same names the discovery dialog presented, independent of
+        // the user's selection order or whether they selected the whole list.
+        let discovered: HashMap<_, _> = self
+            .discover_projects()?
+            .into_iter()
+            .map(|project| (project.path, project.name))
+            .collect();
         for raw in paths {
             let path = dunce::canonicalize(raw).context("Proje klasörü bulunamadı.")?;
             if !path.join("public/index.php").is_file() {
@@ -280,7 +291,10 @@ impl Manager {
                 .file_name()
                 .and_then(|value| value.to_str())
                 .context("Klasör adı okunamadı.")?;
-            let name = slug_from_folder(folder)?;
+            let name = match discovered.get(&path) {
+                Some(name) => name.clone(),
+                None => slug_from_folder(folder)?,
+            };
             if config
                 .projects
                 .iter()

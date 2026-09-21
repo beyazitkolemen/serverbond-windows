@@ -1,6 +1,6 @@
 //! `ManagedChild`: a child process with redirected, size-capped output that
 //! is killed reliably on drop (Windows job objects), plus `command()` which
-//! hides console windows and strips inherited environment surprises.
+//! hides background console windows.
 
 use anyhow::{bail, Context, Result};
 #[cfg(windows)]
@@ -88,6 +88,8 @@ impl ManagedChild {
     }
 
     fn terminate(&mut self) {
+        #[cfg(windows)]
+        self._job.terminate();
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
@@ -134,22 +136,27 @@ impl ManagedChild {
             }
             std::thread::sleep(Duration::from_millis(50));
         };
-        let read = |file: &mut std::fs::File| -> Result<Vec<u8>> {
-            if file.metadata()?.len() > 8 * 1024 * 1024 {
+        // A command may exit while a descendant still writes to these files.
+        // Stop the entire tree before collecting a stable, combined-size result.
+        child.terminate();
+        let read = |file: &mut std::fs::File, limit: usize| -> Result<Vec<u8>> {
+            if file.metadata()?.len() > limit as u64 {
                 bail!("Komut çıktısı 8 MB sınırını aştı.");
             }
             file.seek(SeekFrom::Start(0))?;
             let mut bytes = Vec::new();
-            file.take(8 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
-            if bytes.len() > 8 * 1024 * 1024 {
+            file.take(limit as u64 + 1).read_to_end(&mut bytes)?;
+            if bytes.len() > limit {
                 bail!("Komut çıktısı 8 MB sınırını aştı.");
             }
             Ok(bytes)
         };
+        let stdout = read(&mut stdout, 8 * 1024 * 1024)?;
+        let stderr = read(&mut stderr, 8 * 1024 * 1024 - stdout.len())?;
         Ok(Output {
             status,
-            stdout: read(&mut stdout)?,
-            stderr: read(&mut stderr)?,
+            stdout,
+            stderr,
         })
     }
 }
@@ -192,10 +199,7 @@ mod tests {
 
 impl Drop for ManagedChild {
     fn drop(&mut self) {
-        if !matches!(self.child.try_wait(), Ok(Some(_))) {
-            let _ = self.child.kill();
-            let _ = self.child.wait();
-        }
+        self.terminate();
     }
 }
 
@@ -207,6 +211,34 @@ unsafe impl Send for Job {}
 
 #[cfg(windows)]
 impl Job {
+    fn terminate(&self) {
+        use windows_sys::Win32::System::JobObjects::*;
+        unsafe {
+            if TerminateJobObject(self.0, 1) == 0 {
+                return; // Closing the owned job handle remains the fallback.
+            }
+            // Termination is asynchronous. Wait briefly for descendants to
+            // release file handles before temporary files or install dirs move.
+            let deadline = Instant::now() + Duration::from_secs(2);
+            loop {
+                let mut info: JOBOBJECT_BASIC_ACCOUNTING_INFORMATION = std::mem::zeroed();
+                if QueryInformationJobObject(
+                    self.0,
+                    JobObjectBasicAccountingInformation,
+                    &mut info as *mut _ as *mut _,
+                    std::mem::size_of_val(&info) as u32,
+                    std::ptr::null_mut(),
+                ) == 0
+                    || info.ActiveProcesses == 0
+                    || Instant::now() >= deadline
+                {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
+    }
+
     fn attach(child: &Child) -> Result<Self> {
         use windows_sys::Win32::{Foundation::CloseHandle, System::JobObjects::*};
         unsafe {

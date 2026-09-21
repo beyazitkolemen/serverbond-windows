@@ -37,7 +37,7 @@ pub struct PostgresState {
 impl Manager {
     pub(crate) fn postgres_state_with(
         &self,
-        processes: &HashMap<String, crate::process::ManagedChild>,
+        processes: &HashMap<String, u32>,
         settings: &PostgresSettings,
     ) -> PostgresState {
         let package = tool_package(ID).expect("embedded postgres package");
@@ -47,7 +47,7 @@ impl Manager {
             installed: health.installed,
             repairable: health.repairable,
             running: processes.contains_key(ID),
-            pid: processes.get(ID).map(|child| child.child.id()),
+            pid: processes.get(ID).copied(),
             port: settings.port,
             auto_start: settings.auto_start,
             password_saved: self.postgres_password_path().is_file(),

@@ -25,7 +25,7 @@ pub struct RedisState {
 impl Manager {
     pub(crate) fn redis_state_with(
         &self,
-        processes: &HashMap<String, crate::process::ManagedChild>,
+        processes: &HashMap<String, u32>,
         settings: &RedisSettings,
     ) -> RedisState {
         let package = tool_package(ID).expect("embedded redis package");
@@ -35,7 +35,7 @@ impl Manager {
             installed: health.installed,
             repairable: health.repairable,
             running: processes.contains_key(ID),
-            pid: processes.get(ID).map(|child| child.child.id()),
+            pid: processes.get(ID).copied(),
             port: settings.port,
             auto_start: settings.auto_start,
             issue: health.issue,

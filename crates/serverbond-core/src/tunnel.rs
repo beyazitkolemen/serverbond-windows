@@ -2,7 +2,7 @@
 //! connector token, start/stop with log-based readiness detection, and the
 //! auto-start preference.
 
-use crate::{model::tool_package, process::command, process::ManagedChild, secrets, Manager};
+use crate::{model::tool_package, process::command, secrets, Manager};
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use std::{collections::HashMap, path::PathBuf, time::Duration};
@@ -61,7 +61,7 @@ impl Manager {
 
     pub(crate) fn tunnel_state_with(
         &self,
-        processes: &HashMap<String, ManagedChild>,
+        processes: &HashMap<String, u32>,
         auto_start: bool,
     ) -> TunnelState {
         let package = tool_package(ID).expect("embedded cloudflared package");
@@ -71,7 +71,7 @@ impl Manager {
             installed: health.installed,
             repairable: health.repairable,
             running: processes.contains_key(ID),
-            pid: processes.get(ID).map(|child| child.child.id()),
+            pid: processes.get(ID).copied(),
             token_saved: self.tunnel_token_path().is_file(),
             auto_start,
             issue: health.issue,

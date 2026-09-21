@@ -2,6 +2,8 @@
 
 Bu belge v1.2.0 ile gelen uyumluluk hazırlığını tanımlar. Aşağıdaki hedefler, eski Windows üzerinde tamamlanmış uçtan uca test garantisi değildir.
 
+Güncel `main` dalındaki dosya kilidi, süreç ağacı, kuyruk ve kurulum iyileştirmeleri: [Windows dayanıklılığı](windows-reliability.md).
+
 ## Hedefler ve sınırlar
 
 | Sistem (x64) | Kapsam |

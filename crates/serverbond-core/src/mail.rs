@@ -27,7 +27,7 @@ pub struct MailState {
 impl Manager {
     pub(crate) fn mail_state_with(
         &self,
-        processes: &HashMap<String, crate::process::ManagedChild>,
+        processes: &HashMap<String, u32>,
         settings: &MailSettings,
     ) -> MailState {
         let package = tool_package(ID).expect("embedded mailpit package");
@@ -37,7 +37,7 @@ impl Manager {
             installed: health.installed,
             repairable: health.repairable,
             running: processes.contains_key(ID),
-            pid: processes.get(ID).map(|child| child.child.id()),
+            pid: processes.get(ID).copied(),
             smtp_port: settings.smtp_port,
             web_port: settings.web_port,
             auto_start: settings.auto_start,

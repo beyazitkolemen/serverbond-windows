@@ -9,6 +9,7 @@ use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{Read, Write},
     path::{Component, Path},
@@ -163,6 +164,38 @@ pub fn extract_zip(path: &Path, destination: &Path, prefix: &str) -> Result<()> 
     extract_zip_progress(path, destination, prefix, |_, _| {})
 }
 
+fn windows_archive_component(name: &str) -> bool {
+    if name.is_empty()
+        || name.starts_with(' ')
+        || name.ends_with([' ', '.'])
+        || name
+            .chars()
+            .any(|c| c < ' ' || matches!(c, '<' | '>' | ':' | '"' | '\\' | '|' | '?' | '*'))
+    {
+        return false;
+    }
+    let stem = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .trim_end()
+        .to_ascii_uppercase();
+    if matches!(
+        stem.as_str(),
+        "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
+    ) {
+        return false;
+    }
+    !["COM", "LPT"].iter().any(|prefix| {
+        stem.strip_prefix(prefix).is_some_and(|suffix| {
+            matches!(
+                suffix,
+                "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
+            )
+        })
+    })
+}
+
 fn extract_zip_progress(
     path: &Path,
     destination: &Path,
@@ -176,17 +209,14 @@ fn extract_zip_progress(
         bail!("Arşiv dosya sayısı sınırını aşıyor.");
     }
     let mut required = 0u64;
+    let mut paths = Vec::with_capacity(archive.len());
+    let mut entries = HashMap::new();
     for i in 0..archive.len() {
-        required = required.saturating_add(archive.by_index(i)?.size());
+        let entry = archive.by_index(i)?;
+        required = required.saturating_add(entry.size());
         if required > 4 * 1024 * 1024 * 1024 {
             bail!("Arşiv boyutu sınırı aşıldı.");
         }
-    }
-    fs::create_dir_all(destination)?;
-    crate::storage::require_space(destination, required)?;
-    let mut expanded = 0u64;
-    for i in 0..archive.len() {
-        let entry = archive.by_index(i)?;
         let entry_path = entry
             .enclosed_name()
             .context("Arşivde güvenli olmayan yol bulundu.")?;
@@ -199,9 +229,15 @@ fn extract_zip_progress(
         {
             bail!("Arşivde geçersiz yol veya bağlantı bulundu.");
         }
-        expanded = expanded.saturating_add(entry.size());
-        if expanded > 4 * 1024 * 1024 * 1024 {
-            bail!("Arşiv boyutu sınırı aşıldı.");
+        for component in entry_path.components() {
+            if let Component::Normal(name) = component {
+                if !name.to_str().is_some_and(windows_archive_component) {
+                    bail!(
+                        "Arşivde Windows ile uyumsuz dosya adı bulundu: {}",
+                        entry.name()
+                    );
+                }
+            }
         }
         let relative = if prefix.is_empty() {
             entry_path.as_path()
@@ -209,7 +245,33 @@ fn extract_zip_progress(
             entry_path
                 .strip_prefix(prefix)
                 .context("Arşiv klasör yapısı beklenenden farklı.")?
-        };
+        }
+        .to_path_buf();
+        if !relative.as_os_str().is_empty() {
+            let key = relative.to_string_lossy().replace('\\', "/").to_lowercase();
+            if let Some(previous_dir) = entries.insert(key, entry.is_dir()) {
+                if !previous_dir || !entry.is_dir() {
+                    bail!("Arşivde Windows üzerinde çakışan dosya adları bulundu.");
+                }
+            }
+        }
+        paths.push(relative);
+    }
+    for path in entries.keys() {
+        let mut ancestor = path.as_str();
+        while let Some((parent, _)) = ancestor.rsplit_once('/') {
+            if entries.get(parent) == Some(&false) {
+                bail!("Arşivde aynı yol dosya ve klasör olarak kullanılıyor.");
+            }
+            ancestor = parent;
+        }
+    }
+    // Validate the entire archive before creating any files. This avoids partial
+    // extraction and Windows device/normalization aliases, even on Linux CI.
+    fs::create_dir_all(destination)?;
+    crate::storage::require_space(destination, required)?;
+    for (i, relative) in paths.iter().enumerate() {
+        let entry = archive.by_index(i)?;
         if relative.as_os_str().is_empty() {
             progress(i as u64 + 1, files);
             continue;
