@@ -21,7 +21,7 @@ Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek yeşil vurgu. U
 | Bileşen | Kullanım |
 | --- | --- |
 | `SearchField` | Etiketli, temizlenebilir arama alanı; temizleme sonrası odak girdiye döner. |
-| `SectionTabs` | Proje, hizmet, API ve günlük bölümleri; aktif alt çizgi, tek Tab durağı, yön tuşları ve Home/End. Her sekme ilgili panelle ilişkilidir. |
+| `SectionTabs` | Proje, hizmet, API ve günlük bölümleri; yatay veya dikey menü, tek Tab durağı, menü yönüne uygun ok tuşları ve Home/End. Her sekme ilgili panelle ilişkilidir. |
 | `SaveBar` | Ayar, hizmet ve API formlarında yalnızca taslak değiştiğinde görünür; Vazgeç, Kaydet ve varsa kaydetmeyi engelleyen neden. |
 | `QuickNavigation` | `Ctrl+K` / `Cmd+K` ile açılan sayfa seçici; yön tuşları, Enter ve Escape. |
 | `StatusBadge` | Her durum hapı: `tone` = `running` / `stopped` / `issue` / `warning`. Elle `service-status` + `status-dot` yazılmaz. |
@@ -38,7 +38,7 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 
 - **Genel bakış:** sunucu durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
-- **Projeler:** solda ad, alan adı veya klasör yoluyla aranabilen tek proje listesi, sağda sekmeli detay: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Aç ve Terminal başlıkta kalır.
+- **Projeler:** solda aramalı proje seçici ve simgeli dikey bölüm menüsü: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Sağda proje başlığı, Aç / Terminal işlemleri ve geniş içerik alanı bulunur. Seçici ad, alan adı ve klasör yolunda arar; arama mevcut projeyi değiştirmez. Escape seçiciyi kapatıp odağı geri verir. 760 piksel altında bölüm menüsü etiketli bir seçiciye dönüşür.
 - **Hizmetler:** her uygulama tam genişlikte bir satır. Üstte Tümü / Etkin filtresi ve arama yer alır. Etkin, çalışan servislerin yanında açık phpMyAdmin erişimini ve bağlı GitHub hesabını da kapsar. Simge/ad, açıklama, durum ve açma oku masaüstünde hizalıdır. 1100 altında açıklama adın altına; 540 altında durum da alta geçer. Satırın tamamı klavyeyle erişilebilir bir düğmedir. Hizmete girince üstte ortak denetim şeridi (durum, Kur / Başlat / Durdur / Aç); port ve jeton **Ayarlar** düğmesindedir. Onarım ayrı karttır.
 - **Ayarlar:** solda Çalışma alanı / Sunucu / Yönetim bölüm menüsü, sağda bölüm başlığı ve formlar. Görünüm ve Windows tercihleri ayrı sayfalardır. 1000 piksel altında menü üstte yeniden yerleşir. Kaydetme çubuğu yalnızca değişiklik olduğunda görünür; bölüm değiştirmek sunucu ayar taslağını silmez.
 - **API:** Bağlantı ve erişim / Uç nokta rehberi sekmeleri. Bağlantı formu ve gösterilen jeton sekme değişiminde korunur. Rehberde yöntem filtresi, arama ve açılabilir istek ayrıntıları bulunur.

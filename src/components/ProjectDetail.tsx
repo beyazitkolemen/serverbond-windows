@@ -1,9 +1,14 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import {
   Archive,
   Database,
   ExternalLink,
-  Folder,
+  LayoutDashboard,
+  FileCode2,
+  Clock3,
+  ListTodo,
+  GitBranch,
+  ScrollText,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -18,19 +23,20 @@ import StatusBadge from "./StatusBadge";
 import SectionTabs from "./SectionTabs";
 
 const tabs = [
-  { id: "summary", label: "Özet" },
-  { id: "env", label: "Ortam" },
-  { id: "schedule", label: "Zamanlama" },
-  { id: "queue", label: "Kuyruklar" },
-  { id: "release", label: "Sürüm" },
-  { id: "logs", label: "Günlükler" },
-  { id: "database", label: "Veritabanı" },
+  { id: "summary", label: "Özet", icon: LayoutDashboard },
+  { id: "env", label: "Ortam", icon: FileCode2 },
+  { id: "schedule", label: "Zamanlama", icon: Clock3 },
+  { id: "queue", label: "Kuyruklar", icon: ListTodo },
+  { id: "release", label: "Sürüm", icon: GitBranch },
+  { id: "logs", label: "Günlükler", icon: ScrollText },
+  { id: "database", label: "Veritabanı", icon: Database },
 ] as const;
 
 type Tab = (typeof tabs)[number]["id"];
 
 export default function ProjectDetail({
   project,
+  projectPicker,
   busy,
   run,
   webPort,
@@ -44,6 +50,7 @@ export default function ProjectDetail({
   onRestore,
 }: {
   project: Project;
+  projectPicker: ReactNode;
   busy: boolean;
   run: Run;
   webPort: number;
@@ -74,112 +81,139 @@ export default function ProjectDetail({
   const url = projectUrl(project.host, webPort, https, httpsPort);
   const runningWorkers = jobs.runningWorkers;
   return (
-    <article className="project-detail" aria-labelledby="project-detail-title">
-      <header className="project-detail-head">
-        <div className="project-detail-copy">
-          <span className="eyebrow">Proje çalışma alanı</span>
-          <h3 id="project-detail-title">{project.name}</h3>
-          <p className="project-url">{url}</p>
-        </div>
-        <div className="project-actions">
-          <StatusBadge tone={project.running ? "running" : "stopped"}>
-            {project.running ? `PHP · ${project.phpPort}` : "PHP kapalı"}
-          </StatusBadge>
-          <button
-            className="button secondary small"
-            disabled={busy || !webRunning || !project.running}
-            title={
-              webRunning
-                ? "Projeyi tarayıcıda aç"
-                : "Önce web sunucusunu başlatın"
-            }
-            onClick={() =>
-              void run("Proje açılıyor…", () =>
-                call("open_project", { id: project.id }),
-              )
-            }
+    <article
+      className="project-detail project-detail-workspace"
+      aria-labelledby="project-detail-title"
+    >
+      <aside className="project-detail-nav">
+        {projectPicker}
+        <SectionTabs
+          id={tabsId}
+          label="Proje bölümleri"
+          orientation="vertical"
+          value={tab}
+          onChange={openTab}
+          items={tabs.map((item) => ({
+            id: item.id,
+            label: item.label,
+            icon: <item.icon size={16} aria-hidden />,
+            indicator:
+              (item.id === "schedule" && project.scheduleRunning) ||
+              (item.id === "queue" && runningWorkers) ? (
+                <i className="tab-dot" aria-hidden />
+              ) : null,
+          }))}
+        />
+        <label className="project-section-select">
+          <span>Bölüm</span>
+          <select
+            aria-label="Proje bölümü"
+            value={tab}
+            onChange={(event) => openTab(event.target.value as Tab)}
           >
-            <ExternalLink size={16} />
-            Aç
-          </button>
-          <button
-            className="button secondary small"
-            disabled={busy}
-            aria-label={`${project.name} terminalini aç`}
-            onClick={() =>
-              void run("Proje terminali açılıyor…", () =>
-                call("open_project_terminal", { id: project.id }),
-              )
-            }
-          >
-            <Terminal size={16} /> Terminal
-          </button>
+            {tabs.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </aside>
+      <div className="project-detail-content">
+        <header className="project-detail-head">
+          <div className="project-detail-copy">
+            <h3 id="project-detail-title">{project.name}</h3>
+            <p className="project-url">{url}</p>
+          </div>
+          <div className="project-actions">
+            <StatusBadge tone={project.running ? "running" : "stopped"}>
+              {project.running ? `PHP · ${project.phpPort}` : "PHP kapalı"}
+            </StatusBadge>
+            <button
+              className="button secondary small"
+              disabled={busy || !webRunning || !project.running}
+              title={
+                webRunning
+                  ? "Projeyi tarayıcıda aç"
+                  : "Önce web sunucusunu başlatın"
+              }
+              onClick={() =>
+                void run("Proje açılıyor…", () =>
+                  call("open_project", { id: project.id }),
+                )
+              }
+            >
+              <ExternalLink size={16} />
+              Aç
+            </button>
+            <button
+              className="button secondary small"
+              disabled={busy}
+              aria-label={`${project.name} terminalini aç`}
+              onClick={() =>
+                void run("Proje terminali açılıyor…", () =>
+                  call("open_project_terminal", { id: project.id }),
+                )
+              }
+            >
+              <Terminal size={16} /> Terminal
+            </button>
+          </div>
+        </header>
+        <h4 className="project-section-title" id={`${tabsId}-heading`}>
+          {tabs.find((item) => item.id === tab)?.label}
+        </h4>
+        <div
+          id={`${tabsId}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabsId}-heading`}
+          tabIndex={0}
+        >
+          {openedEditors.env === project.id ? (
+            <div hidden={tab !== "env"}>
+              <ProjectEnv project={project} busy={busy} run={run} />
+            </div>
+          ) : null}
+          {tab === "summary" ? (
+            <SummaryPane
+              project={project}
+              url={url}
+              busy={busy}
+              run={run}
+              phpVersions={phpVersions}
+              anyRunning={anyRunning}
+              runningWorkers={runningWorkers}
+              onOpenTab={openTab}
+              onRemove={onRemove}
+            />
+          ) : null}
+          {tab === "schedule" ? (
+            <ScheduleSection
+              project={project}
+              busy={busy}
+              run={run}
+              jobs={jobs}
+            />
+          ) : null}
+          {tab === "queue" ? (
+            <QueueSection project={project} busy={busy} run={run} jobs={jobs} />
+          ) : null}
+          {openedEditors.release === project.id ? (
+            <div hidden={tab !== "release"}>
+              <ReleasePane project={project} busy={busy} run={run} />
+            </div>
+          ) : null}
+          {tab === "logs" ? <ProjectLogs project={project} embedded /> : null}
+          {tab === "database" ? (
+            <DatabasePane
+              project={project}
+              busy={busy}
+              run={run}
+              mysqlRunning={mysqlRunning}
+              onRestore={onRestore}
+            />
+          ) : null}
         </div>
-      </header>
-      <SectionTabs
-        id={tabsId}
-        label="Proje bölümleri"
-        value={tab}
-        onChange={openTab}
-        items={tabs.map((item) => ({
-          ...item,
-          indicator:
-            (item.id === "schedule" && project.scheduleRunning) ||
-            (item.id === "queue" && runningWorkers) ? (
-              <i className="tab-dot" aria-hidden />
-            ) : null,
-        }))}
-      />
-      <div
-        id={`${tabsId}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${tabsId}-${tab}`}
-        tabIndex={0}
-      >
-        {openedEditors.env === project.id ? (
-          <div hidden={tab !== "env"}>
-            <ProjectEnv project={project} busy={busy} run={run} />
-          </div>
-        ) : null}
-        {tab === "summary" ? (
-          <SummaryPane
-            project={project}
-            url={url}
-            busy={busy}
-            run={run}
-            phpVersions={phpVersions}
-            anyRunning={anyRunning}
-            runningWorkers={runningWorkers}
-            onOpenTab={openTab}
-            onRemove={onRemove}
-          />
-        ) : null}
-        {tab === "schedule" ? (
-          <ScheduleSection
-            project={project}
-            busy={busy}
-            run={run}
-            jobs={jobs}
-          />
-        ) : null}
-        {tab === "queue" ? (
-          <QueueSection project={project} busy={busy} run={run} jobs={jobs} />
-        ) : null}
-        {openedEditors.release === project.id ? (
-          <div hidden={tab !== "release"}>
-            <ReleasePane project={project} busy={busy} run={run} />
-          </div>
-        ) : null}
-        {tab === "logs" ? <ProjectLogs project={project} embedded /> : null}
-        {tab === "database" ? (
-          <DatabasePane
-            project={project}
-            busy={busy}
-            run={run}
-            mysqlRunning={mysqlRunning}
-            onRestore={onRestore}
-          />
-        ) : null}
       </div>
     </article>
   );
@@ -450,37 +484,5 @@ export function ProjectPhp({
         </p>
       ) : null}
     </div>
-  );
-}
-
-export function CompactProjectRow({
-  project,
-  url,
-  selected,
-  onSelect,
-}: {
-  project: Project;
-  url: string;
-  selected?: boolean;
-  onSelect?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`project-picker-item ${selected ? "selected" : ""}`}
-      onClick={onSelect}
-      aria-current={selected ? "true" : undefined}
-    >
-      <span className="project-icon">
-        <Folder size={20} />
-      </span>
-      <span className="project-info">
-        <strong>{project.name}</strong>
-        <span className="project-url">{url}</span>
-      </span>
-      <StatusBadge tone={project.running ? "running" : "stopped"}>
-        {project.running ? "Çalışıyor" : "Kapalı"}
-      </StatusBadge>
-    </button>
   );
 }

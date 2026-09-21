@@ -35,11 +35,10 @@ function githubSlug(raw: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
 }
-import ProjectDetail, { CompactProjectRow } from "./ProjectDetail";
+import ProjectDetail from "./ProjectDetail";
+import ProjectSwitcher from "./ProjectSwitcher";
 import StatusBadge from "./StatusBadge";
 import EmptyState from "./EmptyState";
-import SearchField from "./SearchField";
-import { searchText } from "../search";
 
 export default function Projects({
   projects,
@@ -81,7 +80,6 @@ export default function Projects({
   onOpen?: () => void;
 }) {
   const [modal, setModal] = useState(false);
-  const [query, setQuery] = useState("");
   const [remove, setRemove] = useState<Project | null>(null);
   const [restore, setRestore] = useState<Project | null>(null);
   const [discovered, setDiscovered] = useState<DiscoveredProject[] | null>(
@@ -95,15 +93,8 @@ export default function Projects({
       setSelectedId(projects[0]?.id ?? null);
     }
   }, [projects, selectedId]);
-  const visibleProjects = projects.filter((item) =>
-    searchText(`${item.name} ${item.host} ${item.path}`).includes(
-      searchText(query),
-    ),
-  );
   const selected =
-    visibleProjects.find((item) => item.id === selectedId) ??
-    visibleProjects[0] ??
-    null;
+    projects.find((item) => item.id === selectedId) ?? projects[0] ?? null;
   return (
     <section aria-labelledby="projects-heading">
       <div className="section-heading">
@@ -203,31 +194,16 @@ export default function Projects({
         </div>
       ) : projects.length ? (
         <div className="project-workspace">
-          <div className="project-picker-panel">
-            <SearchField value={query} onChange={setQuery} label="Proje ara" />
-            <div className="project-picker" role="group" aria-label="Projeler">
-              {visibleProjects.map((project) => (
-                <CompactProjectRow
-                  key={project.id}
-                  project={project}
-                  url={projectUrl(project.host, webPort, https, httpsPort)}
-                  selected={project.id === selected?.id}
-                  onSelect={() => setSelectedId(project.id)}
-                />
-              ))}
-            </div>
-            {!visibleProjects.length ? (
-              <div className="search-empty" role="status">
-                <strong>Eşleşen proje yok</strong>
-                <button className="section-link" onClick={() => setQuery("")}>
-                  Aramayı temizle
-                </button>
-              </div>
-            ) : null}
-          </div>
           {selected ? (
             <ProjectDetail
               project={selected}
+              projectPicker={
+                <ProjectSwitcher
+                  projects={projects}
+                  selected={selected}
+                  onSelect={setSelectedId}
+                />
+              }
               busy={busy}
               run={run}
               webPort={webPort}

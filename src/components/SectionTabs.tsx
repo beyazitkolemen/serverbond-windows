@@ -7,15 +7,27 @@ export default function SectionTabs<T extends string>({
   items,
   value,
   onChange,
+  orientation = "horizontal",
 }: {
   id: string;
   label: string;
-  items: readonly { id: T; label: string; indicator?: ReactNode }[];
+  items: readonly {
+    id: T;
+    label: string;
+    icon?: ReactNode;
+    indicator?: ReactNode;
+  }[];
   value: T;
   onChange: (value: T) => void;
+  orientation?: "horizontal" | "vertical";
 }) {
   return (
-    <div className="section-tabs" role="tablist" aria-label={label}>
+    <div
+      className="section-tabs"
+      role="tablist"
+      aria-label={label}
+      aria-orientation={orientation}
+    >
       {items.map((item, index) => (
         <button
           key={item.id}
@@ -28,9 +40,11 @@ export default function SectionTabs<T extends string>({
           onClick={() => onChange(item.id)}
           onKeyDown={(event) => {
             const next =
-              event.key === "ArrowRight"
+              event.key ===
+              (orientation === "vertical" ? "ArrowDown" : "ArrowRight")
                 ? (index + 1) % items.length
-                : event.key === "ArrowLeft"
+                : event.key ===
+                    (orientation === "vertical" ? "ArrowUp" : "ArrowLeft")
                   ? (index - 1 + items.length) % items.length
                   : event.key === "Home"
                     ? 0
@@ -48,7 +62,8 @@ export default function SectionTabs<T extends string>({
             button?.scrollIntoView({ block: "nearest", inline: "nearest" });
           }}
         >
-          {item.label}
+          {item.icon}
+          <span>{item.label}</span>
           {item.indicator}
         </button>
       ))}
