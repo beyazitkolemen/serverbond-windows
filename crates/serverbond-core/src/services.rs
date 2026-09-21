@@ -700,18 +700,35 @@ impl Manager {
         if !self.home.join("config/mysql-ready").is_file() {
             bail!("MySQL henüz ilk kurulumu bitirmedi. Önce sunucuyu bir kez başlatın.");
         }
-        self.mysql_query(&format!(
-            "ALTER USER 'root'@'localhost' IDENTIFIED BY '{password}'"
-        ))?;
-        crate::secrets::save(&self.home.join("config/mysql-password.dpapi"), password)?;
+        let path = self.home.join("config/mysql-password.dpapi");
+        let staged = path.with_extension("dpapi.next");
+        crate::secrets::save(&staged, password)?;
+        if crate::secrets::read(&staged).ok().as_deref() != Some(password) {
+            let _ = std::fs::remove_file(&staged);
+            bail!("Yeni parola şifrelenip geri okunamadı; parola değiştirilmedi.");
+        }
+        if self
+            .mysql_query(&format!(
+                "ALTER USER 'root'@'localhost' IDENTIFIED BY '{password}'"
+            ))
+            .is_err()
+        {
+            let _ = std::fs::remove_file(&staged);
+            bail!("MySQL parolası değiştirilemedi. Sunucu durumunu kontrol edin.");
+        }
+        std::fs::rename(&staged, &path).context("MySQL parolası değişti ancak şifreli kayıt yenilenemedi. Yeni kayıt config/mysql-password.dpapi.next dosyasında korundu.")?;
         self.log("MySQL root parolası güncellendi. Proje .env dosyaları yazılmadı.");
         Ok(())
     }
 
     pub fn mysql_query(&self, sql: &str) -> Result<String> {
         let (mut cmd, _credentials) = self.mysql_command("mysql.exe")?;
-        cmd.args(["--batch", "--skip-column-names", "--execute", sql]);
-        let output = ManagedChild::output(cmd, Duration::from_secs(30))?;
+        cmd.args(["--batch", "--skip-column-names"]);
+        // SQL may contain credentials. Keep it out of process command lines.
+        let mut input = tempfile::tempfile()?;
+        input.write_all(sql.as_bytes())?;
+        std::io::Seek::rewind(&mut input)?;
+        let output = ManagedChild::output_with_stdin(cmd, Duration::from_secs(30), input)?;
         if !output.status.success() {
             bail!(
                 "MySQL sorgusu başarısız: {}",

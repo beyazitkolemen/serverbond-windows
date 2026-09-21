@@ -108,11 +108,19 @@ impl ManagedChild {
         }
     }
 
-    pub fn output(mut cmd: Command, timeout: Duration) -> Result<Output> {
+    pub fn output(cmd: Command, timeout: Duration) -> Result<Output> {
+        Self::output_with_stdin(cmd, timeout, Stdio::null())
+    }
+
+    pub fn output_with_stdin(
+        mut cmd: Command,
+        timeout: Duration,
+        stdin: impl Into<Stdio>,
+    ) -> Result<Output> {
         // Files avoid pipe deadlocks when a child writes more than the pipe buffer.
         let mut stdout = tempfile::tempfile()?;
         let mut stderr = tempfile::tempfile()?;
-        cmd.stdin(Stdio::null())
+        cmd.stdin(stdin)
             .stdout(stdout.try_clone()?)
             .stderr(stderr.try_clone()?);
         let mut child = Self::spawn_redirected(cmd)?;
@@ -164,6 +172,20 @@ impl ManagedChild {
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_standard_input_without_putting_content_in_arguments() {
+        use std::io::Write;
+        let mut input = tempfile::tempfile().unwrap();
+        input.write_all(b"stdin-only-marker\r\n").unwrap();
+        input.rewind().unwrap();
+        let mut cmd = command("cmd.exe");
+        cmd.args(["/D", "/C", "findstr", "marker"]);
+        assert!(!format!("{cmd:?}").contains("stdin-only-marker"));
+        let output = ManagedChild::output_with_stdin(cmd, Duration::from_secs(5), input).unwrap();
+        assert!(output.status.success());
+        assert!(String::from_utf8_lossy(&output.stdout).contains("stdin-only-marker"));
+    }
 
     #[test]
     fn captures_both_streams_and_nonzero_exit() {
