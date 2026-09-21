@@ -1,6 +1,13 @@
 import { call } from "../api";
+import type {
+  GithubAuthFlow,
+  GithubAuthPoll,
+  GithubRepoPage,
+  GithubBranchPage,
+} from "../types";
 import {
   GithubAction,
+  GithubCommand,
   PostgresSecretAction,
   ToolAction,
   ToolCommand,
@@ -48,6 +55,17 @@ export const postgresService = {
     }),
 };
 export const githubService = {
+  saveClientId: (clientId: string) =>
+    call(GithubCommand.AuthSettings, { clientId }),
+  authStart: () => call<GithubAuthFlow>(GithubCommand.AuthStart),
+  authPoll: (flowId: string) =>
+    call<GithubAuthPoll>(GithubCommand.AuthPoll, { flowId }),
+  authCancel: (flowId: string) => call(GithubCommand.AuthCancel, { flowId }),
+  authOpen: () => call(GithubCommand.AuthOpen),
+  repositories: (page = 1) =>
+    call<GithubRepoPage>(GithubCommand.Repositories, { page }),
+  branches: (repository: string, page = 1) =>
+    call<GithubBranchPage>(GithubCommand.Branches, { repository, page }),
   save: (token: string) =>
     call(ToolCommand.Github, { action: GithubAction.Save, token }),
   forget: () => call(ToolCommand.Github, { action: GithubAction.Forget }),

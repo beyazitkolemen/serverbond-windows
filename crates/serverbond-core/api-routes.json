@@ -1,4 +1,11 @@
 [
+  {"method":"GET","path":"/api/v1/github/repositories?page={page}","description":"Hesabın erişebildiği depolar; sayfa başına 50, güncelleme tarihine göre"},
+  {"method":"GET","path":"/api/v1/github/branches?repository={repository}&page={page}","description":"Depo dalları, koruma durumu ve varsayılan dal; sayfa başına 100"},
+  {"method":"PUT","path":"/api/v1/github/auth/settings","description":"OAuth App Client ID kaydet {clientId}; Client Secret kullanılmaz"},
+  {"method":"POST","path":"/api/v1/github/auth/start","description":"GitHub Device Flow başlat; kullanıcı kodu ve akış kimliği döner"},
+  {"method":"POST","path":"/api/v1/github/auth/poll","description":"GitHub onayını denetle {flowId}; jeton yalnızca şifreli olarak saklanır"},
+  {"method":"POST","path":"/api/v1/github/auth/cancel","description":"Bekleyen GitHub girişini iptal et {flowId}"},
+  {"method":"POST","path":"/api/v1/github/auth/open","description":"GitHub cihaz doğrulama sayfasını tarayıcıda aç"},
   {
     "method": "GET",
     "path": "/api/v1",

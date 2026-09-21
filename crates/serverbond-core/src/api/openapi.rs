@@ -54,6 +54,10 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
     let string = json!({"type":"string"});
     let boolean = json!({"type":"boolean"});
     Some(match (method, path) {
+        ("PUT", "/github/auth/settings") => fields(json!({"clientId":string}), &["clientId"]),
+        ("POST", "/github/auth/poll" | "/github/auth/cancel") => {
+            fields(json!({"flowId":string}), &["flowId"])
+        }
         ("PUT", "/settings") | ("POST", "/settings/validate") => settings_schema(),
         ("POST", "/projects") => fields(json!({"name":string,"path":string}), &["name", "path"]),
         ("POST", "/projects/create") => {
@@ -134,7 +138,12 @@ pub fn document() -> Value {
                     );
                 }
             }
-            if !query.is_empty() {
+            if path == "/github/repositories" || path == "/github/branches" {
+                parameters.push(json!({"name":"page","in":"query","required":false,"schema":{"type":"integer","minimum":1,"maximum":10000,"default":1}}));
+                if path == "/github/branches" {
+                    parameters.push(json!({"name":"repository","in":"query","required":true,"schema":{"type":"string"},"description":"owner/repo"}));
+                }
+            } else if !query.is_empty() {
                 parameters.push(json!({"name":"source","in":"query","required":false,"schema":{"type":"string","default":"php"},"description":"php, schedule veya worker:<workerId>"}));
             }
             let mut operation = json!({

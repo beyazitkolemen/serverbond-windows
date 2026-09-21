@@ -153,6 +153,13 @@ Cloudflared masaüstü uygulaması açıldığında eksikse arka planda SHA-256 
 | POST | `/projects/create` | `{ "name": "magaza", "parent": "C:\\\\dev" }` — Composer ile yeni Laravel |
 | POST | `/projects/import` | `{ "url": "https://github.com/owner/repo", "name?": "…", "branch?": "main" }` — klonlar ve ekler |
 | GET | `/github` | GitHub hesabı ve jeton kayıt durumu; jetonun kendisini içermez |
+| GET | `/github/repositories?page=1` | Bağlı hesabın depoları, 50’lik sayfalama ve `nextPage` |
+| GET | `/github/branches?repository=owner/repo&page=1` | Varsayılan dal, koruma bilgisi ve 100’lük dal sayfaları |
+| PUT | `/github/auth/settings` | `{ "clientId": "…" }`; [OAuth bağlantı rehberi](github.md) |
+| POST | `/github/auth/start` | Device Flow başlatır; `flowId`, kullanıcı kodu ve bekleme süresi döner |
+| POST | `/github/auth/poll` | `{ "flowId": "…" }`; giriş durumunu sorgular, `retryAfter` saniye beklenir |
+| POST | `/github/auth/cancel` | `{ "flowId": "…" }`; girişi iptal eder |
+| POST | `/github/auth/open` | GitHub doğrulamasını yerel tarayıcıda açar |
 | POST | `/github/import` | `{ "repository": "owner/repo", "name": "magaza", "branch": "main" }`; `name`/`branch` isteğe bağlı, GitHub URL'si de kabul edilir |
 | GET | `/projects/discover` | Çalışma alanındaki Laravel kökleri |
 | POST | `/projects/import-folders` | `{ "paths": ["C:\\\\dev\\\\a", "C:\\\\dev\\\\b"] }` |

@@ -15,7 +15,15 @@ function expand(route: ApiRoute): ApiRoute[] {
         path: path.replace(choice[0], value) + (query ? `?${query}` : ""),
       }),
     );
-  return [{ ...route, path: path + (query ? "?source=php" : "") }];
+  const exampleQuery = query.startsWith("source=")
+    ? "source=php"
+    : query
+      ? query
+          .replace(/\{page\}/g, "1")
+          .replace(/\{repository\}/g, "owner/repo")
+          .replace(/\{[^}]+\}/g, "php")
+      : "";
+  return [{ ...route, path: path + (exampleQuery ? `?${exampleQuery}` : "") }];
 }
 
 export default function ApiReference({ run }: { run: Run }) {

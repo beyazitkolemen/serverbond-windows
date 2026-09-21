@@ -107,6 +107,14 @@ fn clones_registers_and_releases_a_laravel_project_over_git() {
         return;
     }
     let fx = fixture();
+    // An unreadable GitHub connection must not block local Git status or a
+    // clone/deployment whose remote is unrelated to GitHub.
+    fs::create_dir_all(fx._home.path().join("config")).unwrap();
+    fs::write(
+        fx._home.path().join("config/github-connection.dpapi"),
+        b"unreadable-credential",
+    )
+    .unwrap();
     let project = fx
         .manager
         .import_git_project(&file_url(&fx.bare), String::new(), String::new())

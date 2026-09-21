@@ -25,6 +25,7 @@ Son yayımlanan sürüm **v1.2.0**'dır. Bu sürüm elle kurulur ve imzalı otom
 - **Sunucu yönetimi:** PHP, MySQL ve Caddy; yerel HTTPS ve SQL yedekleme/geri yükleme.
 - **Laravel işlemleri:** kuyruk işçileri, zamanlayıcı ve Git/Composer/Artisan adımlarından oluşan sürüm tarifi.
 - **Ek hizmetler:** phpMyAdmin, Mailpit, PostgreSQL, Redis, GitHub ve Cloudflare tüneli.
+- **GitHub:** tarayıcıdan giriş, hesabınızdan depo seçimi ve dal listeleri. [Bağlantı ayarı](docs/github.md).
 - **API ve MCP:** proje, hizmet ve masaüstü işlemleri için yerel HTTP API, OpenAPI rehberi ve yapay zekâ istemcilerine MCP bağlantısı.
 - **Masaüstü:** açık/koyu tema, sistem tepsisi ve Windows başlangıç tercihleri.
 

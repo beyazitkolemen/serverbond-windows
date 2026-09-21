@@ -6,7 +6,7 @@
 pub mod api;
 mod domain;
 mod envfile;
-mod github;
+pub mod github;
 pub mod https;
 pub mod install;
 mod jobs;
@@ -65,6 +65,7 @@ pub struct Manager {
     shutting_down: AtomicBool,
     startup_issue: Mutex<Option<String>>,
     api: api::ApiState,
+    github_runtime: github::GithubRuntime,
     _lock: File,
 }
 
@@ -164,6 +165,7 @@ impl Manager {
             shutting_down: AtomicBool::new(false),
             startup_issue: Mutex::new(startup_issue),
             api: api::ApiState::default(),
+            github_runtime: github::GithubRuntime::default(),
             _lock: lock,
         };
         manager.log(if manager.recovery_issue().is_some() {

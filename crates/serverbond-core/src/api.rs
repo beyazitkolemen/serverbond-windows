@@ -518,6 +518,23 @@ struct AutoStart {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct GithubClientId {
+    client_id: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct GithubFlowId {
+    flow_id: String,
+}
+
+fn github_page(query: &str) -> Result<u32> {
+    query_value(query, "page")
+        .map(|v| v.parse().context("Sayfa sayı olmalı."))
+        .unwrap_or(Ok(1))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Job {
     #[serde(default)]
     job: Option<String>,
@@ -703,6 +720,30 @@ fn route(
         }
         ["php"] if get => ok(manager.snapshot()?.php_versions),
         ["github"] if get => ok(manager.snapshot()?.github),
+        ["github", "repositories"] if get => ok(manager.github_repositories(github_page(query)?)?),
+        ["github", "branches"] if get => ok(manager.github_branches(
+            &query_value(query, "repository").context("Depo gerekli.")?,
+            github_page(query)?,
+        )?),
+        ["github", "auth", "settings"] if put => {
+            let input: GithubClientId = parse(body)?;
+            manager.save_github_client_id(&input.client_id)?;
+            ok(manager.github_state())
+        }
+        ["github", "auth", "start"] if post => ok(manager.github_auth_start()?),
+        ["github", "auth", "poll"] if post => {
+            let input: GithubFlowId = parse(body)?;
+            ok(manager.github_auth_poll(&input.flow_id)?)
+        }
+        ["github", "auth", "cancel"] if post => {
+            let input: GithubFlowId = parse(body)?;
+            manager.github_auth_cancel(&input.flow_id)?;
+            ok(json!({"cancelled":true}))
+        }
+        ["github", "auth", "open"] if post => {
+            manager.github_auth_open()?;
+            ok(json!({"opened":true}))
+        }
         ["github", "import"] if post => {
             let input: ImportGithub = parse(body)?;
             ok(manager.import_github_project(&input.repository, input.name, input.branch)?)

@@ -609,6 +609,62 @@ async fn github(
     .await
 }
 #[tauri::command]
+async fn github_auth_settings(
+    state: tauri::State<'_, State>,
+    client_id: String,
+) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.save_github_client_id(&client_id)
+    })
+    .await
+}
+#[tauri::command]
+async fn github_auth_start(
+    state: tauri::State<'_, State>,
+) -> Result<serverbond_core::github::GithubAuthFlow, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.github_auth_start()).await
+}
+#[tauri::command]
+async fn github_auth_poll(
+    state: tauri::State<'_, State>,
+    flow_id: String,
+) -> Result<serverbond_core::github::GithubAuthPoll, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.github_auth_poll(&flow_id)).await
+}
+#[tauri::command]
+async fn github_auth_cancel(state: tauri::State<'_, State>, flow_id: String) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.github_auth_cancel(&flow_id)).await
+}
+#[tauri::command]
+async fn github_auth_open(state: tauri::State<'_, State>) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.github_auth_open()).await
+}
+#[tauri::command]
+async fn github_repositories(
+    state: tauri::State<'_, State>,
+    page: u32,
+) -> Result<serverbond_core::github::GithubRepoPage, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.github_repositories(page)).await
+}
+#[tauri::command]
+async fn github_branches(
+    state: tauri::State<'_, State>,
+    repository: String,
+    page: u32,
+) -> Result<serverbond_core::github::GithubBranchPage, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || {
+        state.github_branches(&repository, page)
+    })
+    .await
+}
+#[tauri::command]
 async fn node(state: tauri::State<'_, State>, action: String) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || {
@@ -885,6 +941,13 @@ fn main() {
             postgres,
             redis,
             github,
+            github_auth_settings,
+            github_auth_start,
+            github_auth_poll,
+            github_auth_cancel,
+            github_auth_open,
+            github_repositories,
+            github_branches,
             node,
             save_tunnel_token,
             save_tunnel_auto_start,

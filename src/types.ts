@@ -190,6 +190,42 @@ export interface ApiDocumentation {
 export interface GithubState {
   tokenSaved: boolean;
   login: string | null;
+  oauthClientId?: string;
+  authMethod?: string | null;
+  expiresAt?: number | null;
+}
+export interface GithubAuthFlow {
+  flowId: string;
+  userCode: string;
+  verificationUri: string;
+  expiresAt: number;
+  interval: number;
+}
+export interface GithubAuthPoll {
+  status: "pending" | "connected" | "cancelled" | "expired" | "denied";
+  retryAfter: number;
+  login: string | null;
+}
+export interface GithubRepository {
+  fullName: string;
+  owner: string;
+  private: boolean;
+  archived: boolean;
+  fork: boolean;
+  description: string | null;
+  defaultBranch: string;
+  language: string | null;
+  updatedAt: string;
+  empty: boolean;
+}
+export interface GithubRepoPage {
+  repositories: GithubRepository[];
+  nextPage: number | null;
+}
+export interface GithubBranchPage {
+  branches: { name: string; protected: boolean }[];
+  defaultBranch: string;
+  nextPage: number | null;
 }
 export interface PostgresState {
   version: string;

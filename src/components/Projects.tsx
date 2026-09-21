@@ -35,6 +35,7 @@ function githubSlug(raw: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
 }
+import GithubRepositoryPicker from "./GithubRepositoryPicker";
 import ProjectDetail from "./ProjectDetail";
 import ProjectSwitcher from "./ProjectSwitcher";
 import StatusBadge from "./StatusBadge";
@@ -370,7 +371,7 @@ function ProjectDialog({
     }
     if (fromGithub && !repository.trim()) {
       setError(
-        "Depoyu owner/repo, GitHub adresi veya https:// git adresi olarak yazın.",
+        "Listeden bir depo seçin veya Git adresini girin.",
       );
       return;
     }
@@ -401,7 +402,7 @@ function ProjectDialog({
   return (
     <dialog
       ref={dialog}
-      className="modal"
+      className={`modal ${fromGithub ? "github-project-modal" : ""}`}
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) close();
@@ -475,36 +476,20 @@ function ProjectDialog({
           {projectAddress(hostPattern, name)} adresinden erişilir.
         </p>
         {fromGithub ? (
-          <>
-            <label>
-              Git deposu
-              <input
-                name="repository"
-                placeholder="owner/repo, GitHub adresi veya https://… git adresi"
-                value={repository}
-                disabled={busy}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRepository(value);
-                  const slug = githubSlug(value);
-                  if (slug && (!name || name === githubSlug(repository))) {
-                    setName(slug);
-                  }
-                }}
-                required
-              />
-            </label>
-            <label>
-              Dal (isteğe bağlı)
-              <input
-                name="branch"
-                placeholder="varsayılan dal"
-                value={branch}
-                disabled={busy}
-                onChange={(e) => setBranch(e.target.value)}
-              />
-            </label>
-          </>
+          <GithubRepositoryPicker
+            github={github}
+            repository={repository}
+            branch={branch}
+            disabled={busy}
+            onBranch={setBranch}
+            onRepository={(value, defaultBranch) => {
+              const slug = githubSlug(value);
+              if (slug && (!name || name === githubSlug(repository)))
+                setName(slug);
+              setRepository(value);
+              setBranch(defaultBranch ?? "");
+            }}
+          />
         ) : (
           <>
             <label htmlFor="project-path">
@@ -547,7 +532,7 @@ function ProjectDialog({
                   ? github.login
                     ? `Hesap: ${github.login}.`
                     : "GitHub jetonu kayıtlı."
-                  : "Özel depolar için Hizmetler → GitHub’dan jeton ekleyin."
+                  : "Özel depolar için GitHub hesabınızı bağlayın."
               }`
             : create
               ? `Laravel 12 için PHP 8.2+ gerekir. Seçili sürüm: ${phpVersion}.`

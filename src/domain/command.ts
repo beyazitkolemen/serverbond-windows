@@ -13,6 +13,16 @@ export const ToolCommand = {
 
 export type ToolCommand = (typeof ToolCommand)[keyof typeof ToolCommand];
 
+export const GithubCommand = {
+  AuthSettings: "github_auth_settings",
+  AuthStart: "github_auth_start",
+  AuthPoll: "github_auth_poll",
+  AuthCancel: "github_auth_cancel",
+  AuthOpen: "github_auth_open",
+  Repositories: "github_repositories",
+  Branches: "github_branches",
+} as const;
+
 /** Hizmetler page catalog ids. `pma` is the UI tile, not `phpmyadmin`. */
 export const WorkspaceService = {
   PhpMyAdmin: "pma",

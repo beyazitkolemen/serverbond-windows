@@ -248,6 +248,99 @@ fn mcp_tools_cover_every_openapi_operation_with_valid_unique_schemas() {
 }
 
 #[test]
+fn github_connection_settings_and_discovery_contract_work_through_http_and_mcp() {
+    let api = enabled();
+    let saved = call(
+        &api,
+        "serverbond_put_github_auth_settings",
+        json!({"body":{"clientId":"testclient1234567890"}}),
+    );
+    assert_eq!(saved["result"]["isError"], false);
+    let state = api.get("/github").1["data"].clone();
+    assert_eq!(state["oauthClientId"], "testclient1234567890");
+    assert_eq!(state["tokenSaved"], false);
+    assert!(state.get("accessToken").is_none());
+    assert!(state.get("refreshToken").is_none());
+    let pending = api.send(
+        reqwest::Method::POST,
+        "/github/auth/poll",
+        json!({"flowId":"unknown-flow"}),
+    );
+    assert_eq!(pending.0, 200);
+    assert_eq!(pending.1["data"]["status"], "cancelled");
+    assert_eq!(
+        call(
+            &api,
+            "serverbond_post_github_auth_cancel",
+            json!({"body":{"flowId":"unknown-flow"}})
+        )["result"]["isError"],
+        false
+    );
+    assert_eq!(
+        api.send(
+            reqwest::Method::PUT,
+            "/github/auth/settings",
+            json!({"clientId":"","clientSecret":"NEVER_ECHO"})
+        )
+        .0,
+        400
+    );
+    assert_eq!(
+        api.send(
+            reqwest::Method::PUT,
+            "/github/auth/settings",
+            json!({"clientId":""})
+        )
+        .0,
+        200
+    );
+    // Blank Client ID must fail locally; this test never contacts GitHub.
+    assert_eq!(
+        api.send(reqwest::Method::POST, "/github/auth/start", json!({}))
+            .0,
+        400
+    );
+    for path in [
+        "/github/repositories?page=no",
+        "/github/repositories?page=0",
+        "/github/repositories?page=10001",
+        "/github/branches?page=1",
+        "/github/branches?repository=acme%2Fapp%3Fbad&page=1",
+    ] {
+        assert_eq!(api.get(path).0, 400, "{path}");
+    }
+    let tools = rpc(&api, "tools/list", json!({}));
+    let branches = tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["name"] == "serverbond_get_github_branches")
+        .unwrap();
+    assert_eq!(
+        branches["inputSchema"]["properties"]["page"]["type"],
+        "integer"
+    );
+    assert_eq!(branches["inputSchema"]["properties"]["page"]["minimum"], 1);
+    for page in [json!(0), json!(10001), json!("1")] {
+        assert_eq!(
+            call(
+                &api,
+                "serverbond_get_github_repositories",
+                json!({"page":page})
+            )["error"]["code"],
+            -32602
+        );
+    }
+    let repos = call(
+        &api,
+        "serverbond_get_github_repositories",
+        json!({"page":2}),
+    );
+    assert_eq!(repos["result"]["isError"], true);
+    assert!(repos.to_string().contains("bağlayın"));
+}
+
+#[test]
 fn mcp_validates_arguments_and_distinguishes_execution_errors() {
     let api = enabled();
     for (name, args) in [

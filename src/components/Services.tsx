@@ -395,10 +395,10 @@ export default function Services({
             ? github.login
               ? `Bağlı: ${github.login}`
               : "GitHub jetonu kayıtlı"
-            : "GitHub jetonu yok",
+            : "GitHub hesabı bağlı değil",
           detail: github.tokenSaved
-            ? "Özel depolar için bir kez kaydedilir. Jeton Windows hesabınıza bağlıdır."
-            : "Jeton kaydedilmedi. Ayarlar’dan kişisel erişim jetonunu yapıştırın.",
+            ? "Hesabınızın erişebildiği depoları ve dalları proje eklerken seçebilirsiniz."
+            : "GitHub ile giriş yapın veya Ayarlar’dan erişim jetonu ekleyin.",
           issue: null,
           actions: [] as ConsoleAction[],
         };

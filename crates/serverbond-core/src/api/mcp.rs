@@ -184,8 +184,12 @@ fn call_tool(manager: &Arc<Manager>, id: &Value, params: &Value) -> Reply {
     for parameter in &tool.parameters {
         if parameter["in"] == "query" {
             let name = parameter["name"].as_str().expect("parameter name");
-            if let Some(value) = arguments[name].as_str() {
-                query.query_pairs_mut().append_pair(name, value);
+            if let Some(value) = arguments.get(name) {
+                let value = value
+                    .as_str()
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| value.to_string());
+                query.query_pairs_mut().append_pair(name, &value);
             }
         }
     }

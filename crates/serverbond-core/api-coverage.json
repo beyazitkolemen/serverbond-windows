@@ -1,5 +1,12 @@
 {
   "commands": {
+    "github_auth_settings": ["PUT /github/auth/settings"],
+    "github_auth_start": ["POST /github/auth/start"],
+    "github_auth_poll": ["POST /github/auth/poll"],
+    "github_auth_cancel": ["POST /github/auth/cancel"],
+    "github_auth_open": ["POST /github/auth/open"],
+    "github_repositories": ["GET /github/repositories"],
+    "github_branches": ["GET /github/branches"],
     "app_update_check": ["GET /updates"],
     "app_update_open": ["POST /updates/open"],
     "snapshot": ["GET /status"],

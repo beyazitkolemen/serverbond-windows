@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { githubService } from "../services";
 import type { GithubState, Run } from "../types";
+import GithubConnect from "./GithubConnect";
 
 export default function GithubSettings({
   github,
@@ -23,71 +24,83 @@ export default function GithubSettings({
       {pane !== "ops" ? (
         <h2>{pane === "settings" ? "GitHub ayarları" : "GitHub hesabı"}</h2>
       ) : null}
-      {showOps ? (
-        <p className="section-note">
-          {github.tokenSaved
-            ? "Jeton kayıtlı. Ayarlar’dan değiştirebilirsiniz."
-            : "Özel depolar için Ayarlar’dan jeton ekleyin."}
-        </p>
+      {showOps ? <GithubConnect github={github} disabled={busy} /> : null}
+      {showOps && github.tokenSaved ? (
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy}
+          onClick={() =>
+            void run("GitHub bağlantısı kaldırılıyor…", () =>
+              githubService.forget(),
+            )
+          }
+        >
+          <Trash2 size={16} /> Bağlantıyı kaldır
+        </button>
       ) : null}
       {showForm ? (
         <>
-          <label>
-            Kişisel erişim jetonu
-            <div className="input-with-button">
-              <input
-                type={visible ? "text" : "password"}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="ghp_… veya github_pat_…"
-                value={token}
-                disabled={busy}
-                onChange={(e) => setToken(e.target.value)}
-              />
+          {!showOps ? <GithubConnect github={github} disabled={busy} /> : null}
+          <details className="github-manual-token">
+            <summary>Kişisel erişim jetonuyla bağlan</summary>
+            <label>
+              Kişisel erişim jetonu
+              <div className="input-with-button">
+                <input
+                  type={visible ? "text" : "password"}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="ghp_… veya github_pat_…"
+                  value={token}
+                  disabled={busy}
+                  onChange={(e) => setToken(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="icon-button"
+                  disabled={busy}
+                  aria-label={visible ? "Jetonu gizle" : "Jetonu göster"}
+                  onClick={() => setVisible((v) => !v)}
+                >
+                  {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </label>
+            <div className="settings-actions">
               <button
                 type="button"
-                className="icon-button"
-                disabled={busy}
-                aria-label={visible ? "Jetonu gizle" : "Jetonu göster"}
-                onClick={() => setVisible((v) => !v)}
+                className="button primary"
+                disabled={busy || !token.trim()}
+                onClick={() =>
+                  void run("GitHub jetonu kaydediliyor…", async () => {
+                    await githubService.save(token);
+                    setToken("");
+                    return "GitHub hesabı kaydedildi. Proje ekle → GitHub ile klonlayabilirsiniz.";
+                  })
+                }
               >
-                {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+                Jetonu kaydet
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || !github.tokenSaved}
+                onClick={() =>
+                  void run("GitHub jetonu siliniyor…", () =>
+                    githubService.forget(),
+                  )
+                }
+              >
+                <Trash2 size={16} />
+                Unut
               </button>
             </div>
-          </label>
-          <div className="settings-actions">
-            <button
-              type="button"
-              className="button primary"
-              disabled={busy || !token.trim()}
-              onClick={() =>
-                void run("GitHub jetonu kaydediliyor…", async () => {
-                  await githubService.save(token);
-                  setToken("");
-                  return "GitHub hesabı kaydedildi. Proje ekle → GitHub ile klonlayabilirsiniz.";
-                })
-              }
-            >
-              Jetonu kaydet
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={busy || !github.tokenSaved}
-              onClick={() =>
-                void run("GitHub jetonu siliniyor…", () =>
-                  githubService.forget(),
-                )
-              }
-            >
-              <Trash2 size={16} />
-              Unut
-            </button>
-          </div>
-          <p className="section-note">
-            Genel depolar için jeton gerekmez. Özel depolar: klasik jetonda{" "}
-            <code>repo</code>, ince ayarlı jetonda Contents okuma yetkisi.
-          </p>
+            <p className="section-note">
+              Genel depolar için jeton gerekmez. Özel depolar: klasik jetonda{" "}
+              <code>repo</code>, ince ayarlı jetonda Contents okuma yetkisi.
+            </p>
+          </details>
         </>
       ) : null}
     </section>

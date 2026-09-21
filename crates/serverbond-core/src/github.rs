@@ -9,12 +9,17 @@ use crate::{
     secrets, storage, Manager,
 };
 use anyhow::{bail, Context, Result};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
     process::Command,
     time::Duration,
 };
+
+mod connection;
+pub(crate) use connection::GithubRuntime;
+pub use connection::{GithubAuthFlow, GithubAuthPoll, GithubBranchPage, GithubRepoPage};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GithubRepository {
@@ -27,15 +32,13 @@ pub struct GithubRepository {
 pub struct GithubState {
     pub token_saved: bool,
     pub login: Option<String>,
+    pub oauth_client_id: String,
+    pub auth_method: Option<String>,
+    pub expires_at: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct GithubAccount {
-    login: String,
-}
-
-#[derive(Deserialize)]
-struct GithubUser {
     login: String,
 }
 
@@ -165,16 +168,37 @@ pub fn apply_github_git_auth(cmd: &mut Command, token: Option<&str>) {
             .env("GIT_CONFIG_KEY_1", "http.https://github.com/.extraHeader")
             .env(
                 "GIT_CONFIG_VALUE_1",
-                format!("AUTHORIZATION: bearer {token}"),
+                // Git smart HTTP uses Basic token auth, matching actions/checkout.
+                // REST API requests use Bearer separately in connection.rs.
+                format!(
+                    "AUTHORIZATION: basic {}",
+                    base64::engine::general_purpose::STANDARD
+                        .encode(format!("x-access-token:{token}"))
+                ),
             );
     }
 }
 
+pub(crate) fn is_github_https_url(url: &str) -> bool {
+    reqwest::Url::parse(url)
+        .is_ok_and(|url| url.scheme() == "https" && url.host_str() == Some("github.com"))
+}
+
 impl Manager {
     pub(crate) fn github_state(&self) -> GithubState {
+        let connection = self.github_connection().ok().flatten();
         GithubState {
-            token_saved: self.github_token_path().is_file(),
-            login: self.github_login(),
+            token_saved: self.github_has_token(),
+            login: connection
+                .as_ref()
+                .map(|c| c.login.clone())
+                .or_else(|| self.github_login()),
+            oauth_client_id: self.github_client_id().unwrap_or_default(),
+            auth_method: connection
+                .as_ref()
+                .map(|c| c.method.clone())
+                .or_else(|| self.github_token_path().is_file().then(|| "token".into())),
+            expires_at: connection.and_then(|c| c.expires_at),
         }
     }
 
@@ -182,13 +206,7 @@ impl Manager {
         let _guard = self.gate()?;
         let token = validate_github_token(token)?;
         let login = self.github_login_for_token(&token)?;
-        secrets::save(&self.github_token_path(), &token)?;
-        storage::atomic_write(
-            &self.github_account_path(),
-            serde_json::to_vec(&GithubAccount {
-                login: login.clone(),
-            })?,
-        )?;
+        self.github_store_manual_token(&token, &login)?;
         self.log(format!(
             "GitHub hesabı kaydedildi: {login}. Jeton Windows hesabınıza bağlı olarak şifrelenir."
         ));
@@ -197,6 +215,7 @@ impl Manager {
 
     pub fn clear_github_token(&self) -> Result<()> {
         let _guard = self.cleanup_gate()?;
+        self.github_forget_connection()?;
         for path in [self.github_token_path(), self.github_account_path()] {
             if path.exists() {
                 std::fs::remove_file(&path).context("GitHub jetonu silinemedi.")?;
@@ -279,12 +298,18 @@ impl Manager {
         Ok(project)
     }
 
-    pub(crate) fn apply_github_git_auth(&self, cmd: &mut Command) {
-        apply_github_git_auth(cmd, self.github_token().ok().as_deref());
+    pub(crate) fn apply_github_git_auth(&self, cmd: &mut Command) -> Result<()> {
+        let token = if self.github_has_token() {
+            Some(self.github_token()?)
+        } else {
+            None
+        };
+        apply_github_git_auth(cmd, token.as_deref());
+        Ok(())
     }
 
     fn github_token(&self) -> Result<String> {
-        secrets::read(&self.github_token_path())
+        self.github_access_token()
     }
 
     fn github_login(&self) -> Option<String> {
@@ -318,27 +343,7 @@ impl Manager {
     }
 
     fn github_login_for_token(&self, token: &str) -> Result<String> {
-        let response = crate::install::download_client()?
-            .get("https://api.github.com/user")
-            .header("Authorization", format!("Bearer {token}"))
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .send()
-            .context("GitHub API'ye bağlanılamadı.")?;
-        let status = response.status();
-        let body = response.text().unwrap_or_default();
-        if status.as_u16() == 401 || status.as_u16() == 403 {
-            bail!("GitHub jetonu reddedildi. repo yetkili kişisel erişim jetonunu kontrol edin.");
-        }
-        if !status.is_success() {
-            bail!("GitHub hesabı doğrulanamadı (HTTP {}).", status.as_u16());
-        }
-        let user: GithubUser =
-            serde_json::from_str(&body).context("GitHub hesap yanıtı okunamadı.")?;
-        if user.login.is_empty() {
-            bail!("GitHub hesabı doğrulanamadı.");
-        }
-        Ok(user.login)
+        self.github_runtime.http.login(token)
     }
 
     fn clone_git_repository(&self, url: &str, destination: &Path, branch: &str) -> Result<()> {
@@ -349,7 +354,11 @@ impl Manager {
             cmd.args(["--branch", branch, "--single-branch"]);
         }
         cmd.arg("--").arg(url).arg(destination);
-        self.apply_github_git_auth(&mut cmd);
+        if is_github_https_url(url) {
+            self.apply_github_git_auth(&mut cmd)?;
+        } else {
+            apply_github_git_auth(&mut cmd, None);
+        }
         self.log(format!(
             "Git deposu klonlanıyor: {url}{}",
             if branch.is_empty() {
@@ -366,7 +375,7 @@ impl Manager {
             if destination.exists() {
                 let _ = std::fs::remove_dir_all(destination);
             }
-            let hint = if self.github_token_path().is_file() {
+            let hint = if self.github_has_token() {
                 "Git deposu klonlanamadı. github günlüğünü kontrol edin."
             } else {
                 "Git deposu klonlanamadı. Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."

@@ -277,7 +277,20 @@ fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<
     let git = git_program()?;
     let mut cmd = command(git);
     cmd.args(args).current_dir(&project.path);
-    manager.apply_github_git_auth(&mut cmd);
+    // Local status/branch operations and unrelated remotes must remain usable
+    // when a saved GitHub credential has expired or cannot be decrypted.
+    let network = matches!(args.first().map(String::as_str), Some("fetch" | "pull"));
+    let github_remote = network
+        && manager
+            .git_output(project, &["remote".into(), "-v".into()])?
+            .lines()
+            .filter_map(|line| line.split_whitespace().nth(1))
+            .any(crate::github::is_github_https_url);
+    if github_remote {
+        manager.apply_github_git_auth(&mut cmd)?;
+    } else {
+        crate::github::apply_github_git_auth(&mut cmd, None);
+    }
     Ok(cmd)
 }
 

@@ -84,6 +84,7 @@ const shots = [
     actions: [
       [".heading-actions .button.primary", "Proje ekle"],
       [".tabs button", "GitHub"],
+      [".tabs button", "Adres ile ekle"],
     ],
   },
   {
