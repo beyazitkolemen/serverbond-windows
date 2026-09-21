@@ -75,6 +75,7 @@ pub(crate) struct CloudState {
     started: AtomicBool,
     inner: Mutex<Runtime>,
 }
+type AfterAck = (String, Box<dyn FnOnce() -> Result<()> + Send>);
 #[derive(Default)]
 struct Runtime {
     completed: bool,
@@ -82,6 +83,7 @@ struct Runtime {
     error: Option<String>,
     last_contact: Option<String>,
     disabled: bool,
+    after_ack: Option<AfterAck>,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct Credentials {
@@ -256,6 +258,7 @@ impl Manager {
         runtime.disabled = false;
         runtime.error = None;
         runtime.last_contact = None;
+        runtime.after_ack = None;
         Ok(())
     }
     pub fn cloud_disconnect(&self) -> Result<()> {
@@ -273,6 +276,7 @@ impl Manager {
         runtime.disabled = false;
         runtime.error = None;
         runtime.last_contact = None;
+        runtime.after_ack = None;
         Ok(())
     }
     /// One connector per desktop Manager, stopped when the Manager is dropped.
@@ -351,11 +355,51 @@ impl Manager {
         };
         let services = service_report(crate::api::service_inventory(self)?);
         let http = client()?;
+        let pending = self
+            .cloud
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .after_ack
+            .as_ref()
+            .map(|(id, _)| id.clone());
+        if let Some(id) = pending {
+            let output: Value =
+                serde_json::from_str(&secrets::read(&self.cloud_output_path(&c, &id)?)?)?;
+            let (status, _) = post(
+                &http,
+                &c,
+                &format!("commands/{id}/result"),
+                &json!({"status":"succeeded","output":output}),
+            )?;
+            if status == 401 {
+                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                runtime.disabled = true;
+                runtime.after_ack = None;
+            }
+            anyhow::ensure!(
+                status == 200,
+                "Güncelleme hazırlığı Cloud tarafından onaylanmadı."
+            );
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if !runtime.disabled
+                && self
+                    .cloud_credentials()?
+                    .as_ref()
+                    .is_some_and(|current| current.key == c.key)
+            {
+                if let Some((_, work)) = runtime.after_ack.take() {
+                    drop(runtime);
+                    work()?;
+                }
+            }
+            return Ok(());
+        }
         let (status, reply) = post(
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"services":services,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
+            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -421,6 +465,23 @@ impl Manager {
                 status == 200 || status == 401,
                 "İşlem sonucu gönderilemedi."
             );
+            if status == 200 {
+                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                if !runtime.disabled
+                    && self
+                        .cloud_credentials()?
+                        .as_ref()
+                        .is_some_and(|current| current.key == c.key)
+                    && runtime
+                        .after_ack
+                        .as_ref()
+                        .is_some_and(|(id, _)| id == &command.id)
+                {
+                    let (_, work) = runtime.after_ack.take().unwrap();
+                    drop(runtime);
+                    work()?;
+                }
+            }
             return Ok(());
         }
         if runtime.active.is_some() {
@@ -463,16 +524,16 @@ impl Manager {
         runtime.active = Some(command.id.clone());
         let m = self.clone();
         std::thread::spawn(move || {
-            let result = m.contain(|| match parsed_operation {
-                Some(operation) => operation?.execute(&m),
+            let mut result = m.contain(|| match parsed_operation {
+                Some(operation) => operation?.prepare(&m),
                 None => crate::api::service_action(&m, &command.service, &command.action)
-                    .map(|()| Value::Null),
+                    .map(|()| crate::api::DesktopReply::immediate(Value::Null)),
             });
             let mut runtime = m.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             let saved = (|| -> Result<()> {
                 if command.operation.is_some() {
                     let output = match &result {
-                        Ok(value) => json!({"data":value}),
+                        Ok(value) => json!({"data":value.data}),
                         Err(error) if error.is::<crate::envfile::EnvConflict>() => {
                             json!({"error":crate::envfile::EnvConflict.to_string()})
                         }
@@ -493,7 +554,7 @@ impl Manager {
                 }
                 let mut journal = m.journal(&c)?;
                 journal.insert(
-                    command.id,
+                    command.id.clone(),
                     if result.is_ok() {
                         "succeeded"
                     } else {
@@ -505,6 +566,21 @@ impl Manager {
             })();
             if saved.is_err() {
                 runtime.error = Some("İşlem sonucu kaydedilemedi; sonuç belirsiz.".into());
+            }
+            if saved.is_ok()
+                && !runtime.disabled
+                && m.cloud_credentials()
+                    .ok()
+                    .flatten()
+                    .as_ref()
+                    .is_some_and(|current| current.key == c.key)
+            {
+                if let Ok(reply) = &mut result {
+                    runtime.after_ack = reply
+                        .after_response
+                        .take()
+                        .map(|work| (command.id.clone(), work));
+                }
             }
             runtime.active = None;
             runtime.completed = true;
@@ -704,6 +780,51 @@ impl Manager {
 #[cfg(all(test, windows))]
 mod windows_cloud_tests {
     use super::*;
+    #[test]
+    fn update_waits_for_ack_retries_failed_delivery_and_runs_only_once() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        // Establish the fixture credentials and encrypted output before queuing installation.
+        exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let output = json!({"data":{"accepted":true,"version":"1.3.1","signatureVerified":true}});
+        secrets::save(&m.cloud_output_path(&c, &id).unwrap(), &output.to_string()).unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let flag = installed.clone();
+        m.cloud.inner.lock().unwrap().after_ack = Some((
+            id.clone(),
+            Box::new(move || {
+                flag.store(true, Ordering::Release);
+                Ok(())
+            }),
+        ));
+        assert!(exchange(&m, &mut c, vec![(500, json!({}))]).is_err());
+        assert!(!installed.load(Ordering::Acquire));
+        let requests = exchange(&m, &mut c, vec![(200, json!({"ok":true}))]).unwrap();
+        assert_eq!(requests[0]["output"], output);
+        assert!(installed.load(Ordering::Acquire));
+        assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+        let flag = installed.clone();
+        installed.store(false, Ordering::Release);
+        m.cloud.inner.lock().unwrap().after_ack = Some((
+            id,
+            Box::new(move || {
+                flag.store(true, Ordering::Release);
+                Ok(())
+            }),
+        ));
+        assert!(exchange(&m, &mut c, vec![(401, json!({}))]).is_err());
+        assert!(!installed.load(Ordering::Acquire));
+        assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+    }
     fn exchange(
         m: &Arc<Manager>,
         c: &mut Credentials,

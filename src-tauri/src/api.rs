@@ -14,6 +14,13 @@ pub struct Host {
     updating: Arc<std::sync::atomic::AtomicBool>,
 }
 
+struct ResetUpdateFlag(Arc<std::sync::atomic::AtomicBool>);
+impl Drop for ResetUpdateFlag {
+    fn drop(&mut self) {
+        self.0.store(false, std::sync::atomic::Ordering::Release);
+    }
+}
+
 impl Host {
     pub fn new(app: AppHandle) -> Self {
         Self {
@@ -183,9 +190,15 @@ impl DesktopApi for Host {
                 *state.lock().unwrap_or_else(|e| e.into_inner()) =
                     json!({"phase":"ready","version":input.version});
                 let updating = self.updating.clone();
+                let reset = ResetUpdateFlag(updating.clone());
                 return Ok(DesktopReply {
                     data: json!({"accepted":true,"version":input.version,"signatureVerified":true}),
                     after_response: Some(Box::new(move || {
+                        let _reset = reset;
+                        if manager.is_busy() || manager.snapshot()?.any_running {
+                            *state.lock().unwrap_or_else(|e| e.into_inner()) = json!({"phase":"failed","error":"Servisler çalışıyor; güncelleme iptal edildi."});
+                            bail!("Servisler çalışıyor; güncelleme iptal edildi.");
+                        }
                         *state.lock().unwrap_or_else(|e| e.into_inner()) =
                             json!({"phase":"installing","version":update.version});
                         let result = manager

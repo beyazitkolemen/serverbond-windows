@@ -12,6 +12,8 @@ pub(super) struct ServiceLog {
 }
 
 pub(super) const NAMES: &[&str] = &[
+    "desktop.update-check",
+    "desktop.update-install",
     "desktop.show",
     "desktop.save",
     "desktop.appearance",
@@ -161,6 +163,10 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "desktop.update-check")]
+    DesktopUpdateCheck(Empty),
+    #[serde(rename = "desktop.update-install")]
+    DesktopUpdateInstall(super::desktop::Install),
     #[serde(rename = "desktop.show")]
     DesktopShow(Empty),
     #[serde(rename = "desktop.save")]
@@ -298,8 +304,18 @@ impl Operation {
             json!({"operation":name,"parameters":parameters}),
         )?)
     }
+    pub(super) fn prepare(self, manager: &Manager) -> Result<crate::api::DesktopReply> {
+        match self {
+            Self::DesktopUpdateInstall(input) => super::desktop::install(manager, input),
+            other => other
+                .execute(manager)
+                .map(crate::api::DesktopReply::immediate),
+        }
+    }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::DesktopUpdateCheck(_) => return super::desktop::update_check(manager),
+            Self::DesktopUpdateInstall(_) => anyhow::bail!("Update requires acknowledged delivery"),
             Self::DesktopShow(_) => return super::desktop::show(manager),
             Self::DesktopSave(input) => return super::desktop::save(manager, input),
             Self::DesktopAppearance(input) => return super::desktop::appearance(manager, input),

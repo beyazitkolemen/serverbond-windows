@@ -72,6 +72,72 @@ mod tests {
     use super::*;
     use crate::api::{DesktopApi, DesktopReply};
     use std::sync::{Arc, Mutex};
+    struct UpdateHost {
+        mode: &'static str,
+        installed: Arc<std::sync::atomic::AtomicBool>,
+    }
+    impl DesktopApi for UpdateHost {
+        fn call(&self, operation: &str, _: Value) -> Result<DesktopReply> {
+            match operation {
+                "update-check" => Ok(DesktopReply::immediate(
+                    json!({"currentVersion":"1.3.0","version":"1.3.1","available":true,"installMode":self.mode}),
+                )),
+                "update-install" => {
+                    let flag = self.installed.clone();
+                    Ok(DesktopReply {
+                        data: json!({"accepted":true,"version":"1.3.1","signatureVerified":true}),
+                        after_response: Some(Box::new(move || {
+                            flag.store(true, std::sync::atomic::Ordering::Release);
+                            Ok(())
+                        })),
+                    })
+                }
+                _ => anyhow::bail!("Unexpected operation"),
+            }
+        }
+    }
+    #[test]
+    fn update_requires_confirmation_signed_new_version_and_defers_installation() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let installed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        for mode in ["manual", "automatic"] {
+            manager.attach_desktop_api(Arc::new(UpdateHost {
+                mode,
+                installed: installed.clone(),
+            }));
+            assert!(install(
+                &manager,
+                Install {
+                    version: "1.3.1".into(),
+                    confirm: false
+                }
+            )
+            .is_err());
+            assert!(install(
+                &manager,
+                Install {
+                    version: "1.2.0".into(),
+                    confirm: true
+                }
+            )
+            .is_err());
+            let result = install(
+                &manager,
+                Install {
+                    version: "1.3.1".into(),
+                    confirm: true,
+                },
+            );
+            assert!(!installed.load(std::sync::atomic::Ordering::Acquire));
+            if mode == "manual" {
+                assert!(result.is_err());
+            } else {
+                result.unwrap().after_response.unwrap()().unwrap();
+            }
+        }
+        assert!(installed.load(std::sync::atomic::Ordering::Acquire));
+    }
     struct Host(Mutex<String>);
     struct PreferencesHost(Mutex<Value>);
     impl DesktopApi for PreferencesHost {
@@ -158,4 +224,39 @@ mod tests {
         );
         assert!(show(&manager).unwrap().get("issue").is_none());
     }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Install {
+    version: String,
+    confirm: bool,
+}
+pub(super) fn update_check(manager: &Manager) -> Result<Value> {
+    let value = call(manager, "update-check", json!({}))?;
+    Ok(
+        json!({"currentVersion":value["currentVersion"],"version":value["version"],"available":value["available"],"installMode":value["installMode"]}),
+    )
+}
+pub(super) fn install(manager: &Manager, input: Install) -> Result<crate::api::DesktopReply> {
+    ensure!(input.confirm, "Güncelleme için açık onay gerekli.");
+    let version = semver::Version::parse(&input.version)?;
+    ensure!(
+        version.pre.is_empty() && version.build.is_empty(),
+        "Kararlı sürüm gerekli."
+    );
+    let state = update_check(manager)?;
+    ensure!(
+        state["available"] == true
+            && state["installMode"] == "automatic"
+            && state["version"] == input.version,
+        "İmzalı yeni sürüm bulunamadı veya sürüm değişti."
+    );
+    manager
+        .desktop_api()
+        .context("Masaüstü hostu bağlı değil.")?
+        .call(
+            "update-install",
+            json!({"version":input.version,"confirm":true}),
+        )
 }
