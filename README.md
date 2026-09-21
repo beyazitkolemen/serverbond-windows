@@ -18,11 +18,11 @@ Bu sürüm elle kurulur; otomatik güncelleme için imzalı paket içermez. Önc
 
 Kaynak kodunu indirmeniz veya derlemeniz gerekmez. PHP/MySQL/Caddy gibi bileşenler ilk kullanımda ayrıca indirilir.
 
-Geliştirme dalında kurulum durumu tüm sayfalarda gösterilir: paket adı/sürümü, gerçek indirme boyutu ve yüzdesi, SHA-256 kontrolü, açılan dosya sayısı ve Windows izin aşaması. İşlem sırasında durum 500 ms aralıklarla yenilenir; toplam boyut bilinmiyorsa yüzde gösterilmez. API `/snapshot` aynı `installProgress` bilgisini sağlar.
+Geliştirme dalında kurulum durumu tüm sayfalarda gösterilir: paket adı/sürümü, gerçek indirme boyutu ve yüzdesi, SHA-256 kontrolü, açılan dosya sayısı ve Windows izin aşaması. İşlem sırasında durum 500 ms aralıklarla yenilenir; toplam boyut bilinmiyorsa yüzde gösterilmez. API `/status` aynı `installProgress` bilgisini sağlar.
 
 Windows izin yardımcısı gizli PowerShell ile çalışır; gerekli ilk UAC onayı korunur. Önceki görev tanımı bir sonraki izin yenilemesinde gizli çalışacak şekilde yeniden kaydedilir; eski tanımın açtığı konsol betiğin başında gizlenir. Proje terminali düğmesi ise kullanıcı istediğinde görünür terminal açmaya devam eder. Bu geliştirmeler yayımlanmış v1.2.0 paketinden sonradır.
 
-Kurulu masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsünden GitHub’daki son sürümü denetler. Yeni paket siz onaylamadan kurulmaz. Bu kanalın çalışması için deponun herkese açık olması ve imzalı bir GitHub Release (`latest.json`) yayımlanmış olması gerekir. Ayrıntı: [docs/updates.md](docs/updates.md).
+Masaüstü uygulaması **Ayarlar → Güncellemeler** veya tepsi menüsünden `beyazitkolemen/serverbond-windows` deposunun son kararlı sürümünü denetler. Güncel kaynak kodda denetim GitHub Releases API ile çalışır; `latest.json` yoksa kurulum bağlantısı gösterilir. İmzalı yayınlar uygulama içinden indirilebilir ve imza doğrulandıktan sonra kurulabilir. Yeni paket siz istemeden indirilmez veya kurulmaz. Ayrıntı: [docs/updates.md](docs/updates.md).
 
 ![ServerBond genel bakış: PHP, MySQL ve Caddy servisleri çalışırken](docs/screenshots/01-genel-bakis.png)
 

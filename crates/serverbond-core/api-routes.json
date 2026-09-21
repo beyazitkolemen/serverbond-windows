@@ -162,7 +162,12 @@
   {
     "method": "GET",
     "path": "/api/v1/updates",
-    "description": "İmzalı uygulama güncellemesini denetle"
+    "description": "GitHub sürümünü ve kurulum yöntemini denetle"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/updates/open",
+    "description": "serverbond-windows sürüm/kurulum bağlantısını tarayıcıda aç {url}"
   },
   {
     "method": "GET",

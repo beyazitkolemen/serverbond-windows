@@ -1,5 +1,7 @@
 {
   "commands": {
+    "app_update_check": ["GET /updates"],
+    "app_update_open": ["POST /updates/open"],
     "snapshot": ["GET /status"],
     "desktop_status": ["GET /desktop"],
     "appearance_save": ["PUT /desktop/appearance"],

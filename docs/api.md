@@ -31,7 +31,7 @@ serverbond api forget         # jetonu siler
 
 ## Yanıt biçimi
 
-`GET /snapshot` yanıtındaki `installProgress`, kurulum sürerken `packageId`, `name`, `version`, `phase`, `completed` ve `total` alanlarını içerir; aktif kurulum yoksa `null` döner. `phase`: `preparing`, `downloading`, `verifying`, `extracting`, `installing` veya `permissions`. İndirme/doğrulama sayaçları byte, arşiv açma sayacı dosya adedidir. `total: null` olduğunda yüzde hesaplanmaz. İşlem sırasında durum 500 ms aralıklarla sorgulanabilir; kurulum isteğini yeniden göndermeyin.
+`GET /status` yanıtındaki `installProgress`, kurulum sürerken `packageId`, `name`, `version`, `phase`, `completed` ve `total` alanlarını içerir; aktif kurulum yoksa `null` döner. `phase`: `preparing`, `downloading`, `verifying`, `extracting`, `installing` veya `permissions`. İndirme/doğrulama sayaçları byte, arşiv açma sayacı dosya adedidir. `total: null` olduğunda yüzde hesaplanmaz. İşlem sırasında durum 500 ms aralıklarla sorgulanabilir; kurulum isteğini yeniden göndermeyin.
 
 Her yanıt JSON'dur. `GET /openapi.json` doğrudan OpenAPI 3.1 belgesini döndürür (Swagger/Postman gibi istemcilere aktarılabilir); diğer yanıtlar şu zarfı kullanır:
 
@@ -103,9 +103,12 @@ Bu uçlar için `capabilities.data.desktop` değeri `true` olmalıdır.
 | POST | `/desktop/navigate` | `{"page":"projects"}`; `overview`, `packages`, `projects`, `logs`, `services`, `api`, `settings`, `updates` |
 | POST | `/desktop/exit` | `202`; servisleri durdurur ve uygulamadan çıkar |
 | POST | `/desktop/restart` | `202`; servisleri durdurur ve uygulamayı yeniden başlatır |
-| GET | `/updates` | İmzalı güncelleme kaynağını kontrol eder; `{available, currentVersion, version?, notes?}` |
+| GET | `/updates` | serverbond-windows son kararlı sürümü; `{available, currentVersion, version, notes, installMode, releaseUrl, installerUrl}` |
+| POST | `/updates/open` | `{url}`; bu deponun sürüm sayfasını veya kurulum bağlantısını Windows tarayıcısında açar |
 | GET | `/updates/status` | API üzerinden başlatılmış güncelleme: `phase`, varsa `version`, `downloaded`, `total`, `error` |
-| POST | `/updates/install` | `{"version":"1.2.0","confirm":true}`; belirtilen yayın sürümünü indirir, imzasını doğrular, `202` sonrasında kurucuyu çalıştırır |
+| POST | `/updates/install` | `{"version":"1.2.0","confirm":true}`; belirtilen imzalı yayın sürümünü indirir, imzasını doğrular, `202` sonrasında kurucuyu çalıştırır |
+
+`installMode: "automatic"` yalnızca imzalı kurulum için döner. `"manual"` yayınlarda `installerUrl` (yoksa `releaseUrl`) ile elle kurulum yapılır; `/updates/install` imzasız paketi kurmaz. `available: false`, kurulu sürümün son yayına eşit veya daha yeni olduğunu belirtir. Ağ hataları başarılı denetim gibi gösterilmez.
 
 Güncellemeden önce `POST /services/all/stop` çağırın ve çalışan işlemin tamamlanmasını bekleyin. Sürüm `GET /updates` çıktısıyla tam eşleşmelidir; keyfi URL kabul edilmez. İndirme boyunca istek açık kalır; birkaç dakikalık zaman aşımı kullanın ve başka bağlantıdan `/updates/status` sorgulayın. Durumlar `idle`, `downloading`, `ready`, `installing`, `failed` değerleridir. İndirme/imza hatası `400` döner. `202` sonrası API kapanır; kurulum hatası yerel uygulama günlüğüne ve arayüze bildirilir, bu durumda ServerBond'ı yeniden başlatın. Yeni süreçte durum `idle` olur; kurulum sonucunu `/health` sürümüyle denetleyin.
 

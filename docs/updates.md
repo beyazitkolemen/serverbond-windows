@@ -1,22 +1,27 @@
 # GitHub üzerinden otomatik güncelleme
 
-ServerBond, yayımlanmış GitHub sürümlerindeki imzalı NSIS paketini `latest.json` ile denetler. Kullanıcı onayı olmadan indirmez veya kurmaz.
+ServerBond, `beyazitkolemen/serverbond-windows` deposunun son kararlı sürümünü GitHub Releases API üzerinden denetler. Sürüm keşfi için `latest.json` gerekmez. İmzalı paket varsa uygulama içinden kurulum, diğer yayınlarda tarayıcıda açılan kurulum bağlantısı gösterilir. Kullanıcı isteği olmadan indirme veya kurulum başlatılmaz.
 
 ## Kullanıcı
 
 1. Masaüstü uygulamasını açın. Yeni sürüm varsa genel bakışta bir bildirim görünür.
 2. **Ayarlar → Güncellemeler** veya tepsi menüsündeki **Güncellemeleri denetle** ile GitHub’ı sorun.
-3. Sürüm notlarını okuyup **kur ve yeniden başlat** deyin. Çalışan PHP/MySQL/Caddy durur; kurulum bitince ServerBond yeniden açılır.
+3. İmzalı yayında **kur ve yeniden başlat** deyin. Paket indirilip imzası doğrulandıktan sonra çalışan servisler durur ve kurulum başlar.
+4. İmzasız yayında **kurulumunu indir** bağlantısını kullanın. Kurucuyu çalıştırmadan önce tepsi menüsünden **Çıkış** seçin.
 
-Kaynak: `https://github.com/beyazitkolemen/serverbond-windows/releases/latest/download/latest.json`
+Sürüm kaynağı: `https://api.github.com/repos/beyazitkolemen/serverbond-windows/releases/latest`
+
+İmzalı kurulum bildirimi: `https://github.com/beyazitkolemen/serverbond-windows/releases/latest/download/latest.json`
+
+Masaüstü ekranı ve `GET /api/v1/updates` aynı denetimi kullanır. Ağ veya GitHub erişim hatası, uygulama güncelmiş gibi gösterilmez. Aynı sürüm veya daha eski bir yayın kurulum önerisi üretmez.
 
 **v1.1.0 ve v1.1.1:** Paketler Windows'ta yerel olarak derlenip yayımlandı. Güncelleme imza anahtarı tanımlı olmadığından bu sürümler `latest.json` ve `.sig` içermez; GitHub Releases sayfasındaki kurulum EXE'si elle çalıştırılır. Aşağıdaki imzalı yayın akışı, Actions ve imza anahtarı hazır olduğunda kullanılabilir.
 
 **v1.2.0:** İmza anahtarı henüz tanımlı değildir. Release akışı testlerden sonra imzasız EXE, NSIS kurulum paketi ve `SHA256SUMS.txt` yayımlar; bu sürüm de elle kurulur.
 
-Depo herkese açık olmalıdır. Özel depoda `latest.json` oturumsuz indirilemez; uygulama “güncelleme yok” veya ağ hatası gösterir.
+Depo herkese açık olmalıdır. Özel depoya oturumsuz erişilemez; denetim hata verir.
 
-İmzasız yerel derleme (`npm run desktop:build:unsigned`) veya el ile kopyalanan EXE bu kanalı kullanamaz. Güncelleme, Release işinin ürettiği imzalı kurulum paketinden gelir.
+İmzasız yerel derleme de sürüm denetleyebilir. Uygulama içinden kurulacak yeni paket, yapılandırılmış açık anahtarla doğrulanabilen imzalı bir Release olmalıdır. İmzasız yayınlar otomatik kurulum yolundan geçirilmez.
 
 ## Yayımlama
 
@@ -32,7 +37,7 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-`Release` işi derleme, biçim, Clippy, standart testler ve gerçek Windows servis testlerini çalıştırır. İmza anahtarı varsa imzalı NSIS, `latest.json` ve `.sig`; yoksa imzasız NSIS üretir. Sürüm numaralı EXE, kurulum paketi ve SHA-256 özetleri yüklenene kadar yayın taslak kalır. Genel bakıştaki güncelleyici yalnızca imzalı, yayımlanmış (draft olmayan) sürümleri görür.
+`Release` işi derleme, biçim, Clippy, standart testler ve gerçek Windows servis testlerini çalıştırır. İmza anahtarı varsa imzalı NSIS, `latest.json` ve `.sig`; yoksa imzasız NSIS üretir. Sürüm numaralı EXE, kurulum paketi ve SHA-256 özetleri yüklenene kadar yayın taslak kalır. Güncelleyici yayımlanmış kararlı sürümleri gösterir; kurulum yöntemi imzalı dosyaların varlığına göre belirlenir.
 
 Anahtar üretmek:
 

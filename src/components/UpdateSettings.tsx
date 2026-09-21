@@ -30,6 +30,14 @@ export default function UpdateSettings({
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
   const [checking, setChecking] = useState(false);
+  const openRelease = async (url: string) => {
+    setError("");
+    try {
+      await call("app_update_open", { url });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
   const inspect = async (interactive: boolean) => {
     if (!desktop) {
       if (interactive) {
@@ -95,8 +103,10 @@ export default function UpdateSettings({
         <div className="update-notes">
           <h3>ServerBond {available.version}</h3>
           <p className="section-note">
-            Mevcut sürüm: v{available.currentVersion}. Kurulum servisleri
-            durdurur ve ServerBond’ı yeniden açar.
+            Mevcut sürüm: v{available.currentVersion}.{" "}
+            {available.installMode === "automatic"
+              ? "Kurulum servisleri durdurur ve ServerBond’ı yeniden açar."
+              : "Bu yayın elle kurulur. Kurulumdan önce tepsi menüsünden Çıkış seçin."}
           </p>
           {available.notes ? <pre>{available.notes}</pre> : null}
         </div>
@@ -108,7 +118,7 @@ export default function UpdateSettings({
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={percent ?? 0}
+            aria-valuenow={percent ?? undefined}
             aria-label="İndirme ilerlemesi"
           >
             <span style={{ width: `${percent ?? 15}%` }} />
@@ -130,7 +140,7 @@ export default function UpdateSettings({
           <RefreshCw size={16} className={checking ? "spin" : undefined} />
           Güncellemeleri denetle
         </button>
-        {available && (
+        {available?.installMode === "automatic" && (
           <button
             type="button"
             className="button primary"
@@ -140,10 +150,15 @@ export default function UpdateSettings({
                 setError("");
                 setProgress({ downloaded: 0, total: 0 });
                 try {
-                  if (running) {
-                    await call("service", { id: "all", action: "stop" });
-                  }
-                  await installAppUpdate(setProgress);
+                  await installAppUpdate(
+                    available.version,
+                    setProgress,
+                    async () => {
+                      if (running) {
+                        await call("service", { id: "all", action: "stop" });
+                      }
+                    },
+                  );
                 } catch (e) {
                   setProgress(null);
                   throw e;
@@ -155,6 +170,26 @@ export default function UpdateSettings({
             {available.version} sürümünü kur ve yeniden başlat
           </button>
         )}
+        {available?.installMode === "manual" && (
+          <a
+            className="button primary"
+            href={available.installerUrl ?? available.releaseUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(event) => {
+              if (desktop) {
+                event.preventDefault();
+                void openRelease(
+                  available.installerUrl ?? available.releaseUrl,
+                );
+              }
+            }}
+          >
+            {available.installerUrl
+              ? `${available.version} kurulumunu indir`
+              : "GitHub sürümünü aç"}
+          </a>
+        )}
       </div>
       <p className="section-note">
         Kaynak:{" "}
@@ -162,11 +197,17 @@ export default function UpdateSettings({
           href="https://github.com/beyazitkolemen/serverbond-windows/releases/latest"
           target="_blank"
           rel="noreferrer"
+          onClick={(event) => {
+            if (desktop) {
+              event.preventDefault();
+              void openRelease(event.currentTarget.href);
+            }
+          }}
         >
           GitHub Releases
         </a>
-        . Depo herkese açıksa oturum gerekmez. İmzasız veya el ile indirilen
-        EXE’ler bu kanaldan güncellenmez.
+        . Kaynak depo: beyazitkolemen/serverbond-windows. İmzalı yayınlar
+        uygulamadan kurulur; diğer yayınlarda kurulum bağlantısı gösterilir.
       </p>
     </section>
   );

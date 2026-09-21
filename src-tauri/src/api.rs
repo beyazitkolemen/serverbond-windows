@@ -50,6 +50,12 @@ struct Install {
     confirm: bool,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateLink {
+    url: String,
+}
+
 fn approved_install(body: Value) -> Result<Install> {
     let input: Install = serde_json::from_value(body)?;
     if !input.confirm || input.version.trim().is_empty() {
@@ -129,21 +135,11 @@ impl DesktopApi for Host {
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .clone(),
-            "update-check" => {
-                let update = tauri::async_runtime::block_on(
-                    app.updater_builder()
-                        .timeout(std::time::Duration::from_secs(30))
-                        .build()?
-                        .check(),
-                )?;
-                match update {
-                    Some(update) => {
-                        json!({"available":true,"version":update.version,"currentVersion":update.current_version,"notes":update.body})
-                    }
-                    None => {
-                        json!({"available":false,"currentVersion":app.package_info().version.to_string()})
-                    }
-                }
+            "update-check" => serde_json::to_value(crate::updates::check(&app)?)?,
+            "update-open" => {
+                let input: UpdateLink = serde_json::from_value(body)?;
+                serverbond_core::updates::open_release_link(&input.url)?;
+                json!({"opened":true})
             }
             "update-install" => {
                 let input = approved_install(body)?;

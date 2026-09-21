@@ -32,6 +32,7 @@ mod services;
 mod storage;
 mod terminal;
 pub mod tunnel;
+pub mod updates;
 
 pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
 pub use envfile::ProjectEnv;

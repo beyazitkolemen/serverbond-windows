@@ -363,7 +363,12 @@ fn desktop_capabilities_distinguish_cli_and_wrong_version_paths() {
     ] {
         assert_eq!(api.get(path).0, 501, "{path}");
     }
-    for path in ["/desktop/show", "/desktop/exit", "/updates/install"] {
+    for path in [
+        "/desktop/show",
+        "/desktop/exit",
+        "/updates/install",
+        "/updates/open",
+    ] {
         assert_eq!(
             api.send(reqwest::Method::POST, path, Value::Null).0,
             501,
@@ -425,6 +430,12 @@ fn desktop_routes_forward_to_the_host_without_changing_payloads() {
             "/updates/install",
             "update-install",
             serde_json::json!({"confirm":true,"version":"1.2.0"}),
+        ),
+        (
+            reqwest::Method::POST,
+            "/updates/open",
+            "update-open",
+            serde_json::json!({"url":serverbond_core::updates::RELEASES_URL}),
         ),
     ] {
         let (status, result) = api.send(method, path, body.clone());

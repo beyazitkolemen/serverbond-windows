@@ -9,6 +9,7 @@ mod appearance;
 mod desktop;
 mod startup;
 mod tray;
+mod updates;
 
 use std::sync::atomic::Ordering;
 use tauri::Manager as _;
@@ -24,6 +25,24 @@ use serverbond_core::{
 use std::{path::PathBuf, sync::Arc};
 
 type State = Arc<Manager>;
+
+#[tauri::command]
+async fn app_update_open(state: tauri::State<'_, State>, url: String) -> Result<(), String> {
+    blocking(state.inner().clone(), move || {
+        serverbond_core::updates::open_release_link(&url)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn app_update_check(
+    app: tauri::AppHandle,
+) -> Result<serverbond_core::updates::ReleaseCheck, String> {
+    tauri::async_runtime::spawn_blocking(move || updates::check(&app))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| format!("{error:#}"))
+}
 
 async fn blocking<T: Send + 'static>(
     manager: State,
@@ -802,6 +821,8 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            app_update_open,
+            app_update_check,
             snapshot,
             desktop_status,
             appearance_save,

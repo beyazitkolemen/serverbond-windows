@@ -666,6 +666,7 @@ fn route(
             desktop_call(manager, action, body)
         }
         ["updates"] if get => desktop_call(manager, "update-check", body),
+        ["updates", "open"] if post => desktop_call(manager, "update-open", body),
         ["updates", "status"] if get => desktop_call(manager, "update-status", body),
         ["updates", "install"] if post => desktop_call(manager, "update-install", body),
         ["status"] if get => ok(manager.snapshot()?),

@@ -115,6 +115,7 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
             json!({"version":string,"confirm":{"type":"boolean","const":true}}),
             &["version", "confirm"],
         ),
+        ("POST", "/updates/open") => fields(json!({"url":string}), &["url"]),
         _ => return None,
     })
 }
