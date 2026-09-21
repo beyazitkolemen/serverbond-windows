@@ -17,6 +17,7 @@ use std::{
 mod database;
 mod environment;
 mod jobs;
+mod mysql;
 mod operations;
 const SERVICES: &[&str] = &[
     "all",

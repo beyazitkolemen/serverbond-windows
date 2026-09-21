@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "mysql.connection",
+    "mysql.credentials",
+    "mysql.password",
     "database.show",
     "database.create",
     "database.backup",
@@ -126,6 +129,12 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "mysql.connection")]
+    MysqlConnection(Empty),
+    #[serde(rename = "mysql.credentials")]
+    MysqlCredentials(super::mysql::Confirm),
+    #[serde(rename = "mysql.password")]
+    MysqlPassword(super::mysql::Password),
     #[serde(rename = "database.show")]
     DatabaseShow(Remove),
     #[serde(rename = "database.create")]
@@ -207,6 +216,9 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::MysqlConnection(_) => return super::mysql::connection(manager),
+            Self::MysqlCredentials(input) => return super::mysql::credentials(manager, input),
+            Self::MysqlPassword(input) => return super::mysql::password(manager, input),
             Self::DatabaseShow(input) => {
                 return super::database::execute(manager, &input.id, "show")
             }
