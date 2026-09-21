@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "postgres.connection",
+    "postgres.credentials",
+    "postgres.password",
     "mysql.connection",
     "mysql.credentials",
     "mysql.password",
@@ -129,6 +132,12 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "postgres.connection")]
+    PostgresConnection(Empty),
+    #[serde(rename = "postgres.credentials")]
+    PostgresCredentials(super::mysql::Confirm),
+    #[serde(rename = "postgres.password")]
+    PostgresPassword(super::mysql::Password),
     #[serde(rename = "mysql.connection")]
     MysqlConnection(Empty),
     #[serde(rename = "mysql.credentials")]
@@ -216,6 +225,11 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::PostgresConnection(_) => return super::postgres::connection(manager),
+            Self::PostgresCredentials(input) => {
+                return super::postgres::credentials(manager, input)
+            }
+            Self::PostgresPassword(input) => return super::postgres::password(manager, input),
             Self::MysqlConnection(_) => return super::mysql::connection(manager),
             Self::MysqlCredentials(input) => return super::mysql::credentials(manager, input),
             Self::MysqlPassword(input) => return super::mysql::password(manager, input),

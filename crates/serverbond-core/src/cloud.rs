@@ -19,6 +19,7 @@ mod environment;
 mod jobs;
 mod mysql;
 mod operations;
+mod postgres;
 const SERVICES: &[&str] = &[
     "all",
     "php",

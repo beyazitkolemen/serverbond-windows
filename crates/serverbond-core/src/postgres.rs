@@ -105,12 +105,16 @@ impl Manager {
             let _ = std::fs::remove_file(&staged);
             bail!("Yeni parola şifrelenip geri okunamadı; parola değiştirilmedi.");
         }
-        if let Err(error) = self.psql_query(
-            &current,
-            &format!("ALTER USER postgres PASSWORD '{password}';"),
-        ) {
+        if self
+            .psql_query(
+                &current,
+                &format!("ALTER USER postgres PASSWORD '{password}';"),
+            )
+            .is_err()
+        {
             let _ = std::fs::remove_file(&staged);
-            return Err(error);
+            // PostgreSQL diagnostics may quote the ALTER statement, including the password.
+            bail!("PostgreSQL parola değişikliği doğrulanamadı. Sunucu durumunu kontrol edin.");
         }
         std::fs::rename(&staged, self.postgres_password_path()).with_context(|| {
             format!(
@@ -303,17 +307,83 @@ impl Manager {
             "-v",
             "ON_ERROR_STOP=1",
             "-tA",
-            "-c",
-            sql,
+            "-X",
+            "-f",
+            "-",
         ])
         .env("PGPASSWORD", password)
         .env("PGCLIENTENCODING", "UTF8");
-        let output = ManagedChild::output(cmd, Duration::from_secs(20))?;
+        let mut input = tempfile::tempfile()?;
+        input.write_all(sql.as_bytes())?;
+        std::io::Seek::rewind(&mut input)?;
+        let output = ManagedChild::output_with_stdin(cmd, Duration::from_secs(20), input)?;
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         if !output.status.success() {
             bail!("{}", if stderr.is_empty() { stdout } else { stderr });
         }
         Ok(stdout)
+    }
+}
+
+#[cfg(all(test, windows))]
+mod credential_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "Installs PostgreSQL and starts a disposable instance"]
+    fn postgres_rotation_keeps_credentials_out_of_arguments_and_preserves_access() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let mut settings = manager.snapshot().unwrap().settings;
+        settings.postgres.port = listener.local_addr().unwrap().port();
+        drop(listener);
+        manager.save_settings(settings).unwrap();
+        if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
+            for entry in std::fs::read_dir(cache).unwrap().flatten() {
+                if entry.file_type().unwrap().is_file() {
+                    std::fs::copy(
+                        entry.path(),
+                        home.path().join("cache").join(entry.file_name()),
+                    )
+                    .unwrap();
+                }
+            }
+        }
+        manager.install_postgres().unwrap();
+        manager.start_postgres().unwrap();
+        let old = manager.postgres_credentials().unwrap();
+        assert_eq!(
+            manager.psql_query(&old, "SELECT 'İstanbul';").unwrap(),
+            "İstanbul"
+        );
+        let next = format!("Test-{}", uuid::Uuid::new_v4().simple());
+        let staged = manager
+            .postgres_password_path()
+            .with_extension("dpapi.next");
+        std::fs::create_dir(&staged).unwrap();
+        assert!(manager.change_postgres_password(&next).is_err());
+        assert!(manager.postgres_credentials().unwrap() == old);
+        assert_eq!(manager.psql_query(&old, "SELECT 1;").unwrap(), "1");
+        std::fs::remove_dir(&staged).unwrap();
+        manager.change_postgres_password(&next).unwrap();
+        assert!(manager.postgres_credentials().unwrap() == next);
+        assert!(manager.psql_query(&old, "SELECT 1;").is_err());
+        assert_eq!(
+            manager.psql_query(&next, "SELECT 'İstanbul';").unwrap(),
+            "İstanbul"
+        );
+        assert!(!staged.exists());
+        assert!(!String::from_utf8_lossy(
+            &std::fs::read(manager.postgres_password_path()).unwrap()
+        )
+        .contains(&next));
+        assert!(
+            !std::fs::read_to_string(home.path().join("logs/serverbond.log"))
+                .unwrap()
+                .contains(&next)
+        );
+        manager.stop_postgres().unwrap();
     }
 }
