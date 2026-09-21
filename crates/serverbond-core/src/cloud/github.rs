@@ -10,6 +10,45 @@ pub(super) struct Client {
     confirm: bool,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct Flow {
+    flow_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct Cancel {
+    flow_id: String,
+    confirm: bool,
+}
+
+pub(super) fn start(manager: &Manager, input: super::mysql::Confirm) -> Result<Value> {
+    ensure!(
+        input.confirm,
+        "GitHub girişini başlatmak için açık onay gerekli."
+    );
+    Ok(serde_json::to_value(manager.github_auth_start()?)?)
+}
+
+pub(super) fn poll(manager: &Manager, input: Flow) -> Result<Value> {
+    uuid::Uuid::parse_str(&input.flow_id)?;
+    let state = manager.github_auth_poll(&input.flow_id)?;
+    Ok(
+        json!({"flowId":input.flow_id,"status":state.status,"retryAfter":state.retry_after,"login":state.login}),
+    )
+}
+
+pub(super) fn cancel(manager: &Manager, input: Cancel) -> Result<Value> {
+    ensure!(
+        input.confirm,
+        "GitHub girişini iptal etmek için açık onay gerekli."
+    );
+    uuid::Uuid::parse_str(&input.flow_id)?;
+    manager.github_auth_cancel(&input.flow_id)?;
+    Ok(json!({"flowId":input.flow_id,"status":"cancelled","retryAfter":0,"login":null}))
+}
+
 pub(super) fn show(manager: &Manager) -> Value {
     let state = manager.github_state();
     json!({"tokenSaved":state.token_saved,"login":state.login,"clientId":state.oauth_client_id,"authMethod":state.auth_method,"expiresAt":state.expires_at})
@@ -41,6 +80,37 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let manager = Manager::new(home.path().into()).unwrap();
         let client_id = "TestClient123456";
+        assert!(start(&manager, super::super::mysql::Confirm { confirm: false }).is_err());
+        let flow_id = uuid::Uuid::new_v4().to_string();
+        assert_eq!(
+            poll(
+                &manager,
+                Flow {
+                    flow_id: flow_id.clone()
+                }
+            )
+            .unwrap()["status"],
+            "cancelled"
+        );
+        assert!(cancel(
+            &manager,
+            Cancel {
+                flow_id: flow_id.clone(),
+                confirm: false
+            }
+        )
+        .is_err());
+        assert_eq!(
+            cancel(
+                &manager,
+                Cancel {
+                    flow_id,
+                    confirm: true
+                }
+            )
+            .unwrap()["status"],
+            "cancelled"
+        );
         assert!(client(
             &manager,
             Client {

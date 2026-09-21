@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub(super) const NAMES: &[&str] = &[
+    "github.auth-start",
+    "github.auth-poll",
+    "github.auth-cancel",
     "github.show",
     "github.client",
     "github.disconnect",
@@ -145,6 +148,12 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "github.auth-start")]
+    GithubAuthStart(super::mysql::Confirm),
+    #[serde(rename = "github.auth-poll")]
+    GithubAuthPoll(super::github::Flow),
+    #[serde(rename = "github.auth-cancel")]
+    GithubAuthCancel(super::github::Cancel),
     #[serde(rename = "github.show")]
     GithubShow(Empty),
     #[serde(rename = "github.client")]
@@ -264,6 +273,9 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::GithubAuthStart(input) => return super::github::start(manager, input),
+            Self::GithubAuthPoll(input) => return super::github::poll(manager, input),
+            Self::GithubAuthCancel(input) => return super::github::cancel(manager, input),
             Self::GithubShow(_) => return Ok(super::github::show(manager)),
             Self::GithubClient(input) => return super::github::client(manager, input),
             Self::GithubDisconnect(input) => return super::github::disconnect(manager, input),
