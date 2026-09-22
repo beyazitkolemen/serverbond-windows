@@ -653,7 +653,10 @@ impl Manager {
     }
 
     fn git_output(&self, project: &Project, args: &[String]) -> Result<String> {
-        run_command(git_command_with_token(self, project, args, None)?, Duration::from_secs(8))
+        run_command(
+            git_command_with_token(self, project, args, None)?,
+            Duration::from_secs(8),
+        )
     }
 
     /// `origin` when it exists, otherwise the first configured remote.
