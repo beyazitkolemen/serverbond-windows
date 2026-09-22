@@ -36,6 +36,7 @@ export interface ProjectRelease {
   branch: string;
   composer: boolean;
   composerNoDev: boolean;
+  build?: boolean;
   migrate: boolean;
   optimizeClear: boolean;
   extraArtisan: string[];
@@ -59,6 +60,7 @@ export const defaultRelease = (): ProjectRelease => ({
   branch: "",
   composer: true,
   composerNoDev: true,
+  build: false,
   migrate: true,
   optimizeClear: true,
   extraArtisan: [],

@@ -22,6 +22,7 @@ pub mod preferences;
 mod process;
 pub mod product;
 mod project_runtime;
+pub mod project_setup;
 mod project_workflow;
 mod projects;
 mod redis;

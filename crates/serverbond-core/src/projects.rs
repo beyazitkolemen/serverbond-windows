@@ -221,7 +221,7 @@ impl Manager {
         self.register_project(name, path, None)
     }
 
-    fn register_project(
+    pub(crate) fn register_project(
         &self,
         name: String,
         path: PathBuf,

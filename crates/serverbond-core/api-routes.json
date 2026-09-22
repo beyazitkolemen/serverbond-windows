@@ -420,5 +420,15 @@
     "method": "POST",
     "path": "/api/v1/https/{trust|untrust}",
     "description": "Yerel HTTPS sertifikası"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/setup-check",
+    "description": "Seçilen kaynak ve PHP ile kurulum ön kontrolü"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/setup",
+    "description": "Tekil requestId ile projeyi hazırla ve kur"
   }
 ]

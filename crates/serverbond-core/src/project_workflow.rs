@@ -17,6 +17,8 @@ pub(crate) struct ProjectTemplate {
     pub schedule: bool,
     pub branch: String,
     pub migrate: bool,
+    #[serde(default)]
+    pub build: bool,
 }
 impl ProjectTemplate {
     pub fn validate(&self) -> Result<()> {
@@ -55,6 +57,7 @@ impl ProjectTemplate {
         }
         project.release.branch = self.branch.clone();
         project.release.migrate = self.migrate;
+        project.release.build = self.build;
     }
 }
 impl Manager {
@@ -151,6 +154,7 @@ mod tests {
             schedule: true,
             branch: "main".into(),
             migrate: true,
+            build: false,
         };
         // Resolve a supported PHP release from the manager rather than hard coding catalog updates.
         let home = tempfile::tempdir().unwrap();

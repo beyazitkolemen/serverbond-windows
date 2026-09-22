@@ -30,6 +30,8 @@
     "open_runtime_download": ["POST /system/runtime-download"],
     "service": ["POST /services/{id}/start", "POST /services/{id}/stop", "POST /services/{id}/restart"],
     "add_project": ["POST /projects", "POST /projects/create"],
+    "setup_preflight": ["POST /projects/setup-check"],
+    "setup_project": ["POST /projects/setup"],
     "remove_project": ["DELETE /projects/{id}"],
     "save_settings": ["PUT /settings"],
     "settings_defaults": ["GET /settings/defaults"],

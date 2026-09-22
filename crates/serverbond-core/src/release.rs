@@ -200,6 +200,12 @@ pub fn release_steps(release: &ProjectRelease) -> Result<Vec<ReleaseStep>> {
             args: composer_install_args(release.composer_no_dev),
         });
     }
+    if release.build {
+        steps.push(ReleaseStep {
+            name: "build".into(),
+            args: vec![],
+        });
+    }
     if release.migrate {
         steps.push(ReleaseStep {
             name: "migrate".into(),
@@ -431,6 +437,9 @@ impl Manager {
         {
             artisan_file(&project)?;
         }
+        if project.release.build {
+            self.tool_directory(crate::node::ID)?;
+        }
         let started = Instant::now();
         let started_at = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let deadline = started + RELEASE_TIMEOUT;
@@ -438,6 +447,13 @@ impl Manager {
         let mut success = true;
         let mut error = None;
         for step in steps {
+            self.cloud_stage(match step.name.as_str() {
+                "git" => "clone",
+                "composer" => "composer",
+                "build" => "build",
+                "migrate" => "database",
+                _ => "configure",
+            });
             chunks.push(format!("--- {} ---", step.name));
             match self.run_release_step(&project, &step, deadline) {
                 Ok(output) => {
@@ -585,6 +601,10 @@ impl Manager {
                 }
                 Ok(parts.join("\n"))
             }
+            "build" => {
+                self.build_project_assets(project, timeout)?;
+                Ok("Frontend derlemesi tamamlandı.".into())
+            }
             "composer" => {
                 let composer = self.executable("composer")?;
                 let mut cmd = self.project_php_command(project)?;
@@ -728,6 +748,20 @@ mod tests {
         assert!(error.contains("git PATH"), "{error}");
         let missing = git_program_from(Some(OsStr::new("/tmp/serverbond-no-git-bin"))).unwrap_err();
         assert!(missing.to_string().contains("Git for Windows"), "{missing}");
+    }
+
+    #[test]
+    fn frontend_build_precedes_database_changes_and_is_opt_in_for_old_recipes() {
+        let mut release = recipe();
+        let mut old = serde_json::to_value(&release).unwrap();
+        old.as_object_mut().unwrap().remove("build");
+        assert!(!serde_json::from_value::<ProjectRelease>(old).unwrap().build);
+        release.build = true;
+        let steps = release_steps(&release).unwrap();
+        let position = |name| steps.iter().position(|step| step.name == name).unwrap();
+        assert!(position("composer") < position("build"));
+        assert!(position("build") < position("migrate"));
+        assert!(position("build") < position("jobs"));
     }
 
     #[test]

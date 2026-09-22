@@ -160,6 +160,23 @@ async fn service(state: tauri::State<'_, State>, id: String, action: String) -> 
     .await
 }
 #[tauri::command]
+async fn setup_project(
+    state: tauri::State<'_, State>,
+    input: serverbond_core::project_setup::SetupRequest,
+) -> Result<serverbond_core::model::Project, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.setup_project(input)).await
+}
+#[tauri::command]
+async fn setup_preflight(
+    state: tauri::State<'_, State>,
+    input: serverbond_core::project_setup::SetupRequest,
+) -> Result<serde_json::Value, String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.setup_preflight(&input)).await
+}
+
+#[tauri::command]
 async fn add_project(
     state: tauri::State<'_, State>,
     name: String,
@@ -965,6 +982,8 @@ fn main() {
             open_runtime_download,
             service,
             add_project,
+            setup_project,
+            setup_preflight,
             remove_project,
             save_settings,
             settings_defaults,

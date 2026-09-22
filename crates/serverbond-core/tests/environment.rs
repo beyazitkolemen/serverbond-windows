@@ -38,7 +38,32 @@ fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
     fs::create_dir_all(path.join("public"))?;
     fs::write(path.join(".env"), "APP_KEY=preserve-this-value")?;
     fs::write(path.join("public/index.php"), "<?php header('Content-Type: application/json'); echo json_encode(['php'=>PHP_VERSION, 'uri'=>$_SERVER['REQUEST_URI']]);")?;
-    let project = manager.add_project("integration".into(), path.clone())?;
+    let setup = serverbond_core::project_setup::SetupRequest {
+        request_id: uuid::Uuid::new_v4().to_string(),
+        source: serverbond_core::project_setup::SetupSource::Existing,
+        name: "integration".into(),
+        location: "laravel-shape".into(),
+        branch: String::new(),
+        php_version: manager
+            .snapshot()?
+            .packages
+            .iter()
+            .find(|p| p.package.id == "php")
+            .unwrap()
+            .package
+            .version
+            .clone(),
+        install_dependencies: false,
+        composer: false,
+        build: false,
+    };
+    assert_eq!(manager.setup_preflight(&setup)?["ready"], true);
+    let project = manager.setup_project(setup.clone())?;
+    assert_eq!(manager.setup_project(setup)?.id, project.id);
+    assert_eq!(
+        fs::read_to_string(path.join(".env"))?,
+        "APP_KEY=preserve-this-value"
+    );
     manager.start("all")?;
     manager.create_database("integration")?;
     manager.mysql_query("CREATE TABLE integration.records (id INT PRIMARY KEY, value VARCHAR(100)); INSERT INTO integration.records VALUES (1, 'İstanbul ölçüm')")?;

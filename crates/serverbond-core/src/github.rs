@@ -346,7 +346,12 @@ impl Manager {
         self.github_runtime.http.login(token)
     }
 
-    fn clone_git_repository(&self, url: &str, destination: &Path, branch: &str) -> Result<()> {
+    pub(crate) fn clone_git_repository(
+        &self,
+        url: &str,
+        destination: &Path,
+        branch: &str,
+    ) -> Result<()> {
         let git = git_program()?;
         let mut cmd = command(git);
         cmd.arg("clone").arg("--no-tags");

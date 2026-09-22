@@ -212,6 +212,14 @@ export default function ReleasePane({
         <label className="setting-toggle">
           <input
             type="checkbox"
+            checked={draft.build ?? false}
+            onChange={(e) => update("build", e.target.checked)}
+          />
+          <span>npm ci ve npm run build</span>
+        </label>
+        <label className="setting-toggle">
+          <input
+            type="checkbox"
             checked={draft.migrate}
             onChange={(e) => update("migrate", e.target.checked)}
           />

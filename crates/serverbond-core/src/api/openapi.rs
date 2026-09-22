@@ -60,6 +60,18 @@ fn body_schema(method: &str, path: &str) -> Option<Value> {
         }
         ("PUT", "/settings") | ("POST", "/settings/validate") => settings_schema(),
         ("POST", "/projects") => fields(json!({"name":string,"path":string}), &["name", "path"]),
+        ("POST", "/projects/setup" | "/projects/setup-check") => fields(
+            json!({"requestId":{"type":"string","format":"uuid"},"source":{"type":"string","enum":["github","git","laravel","existing"]},"name":string,"location":string,"branch":string,"phpVersion":string,"installDependencies":{"type":"boolean"},"composer":{"type":"boolean"},"build":{"type":"boolean"}}),
+            &[
+                "requestId",
+                "source",
+                "name",
+                "phpVersion",
+                "installDependencies",
+                "composer",
+                "build",
+            ],
+        ),
         ("POST", "/projects/create") => {
             fields(json!({"name":string,"parent":string}), &["name", "parent"])
         }

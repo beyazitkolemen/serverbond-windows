@@ -48,6 +48,8 @@ pub(super) const NAMES: &[&str] = &[
     "database.backup",
     "database.restore",
     "projects.preflight",
+    "projects.setup-check",
+    "projects.setup",
     "projects.health",
     "projects.create-template",
     "projects.list",
@@ -173,6 +175,10 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "projects.setup-check")]
+    SetupCheck(crate::project_setup::SetupRequest),
+    #[serde(rename = "projects.setup")]
+    Setup(crate::project_setup::SetupRequest),
     #[serde(rename = "projects.preflight")]
     Preflight(Empty),
     #[serde(rename = "projects.health")]
@@ -330,6 +336,10 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::SetupCheck(input) => return manager.setup_preflight(&input),
+            Self::Setup(input) => {
+                manager.setup_project(input)?;
+            }
             Self::Preflight(_) => return manager.project_preflight(),
             Self::Health(input) => return manager.project_health(&input.id),
             Self::CreateTemplate(input) => {

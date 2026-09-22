@@ -765,6 +765,8 @@ fn route(
             let input: AddProject = parse(body)?;
             ok(manager.add_project(input.name, input.path)?)
         }
+        ["projects", "setup-check"] if post => ok(manager.setup_preflight(&parse(body)?)?),
+        ["projects", "setup"] if post => ok(manager.setup_project(parse(body)?)?),
         ["projects", "create"] if post => {
             let input: CreateProject = parse(body)?;
             ok(manager.create_project(input.name, input.parent)?)

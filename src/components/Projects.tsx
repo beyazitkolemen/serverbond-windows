@@ -38,6 +38,7 @@ function githubSlug(raw: string): string {
 }
 import GithubRepositoryPicker from "./GithubRepositoryPicker";
 import ProjectDetail from "./ProjectDetail";
+import ProjectSetup from "./ProjectSetup";
 import ProjectSwitcher from "./ProjectSwitcher";
 import StatusBadge from "./StatusBadge";
 import EmptyState from "./EmptyState";
@@ -83,6 +84,7 @@ export default function Projects({
 }) {
   const navigate = useNavigationGuard();
   const [modal, setModal] = useState(false);
+  const [setup, setSetup] = useState(false);
   const [remove, setRemove] = useState<Project | null>(null);
   const [restore, setRestore] = useState<Project | null>(null);
   const [discovered, setDiscovered] = useState<DiscoveredProject[] | null>(
@@ -116,6 +118,16 @@ export default function Projects({
           </div>
         )}
         <div className="heading-actions">
+          <button
+            className="button primary small"
+            disabled={busy}
+            onClick={() => {
+              clearError();
+              setSetup(true);
+            }}
+          >
+            Yeni proje kur
+          </button>
           {onOpen ? (
             <button type="button" className="section-link" onClick={onOpen}>
               Tümünü yönet
@@ -263,6 +275,16 @@ export default function Projects({
             ? null
             : "Klasörden, GitHub’dan veya yeni bir Laravel projesi ekleyin."}
         </EmptyState>
+      )}
+      {setup && (
+        <ProjectSetup
+          versions={phpVersions}
+          selectedPhp={phpVersion}
+          busy={busy}
+          run={run}
+          close={() => setSetup(false)}
+          serverError={serverError}
+        />
       )}
       {modal ? (
         <ProjectDialog
