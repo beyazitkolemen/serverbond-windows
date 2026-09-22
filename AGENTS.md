@@ -32,7 +32,7 @@ bash scripts/ai/install.sh
 npm run test:ai
 ```
 
-Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md).
+Gerçek MySQL ve PostgreSQL kuran testler yalnızca o servisin dosyaları değiştiyse çalışır. Ayrıntı: [docs/ai-environment.md](docs/ai-environment.md), [.cursor/rules/long-service-tests.mdc](.cursor/rules/long-service-tests.mdc).
 
 ## Çalıştırma
 

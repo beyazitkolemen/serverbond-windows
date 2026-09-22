@@ -1,0 +1,35 @@
+---
+description: Uzun MySQL ve PostgreSQL servis testleri yalnızca o alan değişince çalışır
+alwaysApply: true
+---
+
+# Uzun MySQL ve PostgreSQL testleri
+
+Gerçek MySQL veya PostgreSQL kurup başlatan testler dakikalar sürer. Birim testlerin ve Clippy’nin yerini tutmazlar.
+
+## Ne zaman çalışır
+
+Yalnızca o servisin kaynağı, testi veya paket sabiti değiştiyse:
+
+- MySQL: `src/cloud/mysql.rs`, `tests/mysql_credentials.rs`, `tests/environment.rs`, `tests/preferences_runtime.rs` ve `catalog.json` içindeki `mysql` paketi
+- PostgreSQL: `src/postgres.rs`, `src/cloud/postgres.rs` ve `tools.json` içindeki `postgres` paketi
+
+Başka bir alanda (GitHub, Cloudflare, arayüz, proje kurulumu) yapılan işte bu testler çalıştırılmaz ve yayın işine zorunlu adım olarak eklenmez.
+
+## Komutlar
+
+MySQL alanı değiştiyse:
+
+```bash
+cargo test -p serverbond-core --test mysql_credentials --test environment --test preferences_runtime -- --ignored --nocapture --test-threads=1
+```
+
+PostgreSQL alanı değiştiyse:
+
+```bash
+cargo test -p serverbond-core --lib postgres::credential_tests -- --ignored --nocapture --test-threads=1
+```
+
+`cargo test -p serverbond-core --tests -- --ignored` bu iki aileyi de içerir. Alan değişmeden bu komutun tamamını çalıştırma. Linux’ta bu testler zaten çalışmaz.
+
+Yayın işi, önceki etiket ile yeni etiket arasındaki dosya farkına bakarak aynı kararı verir. Elle tetiklenen tam servis turu yalnızca `workflow_dispatch` ile istenir.

@@ -15,6 +15,8 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Validate release version
         shell: pwsh
         run: |
@@ -44,8 +46,42 @@ jobs:
       - name: Rust checks
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       # Cloud roundtrip requires a separately provisioned Laravel/Reverb test instance.
+      # MySQL and PostgreSQL installs run only when that service changed since the previous tag.
       - name: Real Windows environment tests
-        run: cargo test -p serverbond-core --tests --locked -- --ignored --skip live_reverb_device_roundtrip --skip postgres_rotation_keeps_credentials_out_of_arguments_and_preserves_access --nocapture --test-threads=1
+        shell: pwsh
+        run: |
+          $prev = git describe --tags --abbrev=0 "HEAD^"
+          if (-not $prev) { throw "Önceki sürüm etiketi bulunamadı." }
+          $changed = @(git diff --name-only "$prev" HEAD)
+          Write-Host "Karşılaştırma: $prev..HEAD"
+          $changed | ForEach-Object { Write-Host $_ }
+          function Touches([string]$pathPattern, [string]$packageId) {
+            if (@($changed | Where-Object { $_ -match $pathPattern }).Count -gt 0) { return $true }
+            foreach ($file in @($changed | Where-Object { $_ -match '(^|/)(catalog|tools)\.json$' })) {
+              $diff = git diff --unified=0 "$prev" HEAD -- $file
+              if ($diff -match $packageId) { return $true }
+            }
+            return $false
+          }
+          $mysql = Touches '(mysql\.rs|mysql_credentials\.rs|environment\.rs|preferences_runtime\.rs)' '"id": "mysql"'
+          $postgres = Touches 'postgres\.rs' '"id": "postgres"'
+          $skip = @('live_reverb_device_roundtrip')
+          if (-not $mysql) {
+            Write-Host "MySQL alanı değişmedi; uzun MySQL testleri atlanıyor."
+            $skip += @(
+              'mysql_php_web_and_backups_survive_restart_and_repair',
+              'user_preferences_reach_real_runtimes_and_survive_repair',
+              'mysql_rotation_stages_secrets_and_preserves_query_and_backup_behavior'
+            )
+          }
+          if (-not $postgres) {
+            Write-Host "PostgreSQL alanı değişmedi; uzun PostgreSQL testi atlanıyor."
+            $skip += 'postgres_rotation_keeps_credentials_out_of_arguments_and_preserves_access'
+          }
+          $arguments = @('--ignored', '--nocapture', '--test-threads=1')
+          foreach ($name in $skip) { $arguments += @('--skip', $name) }
+          cargo test -p serverbond-core --tests --locked -- @arguments
+          if ($LASTEXITCODE -ne 0) { throw "Windows ortam testleri başarısız." }
       - name: Signed Windows installer and updater manifest
         if: env.TAURI_SIGNING_PRIVATE_KEY != ''
         uses: tauri-apps/tauri-action@v0

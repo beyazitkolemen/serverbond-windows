@@ -29,6 +29,7 @@ Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ek
 
 - `src-tauri` ve NSIS paketleri Windows x64 ister.
 - Paket indirme, MySQL ilk kurulum ve phpMyAdmin tarayıcı akışları yok sayılmış (`ignored`) testlerdir; Cloud Agent bunları çalıştırmaz.
+- MySQL ve PostgreSQL kurup başlatan testler yalnızca ilgili servis dosyaları değiştiğinde çalışır. Yayın işi bunu önceki etiketle karşılaştırır. Kural: `.cursor/rules/long-service-tests.mdc`.
 - `SERVERBOND_HOME` veri dizinini taşır; testler geçici dizin kullanır.
 
 ## Windows kurulum yolu testi
