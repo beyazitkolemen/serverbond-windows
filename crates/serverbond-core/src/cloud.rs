@@ -24,6 +24,7 @@ mod operations;
 mod postgres;
 mod settings;
 mod tunnel;
+pub const DEFAULT_CLOUD_URL: &str = "https://serverbond.on-forge.com";
 const SERVICES: &[&str] = &[
     "all",
     "php",
@@ -84,6 +85,18 @@ struct Runtime {
     last_contact: Option<String>,
     disabled: bool,
     after_ack: Option<AfterAck>,
+    connection: CloudConnection,
+    socket_endpoint: Option<String>,
+}
+#[derive(Clone, Copy, Default, Serialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum CloudConnection {
+    #[default]
+    Disconnected,
+    Connecting,
+    Connected,
+    Retrying,
+    Revoked,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct Credentials {
@@ -98,6 +111,9 @@ struct Credentials {
 #[serde(rename_all = "camelCase")]
 pub struct CloudStatus {
     pub paired: bool,
+    pub default_url: &'static str,
+    pub connection: CloudConnection,
+    pub socket_endpoint: Option<String>,
     pub url: Option<String>,
     pub name: Option<String>,
     pub account: Option<String>,
@@ -130,8 +146,26 @@ struct Pair {
     account: String,
 }
 
+fn connection_status(paired: bool, runtime: &Runtime) -> CloudConnection {
+    if runtime.disabled {
+        CloudConnection::Revoked
+    } else if !paired {
+        CloudConnection::Disconnected
+    } else if runtime.connection == CloudConnection::Disconnected {
+        CloudConnection::Connecting
+    } else {
+        runtime.connection
+    }
+}
+
 fn base_url(input: &str, allow_http: bool) -> Result<String> {
-    let u = Url::parse(input.trim()).context("Geçerli bir Cloud adresi girin.")?;
+    let input = input.trim();
+    let u = Url::parse(if input.is_empty() {
+        DEFAULT_CLOUD_URL
+    } else {
+        input
+    })
+    .context("Geçerli bir Cloud adresi girin.")?;
     let loopback = matches!(u.host_str(), Some("127.0.0.1") | Some("[::1]"));
     if !(u.scheme() == "https" || (allow_http && u.scheme() == "http" && loopback))
         || !u.username().is_empty()
@@ -200,8 +234,12 @@ impl Manager {
     pub fn cloud_status(&self) -> Result<CloudStatus> {
         let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         let c = self.cloud_credentials()?;
+        let paired = c.as_ref().is_some_and(|c| c.device_id.is_some());
         Ok(CloudStatus {
-            paired: c.as_ref().is_some_and(|c| c.device_id.is_some()) && !runtime.disabled,
+            paired: paired && !runtime.disabled,
+            default_url: DEFAULT_CLOUD_URL,
+            connection: connection_status(paired, &runtime),
+            socket_endpoint: runtime.socket_endpoint.clone(),
             url: c.as_ref().map(|c| c.url.clone()),
             name: c.as_ref().and_then(|c| c.name.clone()),
             account: c.and_then(|c| c.account),
@@ -259,6 +297,8 @@ impl Manager {
         runtime.error = None;
         runtime.last_contact = None;
         runtime.after_ack = None;
+        runtime.connection = CloudConnection::Connecting;
+        runtime.socket_endpoint = None;
         Ok(())
     }
     pub fn cloud_disconnect(&self) -> Result<()> {
@@ -277,6 +317,8 @@ impl Manager {
         runtime.error = None;
         runtime.last_contact = None;
         runtime.after_ack = None;
+        runtime.connection = CloudConnection::Disconnected;
+        runtime.socket_endpoint = None;
         Ok(())
     }
     /// One connector per desktop Manager, stopped when the Manager is dropped.
@@ -294,17 +336,22 @@ impl Manager {
                 }
                 match m.cloud_socket_session() {
                     Ok(()) => {
-                        delay = 5;
-                    }
-                    Err(_) => {
                         m.cloud
                             .inner
                             .lock()
                             .unwrap_or_else(|e| e.into_inner())
-                            .error = Some(
-                            "Cloud bağlantısı veya yerel kayıt başarısız. Yeniden deneniyor."
-                                .into(),
-                        );
+                            .connection = CloudConnection::Disconnected;
+                        delay = 5;
+                    }
+                    Err(_) => {
+                        let mut runtime = m.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                        runtime.connection = CloudConnection::Retrying;
+                        if !runtime.disabled {
+                            runtime.error = Some(
+                                "Cloud bağlantısı veya yerel kayıt başarısız. Yeniden deneniyor."
+                                    .into(),
+                            );
+                        }
                         delay = (delay * 2).min(60);
                     }
                 }
@@ -603,7 +650,7 @@ impl Manager {
         use std::time::Instant;
         use tungstenite::{client::IntoClientRequest, stream::MaybeTlsStream, Message};
         let c = {
-            let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             if runtime.disabled {
                 return Ok(());
             }
@@ -614,6 +661,8 @@ impl Manager {
                 return Ok(());
             }
             base_url(&c.url, allow_http())?;
+            runtime.connection = CloudConnection::Connecting;
+            runtime.socket_endpoint = None;
             c
         };
         let http = client()?;
@@ -642,6 +691,11 @@ impl Manager {
                 "ws"
             })
             .map_err(|_| anyhow::anyhow!("Soket adresi geçersiz."))?;
+        self.cloud
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .socket_endpoint = Some(socket_url.as_str().trim_end_matches('/').to_string());
         socket_url
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("Soket adresi geçersiz."))?
@@ -746,6 +800,16 @@ impl Manager {
                         {
                             subscribed = true;
                             self.cloud_tick(true)?;
+                            let mut runtime =
+                                self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                            if !runtime.disabled
+                                && self
+                                    .cloud_credentials()?
+                                    .as_ref()
+                                    .is_some_and(|current| current.key == c.key)
+                            {
+                                runtime.connection = CloudConnection::Connected;
+                            }
                         }
                         "command.ready" if subscribed && event["channel"] == settings.channel => {
                             self.cloud_tick(true)?
@@ -962,6 +1026,48 @@ mod windows_cloud_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cloud_default_uses_forge_without_replacing_custom_servers() {
+        assert_eq!(base_url("", false).unwrap(), DEFAULT_CLOUD_URL);
+        assert_eq!(base_url("  ", false).unwrap(), DEFAULT_CLOUD_URL);
+        assert_eq!(
+            base_url(DEFAULT_CLOUD_URL, false).unwrap(),
+            DEFAULT_CLOUD_URL
+        );
+        assert_eq!(
+            base_url(" https://custom.example/ ", false).unwrap(),
+            "https://custom.example"
+        );
+    }
+    #[test]
+    fn cloud_connection_distinguishes_pairing_from_live_subscription() {
+        let mut runtime = Runtime::default();
+        assert_eq!(
+            connection_status(false, &runtime),
+            CloudConnection::Disconnected
+        );
+        assert_eq!(
+            connection_status(true, &runtime),
+            CloudConnection::Connecting
+        );
+        runtime.connection = CloudConnection::Connected;
+        assert_eq!(
+            connection_status(true, &runtime),
+            CloudConnection::Connected
+        );
+        assert_eq!(
+            connection_status(false, &runtime),
+            CloudConnection::Disconnected
+        );
+        runtime.connection = CloudConnection::Retrying;
+        assert_eq!(connection_status(true, &runtime), CloudConnection::Retrying);
+        runtime.disabled = true;
+        assert_eq!(connection_status(true, &runtime), CloudConnection::Revoked);
+        assert_eq!(
+            serde_json::to_value(CloudConnection::Retrying).unwrap(),
+            "retrying"
+        );
+    }
     #[test]
     fn service_report_exposes_capabilities_without_snapshot_secrets() {
         let report = service_report(vec![

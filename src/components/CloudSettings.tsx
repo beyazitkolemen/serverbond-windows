@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
+import { Cloud, Radio, ShieldCheck } from "lucide-react";
 import { desktop } from "../api";
+import { useDraft } from "../hooks/useDraft";
 import { cloudService, type CloudStatus } from "../services/cloud";
+
+const connectionLabels: Record<CloudStatus["connection"], string> = {
+  disconnected: "Eşleştirme bekleniyor",
+  connecting: "Sokete bağlanıyor",
+  connected: "Soket bağlı",
+  retrying: "Yeniden bağlanıyor",
+  revoked: "Yeniden eşleştirin",
+};
 
 export default function CloudSettings() {
   const [status, setStatus] = useState<CloudStatus | null>(null);
-  const [url, setUrl] = useState("");
+  const { values: url, setValues: setUrl } = useDraft(
+    status?.url ?? status?.defaultUrl ?? "",
+  );
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [statusError, setStatusError] = useState("");
   useEffect(() => {
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -16,10 +29,13 @@ export default function CloudSettings() {
         const value = await cloudService.status();
         if (!disposed) {
           setStatus(value);
-          if (value.url) setUrl((current) => current || value.url || "");
+          setStatusError("");
         }
       } catch {
-        if (!disposed) setError("Cloud bağlantı durumu okunamadı.");
+        if (!disposed)
+          setStatusError(
+            "Cloud bağlantı durumu okunamadı. Tekrar denetleniyor.",
+          );
       } finally {
         if (!disposed) timer = setTimeout(() => void refresh(), 5000);
       }
@@ -37,90 +53,191 @@ export default function CloudSettings() {
       await action();
       setCode("");
       setStatus(await cloudService.status());
+      setStatusError("");
     } catch (e) {
       setError(String(e));
     } finally {
       setBusy(false);
     }
   };
+  const connection = status?.connection ?? "disconnected";
+  const locked = busy || !desktop || !status;
+  const alert = error || statusError || status?.error;
   return (
-    <section className="settings-section">
-      <h2>ServerBond Cloud</h2>
-      <p className="muted">
-        Cloud panelinden bir bağlantı kodu oluşturun ve bu cihazı hesabınıza
-        bağlayın. Uygulama açıkken servislerinizi ve projelerinizi uzaktan
-        yönetebilirsiniz.
-      </p>
+    <section className="settings-section cloud-settings">
+      <div className="cloud-heading">
+        <div className="cloud-title">
+          <Cloud size={24} aria-hidden="true" />
+          <div>
+            <h2>Cloud bağlantısı</h2>
+            <p className="muted">
+              Cihazınızı ve projelerinizi uzaktan yönetin.
+            </p>
+          </div>
+        </div>
+        <span
+          className="cloud-status"
+          data-state={statusError ? "retrying" : connection}
+          role="status"
+        >
+          <span aria-hidden="true" />
+          {statusError
+            ? "Durum okunamıyor"
+            : status
+              ? connectionLabels[connection]
+              : "Durum denetleniyor…"}
+        </span>
+      </div>
       {!desktop && (
-        <p role="status">
+        <p className="cloud-notice" role="status">
           Bağlantı yalnızca Windows uygulamasında kullanılabilir.
         </p>
       )}
-      {(error || status?.error) && <p role="alert">{error || status?.error}</p>}
+      {alert && (
+        <p className="cloud-error" role="alert">
+          {alert}
+        </p>
+      )}
       {status?.paired ? (
-        <div>
-          <p>
-            <strong>{status.name}</strong> · {status.account}
+        <>
+          <dl className="cloud-details">
+            <div>
+              <dt>Cihaz</dt>
+              <dd>{status.name || "Bu cihaz"}</dd>
+            </div>
+            <div>
+              <dt>Hesap</dt>
+              <dd>{status.account || "—"}</dd>
+            </div>
+            <div>
+              <dt>Cloud sunucusu</dt>
+              <dd>{status.url}</dd>
+            </div>
+            <div>
+              <dt>Soket adresi · otomatik</dt>
+              <dd>{status.socketEndpoint || "Cloud’dan alınıyor…"}</dd>
+            </div>
+            <div>
+              <dt>Son başarılı iletişim</dt>
+              <dd>
+                {status.lastContact
+                  ? new Date(status.lastContact).toLocaleString("tr-TR")
+                  : "İlk bağlantı bekleniyor"}
+              </dd>
+            </div>
+            <div>
+              <dt>Yeniden bağlantı</dt>
+              <dd>Uygulama açıkken otomatik</dd>
+            </div>
+          </dl>
+          <p className="cloud-notice">
+            <Radio size={18} aria-hidden="true" /> Bağlantı kesildiğinde
+            otomatik tekrar denenir. Uygulamayı yeniden açtığınızda bağlantı
+            kodu gerekmez.
           </p>
-          <p>Cloud adresi: {status.url}</p>
-          <p role="status">
-            Son bağlantı:{" "}
-            {status.lastContact
-              ? new Date(status.lastContact).toLocaleString("tr-TR")
-              : "Bağlantı bekleniyor"}
-          </p>
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() => void act(cloudService.disconnect)}
-          >
-            Bağlantıyı kaldır
-          </button>
-        </div>
+          <div className="cloud-actions">
+            <button
+              className="button secondary"
+              disabled={locked}
+              onClick={() => void act(cloudService.disconnect)}
+            >
+              {busy ? "Bağlantı kaldırılıyor…" : "Eşleştirmeyi kaldır"}
+            </button>
+            <span className="muted">
+              Bu cihazın Cloud üzerinden yönetimini kapatır.
+            </span>
+          </div>
+        </>
       ) : (
         <form
+          className="cloud-form"
           onSubmit={(e) => {
             e.preventDefault();
-            void act(() => cloudService.pair(url, code));
+            if (!locked) void act(() => cloudService.pair(url, code));
           }}
         >
-          <label>
-            Cloud adresi
+          <div className="cloud-server">
+            <div className="cloud-field-heading">
+              <label htmlFor="cloud-url">Cloud sunucusu</label>
+              <span className="muted">
+                {url.replace(/\/$/, "") === status?.defaultUrl
+                  ? "Varsayılan sunucu"
+                  : "Özel sunucu"}
+              </span>
+            </div>
             <input
+              id="cloud-url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
-              placeholder="https://cloud.example.com"
-              disabled={busy || !desktop}
+              disabled={locked}
+              spellCheck={false}
+              autoCapitalize="none"
+              aria-describedby="cloud-server-help"
             />
-          </label>
-          <label>
-            Bağlantı kodu
+            <p id="cloud-server-help" className="muted">
+              Forge sunucusu hazır gelir. Soket adresi ve bağlantı ayarları
+              Cloud’dan otomatik alınır.
+            </p>
+            {status && url.replace(/\/$/, "") !== status.defaultUrl && (
+              <button
+                type="button"
+                className="button secondary small"
+                disabled={locked}
+                onClick={() => setUrl(status.defaultUrl)}
+              >
+                Varsayılan sunucuyu kullan
+              </button>
+            )}
+          </div>
+          <div className="cloud-pairing">
+            <label htmlFor="cloud-code">Bağlantı kodu</label>
+            <p className="muted" id="cloud-code-help">
+              Cloud panelinde cihaz ekleyerek oluşturduğunuz 32 karakterli kodu
+              yapıştırın. Bu işlem yalnızca ilk bağlantıda gerekir.
+            </p>
             <input
+              id="cloud-code"
+              className="cloud-code"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => setCode(e.target.value.trim().toUpperCase())}
               required
               minLength={32}
               maxLength={32}
+              pattern="[A-Fa-f0-9]{32}"
+              title="32 karakterli bağlantı kodunu girin."
               autoComplete="off"
+              autoCapitalize="characters"
               spellCheck={false}
-              disabled={busy || !desktop}
+              disabled={locked}
+              aria-describedby="cloud-code-help"
+              placeholder="32 karakterli bağlantı kodu"
             />
-          </label>
-          <button className="button" disabled={busy || !desktop || !status}>
-            {busy ? "Bağlanıyor…" : "Bağlan"}
-          </button>
-          {status?.url && (
+          </div>
+          <div className="cloud-actions">
             <button
-              type="button"
-              className="button secondary"
-              disabled={busy || !desktop}
-              onClick={() => void act(cloudService.disconnect)}
+              className="button primary"
+              disabled={locked || !/^[A-F0-9]{32}$/.test(code)}
             >
-              Kayıtlı bağlantıyı kaldır
+              {busy ? "Eşleştiriliyor…" : "Cihazı bağla"}
             </button>
-          )}
+            {status?.url && (
+              <button
+                type="button"
+                className="button secondary"
+                disabled={locked}
+                onClick={() => void act(cloudService.disconnect)}
+              >
+                Kayıtlı eşleştirmeyi temizle
+              </button>
+            )}
+          </div>
+          <p className="cloud-notice">
+            <ShieldCheck size={18} aria-hidden="true" /> Eşleştirme bu Windows
+            kullanıcısına kaydedilir. Sonraki açılışlarda güvenli bağlantı
+            otomatik kurulur.
+          </p>
         </form>
       )}
     </section>
