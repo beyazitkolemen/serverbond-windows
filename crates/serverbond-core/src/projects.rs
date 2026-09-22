@@ -15,6 +15,16 @@ use std::{
     time::Duration,
 };
 
+/// Only fixed, actionable messages may be returned to Cloud; never raw process errors.
+#[derive(Debug)]
+pub(crate) struct ProjectError(pub &'static str);
+impl std::fmt::Display for ProjectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.0)
+    }
+}
+impl std::error::Error for ProjectError {}
+
 /// Runtime, bağımlılık ve çerçeve klasörleri proje kökü değildir.
 const SKIP_FOLDERS: &[&str] = &[
     ".git",
@@ -143,6 +153,46 @@ impl Manager {
         self.home.join("www")
     }
 
+    pub(crate) fn cloud_project_parent(&self) -> PathBuf {
+        self.project_scan_roots()[0].clone()
+    }
+
+    pub(crate) fn cloud_project_path(&self, path: PathBuf) -> Result<PathBuf> {
+        // Explicit absolute paths remain compatible with older Cloud clients.
+        if path.is_absolute() {
+            return Ok(path);
+        }
+        let folder = path.to_str().unwrap_or_default();
+        if folder.is_empty()
+            || folder.len() > 200
+            || folder == "."
+            || folder == ".."
+            || folder.ends_with(['.', ' '])
+            || folder
+                .chars()
+                .any(|c| c.is_control() || r#"/\:<>"|?*"#.contains(c))
+        {
+            return Err(ProjectError(
+                "Geçerli bir klasör adı girin; tam yol veya üst klasör kullanmayın.",
+            )
+            .into());
+        }
+        let root = dunce::canonicalize(self.cloud_project_parent()).map_err(|_| {
+            ProjectError(
+                "Proje çalışma klasörü bulunamadı. Windows proje klasörü ayarını kontrol edin.",
+            )
+        })?;
+        let resolved = dunce::canonicalize(root.join(path))
+            .map_err(|_| ProjectError("Bu klasör Windows proje çalışma alanında bulunamadı. Yeni proje için Yeni Laravel yöntemini seçin."))?;
+        if resolved == root || !resolved.starts_with(&root) {
+            return Err(ProjectError(
+                "Proje klasörü çalışma alanının dışında bir konuma yönleniyor.",
+            )
+            .into());
+        }
+        Ok(resolved)
+    }
+
     pub fn project_scan_roots(&self) -> Vec<PathBuf> {
         let projects_dir = self
             .config
@@ -169,11 +219,13 @@ impl Manager {
 
     pub(crate) fn add_project_inner(&self, name: String, path: PathBuf) -> Result<Project> {
         validate_slug(&name)?;
-        let path = dunce::canonicalize(path).context("Proje klasörü bulunamadı.")?;
+        let path =
+            dunce::canonicalize(path).map_err(|_| ProjectError("Proje klasörü bulunamadı."))?;
         if !path.join("public/index.php").is_file() {
-            bail!(
-                "Proje kökünde public/index.php bulunmalı. Laravel projesinin kök klasörünü seçin."
-            );
+            return Err(ProjectError(
+                "Proje kökünde public/index.php bulunmalı. Laravel projesinin kök klasörünü seçin.",
+            )
+            .into());
         }
         let original = self
             .config
@@ -185,7 +237,7 @@ impl Manager {
             .iter()
             .any(|p| p.name == name || p.path == path)
         {
-            bail!("Bu proje veya alan adı zaten kayıtlı.");
+            return Err(ProjectError("Bu proje veya alan adı zaten kayıtlı.").into());
         }
         let project = Project {
             id: uuid::Uuid::new_v4().to_string(),
@@ -350,7 +402,7 @@ impl Manager {
         let _guard = self.gate()?;
         let version = self.package("php")?.version;
         if !crate::model::php_supports_laravel12(&version) {
-            bail!("Yeni Laravel 12 projesi için PHP 8.2 veya üzerini seçin. Eski PHP sürümleriyle mevcut projelerinizi ekleyebilirsiniz.");
+            return Err(ProjectError("Yeni Laravel 12 projesi için PHP 8.2 veya üzerini seçin. Eski PHP sürümleriyle mevcut projelerinizi ekleyebilirsiniz.").into());
         }
         validate_slug(&name)?;
         if self
@@ -361,14 +413,24 @@ impl Manager {
             .iter()
             .any(|p| p.name == name)
         {
-            bail!("Bu proje adı zaten kayıtlı.");
+            return Err(ProjectError("Bu proje adı zaten kayıtlı.").into());
         }
-        let parent = dunce::canonicalize(parent).context("Üst klasör bulunamadı.")?;
+        let parent = dunce::canonicalize(parent).map_err(|_| {
+            ProjectError("Üst klasör bulunamadı. Windows proje klasörü ayarını kontrol edin.")
+        })?;
         let destination = parent.join(&name);
         if destination.exists() {
-            bail!("Hedef klasör zaten var; mevcut dosyaların üzerine yazılmadı.");
+            return Err(ProjectError(
+                "Hedef klasör zaten var; mevcut dosyaların üzerine yazılmadı.",
+            )
+            .into());
         }
-        let composer = self.executable("composer")?;
+        self.executable("php").map_err(|_| {
+            ProjectError(
+                "Seçili PHP sürümü kurulu değil. Önce PHP kurulumu veya onarımını tamamlayın.",
+            )
+        })?;
+        let composer = self.executable("composer").map_err(|_| ProjectError("Composer kurulu değil. Servisler ekranından Composer kurulumu veya onarımını tamamlayın."))?;
         self.write_php_config()?;
         self.log(format!(
             "Laravel projesi oluşturuluyor: {name}. Composer günlüğünden takip edebilirsiniz."
@@ -392,7 +454,7 @@ impl Manager {
             .env("PHPRC", self.php_ini_path()?)
             .env("PHP_INI_SCAN_DIR", "");
         let mut child = ManagedChild::spawn(cmd, &self.home.join("logs/composer.log"))?;
-        child.wait_timeout(Duration::from_secs(900)).context("Laravel oluşturulamadı. Composer günlüğünü kontrol edin. Oluşan dosyalar inceleme için korundu.")?;
+        child.wait_timeout(Duration::from_secs(900)).map_err(|_| ProjectError("Laravel oluşturulamadı. Composer günlüğünü kontrol edin. Oluşan dosyalar inceleme için korundu."))?;
         self.add_project_inner(name, destination)
     }
 }

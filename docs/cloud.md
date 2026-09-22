@@ -93,3 +93,9 @@ Ekran eşleştirme, sokete bağlanma, canlı abonelik, yeniden deneme ve erişim
 ## Tek kodla bağlantı (v1.3.4)
 
 Varsayılan Forge sunucusu için IPC çağrısında da adres gerekmez. Özel Cloud sunucuları gelişmiş bağlantı ayarlarından seçilebilir; kayıtlı özel adresler korunur ve kod gönderilmeden önce ekranda gösterilir. Kopyalanmış koddaki boşluk ve tireler temizlenir. Eşleştirme tamamlanınca bağlantı döngüsü beklemeden uyandırılır. Başarılı eşleştirme ile canlı Cloud bağlantısı ayrı durumlar olarak gösterilir; yinelenen gönderimler ve eski durum sorgularının yeni sonucu ezmesi engellenir.
+
+## 1.3.6 proje ve teslim sözleşmesi
+
+`projects.add` için tek klasör adı Windows ayarlarındaki proje çalışma alanına göre çözülür (varsayılan `www`). Üst klasör geçişleri ve çalışma alanı dışına çıkan bağlantılar reddedilir. Eski istemcilerin açık mutlak yolları uyumluluk için korunur. `projects.create` artık yalnızca `name` alabilir; `parent` yoksa aynı çalışma alanını kullanır. Var olan hedeflerin üzerine yazılmaz. Eksik klasör, PHP/Composer ve geçersiz Laravel kökü için Cloud'a sabit, güvenli açıklamalar döner.
+
+Heartbeat yanıtındaki isteğe bağlı `commands_pending` alanı yalnızca uyandırma işaretidir. `true` olduğunda ajan `/poll` çağırır; Cloud heartbeat komutu teslim almış saymaz. Bu, kaybolan Reverb bildiriminin bir sonraki 10 saniyelik heartbeat ile telafi edilmesini sağlar. Tekrar teslim edilen komut, kalıcı günlüğe göre raporlanır; tamamlanmış veya yarım kalmış işlem tekrar çalıştırılmaz. Eski Cloud yanıtlarında alanın olmaması `false` kabul edilir.

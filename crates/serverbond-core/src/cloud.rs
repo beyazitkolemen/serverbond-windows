@@ -152,6 +152,8 @@ fn empty_parameters() -> Value {
 #[derive(Deserialize)]
 struct Poll {
     command: Option<Command>,
+    #[serde(default)]
+    commands_pending: bool,
 }
 #[derive(Deserialize)]
 struct Pair {
@@ -498,6 +500,11 @@ impl Manager {
         runtime.last_contact = Some(chrono::Utc::now().to_rfc3339());
         runtime.error = None;
         let p: Poll = serde_json::from_value(reply)?;
+        if !claim && p.commands_pending {
+            // Heartbeat is only a wake-up hint. Poll owns delivery and journal replay.
+            drop(runtime);
+            return self.cloud_tick(true);
+        }
         let Some(command) = p.command else {
             return Ok(());
         };
@@ -595,6 +602,11 @@ impl Manager {
             journal.len() < 50000,
             "Cloud işlem günlüğü dolu; bağlantıyı yenileyin."
         );
+        if invalid && command.operation.is_some() {
+            secrets::save(&self.cloud_output_path(&c, &command.id)?, &json!({
+                "error":"İşlem parametreleri bu Windows sürümüyle uyumlu değil. Windows uygulamasını güncelleyip formu yenileyin."
+            }).to_string())?;
+        }
         journal.insert(command.id.clone(), state.into());
         self.save_journal(&c, &journal)?;
         if state != "running" {
@@ -619,6 +631,9 @@ impl Manager {
                         }
                         Err(error) if error.is::<crate::preferences::SettingsConflict>() => {
                             json!({"error":crate::preferences::SettingsConflict.to_string()})
+                        }
+                        Err(error) if error.is::<crate::projects::ProjectError>() => {
+                            json!({"error":error.downcast_ref::<crate::projects::ProjectError>().unwrap().to_string()})
                         }
                         // Raw errors can contain repository URLs or local secrets.
                         Err(_) => {
@@ -878,6 +893,73 @@ impl Manager {
 mod windows_cloud_tests {
     use super::*;
     #[test]
+    fn heartbeat_hint_polls_and_replays_saved_result_without_reexecution() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let output = json!({"data":{"projects":[],"total":0,"offset":0}});
+        secrets::save(&m.cloud_output_path(&c, &id).unwrap(), &output.to_string()).unwrap();
+        m.save_journal(
+            &c,
+            &std::collections::BTreeMap::from([(id.clone(), "succeeded".into())]),
+        )
+        .unwrap();
+        let requests = exchange_tick(&m, &mut c, vec![
+            (200, json!({"command":null,"commands_pending":true})),
+            (200, json!({"command":{"id":id,"service":"projects","action":"execute","operation":"projects.list","parameters":{},"expires_at":"2099-01-01T00:00:00Z"}})),
+            (200, json!({"ok":true})),
+        ], false).unwrap();
+        assert_eq!(requests.len(), 3);
+        assert_eq!(requests[2]["output"], output);
+        assert_eq!(requests[2]["status"], "succeeded");
+        assert!(m.cloud.inner.lock().unwrap().active.is_none());
+        assert_eq!(
+            exchange_tick(&m, &mut c, vec![(200, json!({"command":null}))], false)
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn malformed_operation_persists_an_actionable_safe_error() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let command = json!({"id":id,"service":"projects","action":"execute","operation":"projects.create","parameters":{"secret":"never-return-this"},"expires_at":"2099-01-01T00:00:00Z"});
+        exchange(&m, &mut c, vec![(200, json!({"command":command}))]).unwrap();
+        assert_eq!(m.journal(&c).unwrap()[&id], "failed");
+        let requests = exchange(
+            &m,
+            &mut c,
+            vec![(200, json!({"command":command})), (200, json!({"ok":true}))],
+        )
+        .unwrap();
+        assert_eq!(requests[1]["status"], "failed");
+        assert!(requests[1]["output"]["error"]
+            .as_str()
+            .unwrap()
+            .contains("parametreleri"));
+        assert!(!requests[1].to_string().contains("never-return-this"));
+    }
+
+    #[test]
     fn update_waits_for_ack_retries_failed_delivery_and_runs_only_once() {
         let home = tempfile::tempdir().unwrap();
         let m = Arc::new(Manager::new(home.path().into()).unwrap());
@@ -927,6 +1009,14 @@ mod windows_cloud_tests {
         c: &mut Credentials,
         replies: Vec<(u16, Value)>,
     ) -> Result<Vec<Value>> {
+        exchange_tick(m, c, replies, true)
+    }
+    fn exchange_tick(
+        m: &Arc<Manager>,
+        c: &mut Credentials,
+        replies: Vec<(u16, Value)>,
+        claim: bool,
+    ) -> Result<Vec<Value>> {
         std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
         let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
         c.url = format!("http://{}", server.server_addr());
@@ -949,7 +1039,7 @@ mod windows_cloud_tests {
             }
             bodies
         });
-        let result = m.cloud_tick(true);
+        let result = m.cloud_tick(claim);
         let bodies = handler.join().unwrap();
         result.map(|()| bodies)
     }

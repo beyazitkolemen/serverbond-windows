@@ -115,7 +115,8 @@ pub(super) struct Add {
 #[serde(deny_unknown_fields)]
 pub(super) struct Create {
     name: String,
-    parent: PathBuf,
+    #[serde(default)]
+    parent: Option<PathBuf>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -474,14 +475,18 @@ impl Operation {
                 );
             }
             Self::Add(input) => {
-                manager.add_project(input.name, input.path)?;
+                let path = manager.cloud_project_path(input.path)?;
+                manager.add_project(input.name, path)?;
             }
             Self::Remove(input) => {
                 uuid::Uuid::parse_str(&input.id)?;
                 manager.remove_project(&input.id)?;
             }
             Self::Create(input) => {
-                manager.create_project(input.name, input.parent)?;
+                let parent = input
+                    .parent
+                    .unwrap_or_else(|| manager.cloud_project_parent());
+                manager.create_project(input.name, parent)?;
             }
             Self::Import(input) => {
                 manager.import_git_project(&input.url, input.name, input.branch)?;
@@ -559,6 +564,124 @@ fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn folder_only_add_uses_configured_workspace_and_preserves_absolute_clients() {
+        let home = tempfile::tempdir().unwrap();
+        let workspace = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        manager.config.lock().unwrap().settings.projects_dir =
+            workspace.path().to_string_lossy().into();
+        let path = workspace.path().join("cloud-project");
+        std::fs::create_dir_all(path.join("public")).unwrap();
+        std::fs::write(path.join("public/index.php"), "<?php").unwrap();
+        let result = Operation::parse(
+            "projects.add",
+            &json!({"name":"cloud-project","path":"cloud-project"}),
+        )
+        .unwrap()
+        .execute(&manager)
+        .unwrap();
+        assert_eq!(
+            PathBuf::from(result["projects"][0]["path"].as_str().unwrap()),
+            dunce::canonicalize(&path).unwrap()
+        );
+        assert!(!home.path().join("www/cloud-project").exists());
+        let error = Operation::parse("projects.add", &json!({"name":"duplicate","path":path}))
+            .unwrap()
+            .execute(&manager)
+            .unwrap_err();
+        assert!(error.is::<crate::projects::ProjectError>());
+        assert!(error.to_string().contains("zaten kayıtlı"));
+    }
+
+    #[test]
+    fn folder_only_add_rejects_missing_folders_traversal_and_non_laravel_roots() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        for folder in [
+            "",
+            ".",
+            "..",
+            "../outside",
+            r"..\outside",
+            "C:relative",
+            "folder/child",
+            "folder.",
+            "missing",
+        ] {
+            let error = Operation::parse("projects.add", &json!({"name":"demo","path":folder}))
+                .unwrap()
+                .execute(&manager)
+                .unwrap_err();
+            assert!(
+                error.is::<crate::projects::ProjectError>(),
+                "{folder}: {error}"
+            );
+        }
+        std::fs::create_dir(home.path().join("www/empty")).unwrap();
+        let error = Operation::parse("projects.add", &json!({"name":"demo","path":"empty"}))
+            .unwrap()
+            .execute(&manager)
+            .unwrap_err();
+        assert!(error.to_string().contains("public/index.php"));
+        assert!(manager.config.lock().unwrap().projects.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn relative_project_folder_cannot_escape_through_symlink() {
+        let home = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        std::os::unix::fs::symlink(outside.path(), home.path().join("www/outside")).unwrap();
+        assert!(manager
+            .cloud_project_path("outside".into())
+            .unwrap_err()
+            .to_string()
+            .contains("dışında"));
+    }
+
+    #[test]
+    fn cloud_create_defaults_parent_and_rejects_existing_target_before_composer() {
+        let home = tempfile::tempdir().unwrap();
+        let workspace = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let operation = Operation::parse("projects.create", &json!({"name":"demo"})).unwrap();
+        assert!(matches!(
+            operation,
+            Operation::Create(Create { parent: None, .. })
+        ));
+        assert_eq!(
+            manager.cloud_project_parent(),
+            dunce::canonicalize(home.path().join("www")).unwrap()
+        );
+        manager.config.lock().unwrap().settings.projects_dir =
+            workspace.path().to_string_lossy().into();
+        std::fs::create_dir(workspace.path().join("demo")).unwrap();
+        std::fs::write(workspace.path().join("demo/keep.txt"), "keep").unwrap();
+        let error = operation.execute(&manager).unwrap_err();
+        assert!(
+            error.to_string().contains("Hedef klasör zaten var"),
+            "{error}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(workspace.path().join("demo/keep.txt")).unwrap(),
+            "keep"
+        );
+        let legacy = Operation::parse(
+            "projects.create",
+            &json!({"name":"demo","parent":workspace.path()}),
+        )
+        .unwrap();
+        assert!(matches!(
+            legacy,
+            Operation::Create(Create {
+                parent: Some(_),
+                ..
+            })
+        ));
+    }
+
     #[test]
     fn service_logs_reject_paths_and_bound_unicode_output() {
         let home = tempfile::tempdir().unwrap();
