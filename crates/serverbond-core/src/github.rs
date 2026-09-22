@@ -319,10 +319,6 @@ impl Manager {
         Ok(project)
     }
 
-    pub(crate) fn apply_github_git_auth(&self, cmd: &mut Command) -> Result<()> {
-        self.apply_github_git_auth_with(cmd, None)
-    }
-
     pub(crate) fn apply_github_git_auth_with(
         &self,
         cmd: &mut Command,
@@ -378,15 +374,6 @@ impl Manager {
 
     fn github_login_for_token(&self, token: &str) -> Result<String> {
         self.github_runtime.http.login(token)
-    }
-
-    pub(crate) fn clone_git_repository(
-        &self,
-        url: &str,
-        destination: &Path,
-        branch: &str,
-    ) -> Result<()> {
-        self.clone_git_repository_with_token(url, destination, branch, None)
     }
 
     pub(crate) fn clone_git_repository_with_token(

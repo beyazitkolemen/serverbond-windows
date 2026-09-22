@@ -287,10 +287,6 @@ fn run_command(cmd: Command, timeout: Duration) -> Result<String> {
     Ok(text)
 }
 
-fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<Command> {
-    git_command_with_token(manager, project, args, None)
-}
-
 fn git_command_with_token(
     manager: &Manager,
     project: &Project,
@@ -531,15 +527,6 @@ impl Manager {
         Ok(record)
     }
 
-    fn run_release_step(
-        &self,
-        project: &Project,
-        step: &ReleaseStep,
-        deadline: Instant,
-    ) -> Result<String> {
-        self.run_release_step_with_token(project, step, deadline, None)
-    }
-
     fn run_release_step_with_token(
         &self,
         project: &Project,
@@ -666,7 +653,7 @@ impl Manager {
     }
 
     fn git_output(&self, project: &Project, args: &[String]) -> Result<String> {
-        run_command(git_command(self, project, args)?, Duration::from_secs(8))
+        run_command(git_command_with_token(self, project, args, None)?, Duration::from_secs(8))
     }
 
     /// `origin` when it exists, otherwise the first configured remote.
