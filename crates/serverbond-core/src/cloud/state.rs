@@ -49,6 +49,8 @@ pub(super) fn fingerprint(data: &Value) -> Result<String> {
 fn byte_limit(section: &str) -> usize {
     if section == "env" {
         768 * 1024
+    } else if section == "projects" {
+        700 * 1024
     } else {
         256 * 1024
     }
@@ -107,14 +109,6 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
         sections: BTreeMap::new(),
         protected: BTreeSet::new(),
     };
-    capture(
-        &mut snapshot,
-        manager,
-        "projects",
-        "",
-        "projects.list",
-        json!({}),
-    );
     capture(&mut snapshot, manager, "php", "", "php.list", json!({}));
     capture(
         &mut snapshot,
@@ -152,6 +146,10 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
     }
     match manager.snapshot() {
         Ok(inventory) => {
+            let projects = super::operations::project_inventory(&inventory.projects, 0, 1000);
+            if !insert(&mut snapshot.sections, "projects", "", projects) {
+                snapshot.protected.insert("projects".into());
+            }
             for project in inventory.projects {
                 let id = project.project.id;
                 capture(
@@ -189,6 +187,7 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
             }
         }
         Err(_) => {
+            snapshot.protected.insert("projects".into());
             for key in previous.keys() {
                 if ["project:", "jobs:", "database:", "env:"]
                     .iter()

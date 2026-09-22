@@ -606,24 +606,63 @@ fn php_inventory(manager: &Manager) -> Result<Value> {
 fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
     ensure!(offset <= 1000, "Sayfa aralığı geçersiz.");
     let snapshot = manager.snapshot()?;
-    let total = snapshot.projects.len();
-    let projects: Vec<Value> = snapshot
-        .projects
-        .into_iter()
+    Ok(project_inventory(&snapshot.projects, offset, 50))
+}
+
+pub(super) fn project_inventory(
+    states: &[crate::model::ProjectStatus],
+    offset: usize,
+    limit: usize,
+) -> Value {
+    let projects: Vec<Value> = states
+        .iter()
         .skip(offset)
-        .take(50)
+        .take(limit)
         .map(|state| {
-            let project = state.project;
+            let project = &state.project;
             json!({"id":project.id,"name":project.name,"path":project.path,"host":project.host,
             "phpVersion":project.php_version,"running":state.running})
         })
         .collect();
-    Ok(json!({"projects":projects,"total":total,"offset":offset}))
+    json!({"projects":projects,"total":states.len(),"offset":offset})
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn project_inventory_keeps_all_projects_while_commands_remain_paged() {
+        let states = (1..=51)
+            .map(|number| crate::model::ProjectStatus {
+                project: crate::model::Project {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    name: format!("project-{number}"),
+                    path: PathBuf::from(format!("C:/projects/project-{number}")),
+                    host: format!("project-{number}.test"),
+                    php_version: "8.4".into(),
+                    workers: Vec::new(),
+                    schedule: Default::default(),
+                    release: Default::default(),
+                },
+                running: number == 51,
+                pid: None,
+                php_port: None,
+                issue: None,
+                worker_states: Vec::new(),
+                schedule_running: false,
+                schedule_pid: None,
+                schedule_issue: None,
+            })
+            .collect::<Vec<_>>();
+        let full = project_inventory(&states, 0, 1000);
+        let page = project_inventory(&states, 0, 50);
+        assert_eq!(full["projects"].as_array().unwrap().len(), 51);
+        assert_eq!(full["projects"][50]["name"], "project-51");
+        assert_eq!(full["projects"][50]["running"], true);
+        assert_eq!(page["projects"].as_array().unwrap().len(), 50);
+        assert_eq!(page["total"], 51);
+    }
+
     #[test]
     fn folder_only_add_uses_configured_workspace_and_preserves_absolute_clients() {
         let home = tempfile::tempdir().unwrap();
