@@ -16,6 +16,7 @@ Git kuralı: yalnızca `main`. **PR oluşturma yok** (`gh pr create`, ManagePull
 | --- | --- | --- |
 | `npm run test:ai` | Linux Cloud Agent, yerel Linux/macOS | Vite/TypeScript derlemesi, `serverbond-core` testleri, rustfmt, clippy |
 | `npm run test:core` | Her yer | Yalnızca `serverbond-core` birim/entegrasyon testleri |
+| `npm run test:rust:parallel` | Windows ve Linux, Nextest 0.9.146 | Workspace genelinde sekiz eşzamanlı Rust testi; `ignored` testler ayrı kalır |
 | `npm run test:mcp` | Windows / Linux | Resmi MCP SDK ile geçici Rust API sunucusuna gerçek bağlantı |
 | `npm run check` | Windows geliştirme | Arayüz + tüm workspace clippy (Tauri masaüstü dahil) |
 | `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS + EXE (`createUpdaterArtifacts` kapalı) |

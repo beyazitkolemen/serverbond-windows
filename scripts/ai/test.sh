@@ -12,5 +12,5 @@ npm run build
 npm run test:ui
 node --test scripts/ai/select-release-tests.test.mjs
 cargo fmt --all -- --check
-cargo test -p serverbond-core --locked
+cargo nextest run -p serverbond-core --locked -j 8 --status-level fail --final-status-level fail
 cargo clippy -p serverbond-core --all-targets --locked -- -D warnings

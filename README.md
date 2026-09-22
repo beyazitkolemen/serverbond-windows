@@ -17,7 +17,7 @@ Yeni kurulumların varsayılan konumu `C:\ServerBond`, proje çalışma alanı `
 
 Windows x64 ve internet bağlantısı gerekir. Kurulum WebView2 gereksinimini yönetir; PHP/MySQL için Microsoft Visual C++ Runtime gerekir. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
 
-Son yayımlanan sürüm **v1.3.12**'dir. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.12.md) · [Güncellemeler](docs/updates.md).
+Son yayımlanan sürüm **v1.3.15**'tir. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.15.md) · [Güncellemeler](docs/updates.md).
 
 ## Neler yapabilirsiniz?
 
@@ -54,6 +54,9 @@ npm run desktop
 | `npm run dev`                    | Salt okunur tarayıcı önizlemesi     |
 | `npm run check`                  | Arayüz derlemesi, rustfmt ve Clippy |
 | `npm run test:core`              | Rust çekirdek testleri              |
+| `npm run test:rust:parallel`     | Nextest ile sekiz eşzamanlı Rust testi |
 | `npm run desktop:build:unsigned` | Windows EXE ve kurulum paketi       |
+
+Paralel Rust komutu için [Nextest 0.9.146](https://nexte.st/docs/installation/pre-built-binaries/) gerekir. CI bu sürümü kendisi kurar; gerçek servis ve paket testleri ayrı koşulur.
 
 [Mimari](docs/architecture.md) · [Test ortamı](docs/ai-environment.md) · [Paketler](docs/packages.md) · [Tasarım sistemi](docs/design/design-system.md)

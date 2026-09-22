@@ -32,6 +32,9 @@ jobs:
         with:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.146
       - uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: npm ci
@@ -44,7 +47,7 @@ jobs:
       - name: Rust formatting
         run: cargo fmt --all -- --check
       - name: Core and desktop tests
-        run: cargo test --workspace --locked
+        run: npm run test:rust:parallel
       - name: Rust checks
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       # Cloud roundtrip requires a separately provisioned Laravel/Reverb test instance.
