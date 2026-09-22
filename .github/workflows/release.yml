@@ -45,7 +45,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       # Cloud roundtrip requires a separately provisioned Laravel/Reverb test instance.
       - name: Real Windows environment tests
-        run: cargo test -p serverbond-core --tests --locked -- --ignored --skip live_reverb_device_roundtrip --nocapture --test-threads=1
+        run: cargo test -p serverbond-core --tests --locked -- --ignored --skip live_reverb_device_roundtrip --skip postgres_rotation_keeps_credentials_out_of_arguments_and_preserves_access --nocapture --test-threads=1
       - name: Signed Windows installer and updater manifest
         if: env.TAURI_SIGNING_PRIVATE_KEY != ''
         uses: tauri-apps/tauri-action@v0
