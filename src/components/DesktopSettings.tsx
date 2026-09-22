@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useNavigationGuard";
 import { useEffect, useState } from "react";
 import { call, desktop } from "../api";
 import type { Run } from "../types";
@@ -58,6 +59,18 @@ export default function DesktopSettings({
           autostart: status.autostart ?? false,
         }
       : null);
+  const dirty =
+    draft !== null &&
+    JSON.stringify(draft) !==
+      JSON.stringify(
+        status
+          ? {
+              preferences: status.preferences,
+              autostart: status.autostart ?? false,
+            }
+          : null,
+      );
+  useUnsavedChanges(dirty, "Windows tercihleri");
   const update = (key: keyof Preferences | "autostart", checked: boolean) => {
     if (!current) return;
     setDraft(
@@ -74,7 +87,7 @@ export default function DesktopSettings({
       className="settings-section"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!current) return;
+        if (!current || !dirty || busy) return;
         void run("Masaüstü tercihleri kaydediliyor…", async () => {
           await call("desktop_save", current);
           setStatus(await call<Status>("desktop_status"));
@@ -139,10 +152,10 @@ export default function DesktopSettings({
           Tepsiye küçültmek servisleri durdurmaz. Tamamen kapatmak için Çıkış’ı
           seçin.
         </p>
-        <button className="button primary" type="submit" disabled={!draft}>
+        <button className="button primary" type="submit" disabled={!dirty}>
           Masaüstü tercihlerini kaydet
         </button>
-        {draft && (
+        {dirty && (
           <button
             type="button"
             className="button secondary"

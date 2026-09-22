@@ -752,3 +752,78 @@
     max-width: 100%;
   }
 }
+
+/* Persistent feedback and draft actions keep context visible on long forms. */
+.connection-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+.connection-notice p {
+  margin-top: 6px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.connection-notice button {
+  flex-shrink: 0;
+}
+.unsaved-dialog {
+  max-width: 480px;
+}
+.unsaved-list {
+  padding-left: 24px;
+  margin: 16px 0 24px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+input[aria-invalid="true"] {
+  border-color: var(--danger) !important;
+}
+small.field-error {
+  color: var(--danger);
+}
+.project-jobs-panel {
+  margin: 0;
+}
+.project-jobs-panel > .project-jobs-actions {
+  flex-wrap: wrap;
+}
+.environment-summary {
+  border-left: 3px solid var(--accent);
+}
+.environment-summary.is-running {
+  border-left-color: var(--success);
+}
+.environment-summary.is-running .summary-symbol {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success-border);
+}
+.settings-tab-caption {
+  letter-spacing: 0.06em;
+}
+.settings-save.save-bar {
+  background: var(--surface);
+  border-color: var(--accent-border);
+}
+@media (max-width: 640px) {
+  .connection-notice {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .unsaved-dialog .modal-actions {
+    flex-direction: column;
+  }
+  .unsaved-dialog .modal-actions button {
+    width: 100%;
+  }
+}

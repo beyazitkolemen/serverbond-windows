@@ -4,13 +4,13 @@ Türkçe Windows Laravel üretim paneli. React ve mevcut CSS altyapısı korunur
 
 ## Görsel dil
 
-Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek yeşil vurgu. Uygulamalar yan yana kartlar yerine her biri ayrı satırda listelenir. Açık temada kenar çubuğu yumuşak gri-yeşildir; koyu temada aynı hiyerarşi nötr koyu yüzeylerle korunur.
+Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek lacivert vurgu. Uygulamalar yan yana kartlar yerine her biri ayrı satırda listelenir. Açık temada kenar çubuğu yumuşak mavi-gridir; koyu temada aynı hiyerarşi nötr koyu yüzeylerle korunur.
 
-- **Renkler:** zemin `--canvas` `#f6f8fa`, yüzey `#ffffff`, kenar çubuğu `#eef2f3`, kenar `--border` `#e4e9ec`. Metin `--ink` `#20282d`, ikincil `--muted` `#626e76`. Vurgu `--accent` `#147a56`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler renkleri tokenlardan alır.
+- **Renkler:** zemin `--canvas` `#f2f5fa`, yüzey `#ffffff`, kenar çubuğu `#e8eef7`, kenar `--border` `#dce4ef`. Metin `--ink` `#172b46`, ikincil `--muted` `#5b6c81`. Vurgu `--accent` `#234577`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler renkleri tokenlardan alır.
 - **Yazı:** Segoe UI Variable → Segoe UI → system-ui. Sayfa başlığı 32/650 (1150 altında 28), bölüm 18/650, gövde 14, kontroller 13/600. Sürümler ve ölçümler tabular. Ürün satırı yalnızca kenar çubuğundadır; sayfa kaşı tekrarlanmaz.
 - **Izgara:** 4 piksel. Aralıklar `--space-1`…`--space-9` (4–36). Kenar boşluğu dışı 9, 11, 13, 15, 17, 19, 22, 25 kullanılmaz.
 - **Yerleşim:** kenar çubuğu `--sidebar-w` 224 (850 altında 76, 540 altında 60). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 36 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; marka, gezinme ve alt bilgi aynı dikey hatta durur.
-- **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Sunucu (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar kutu yerine boşluk ve küçük başlıklarla ayrılır; seçili satır dolu yeşil yüzey ve açık metinle belirtilir.
+- **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Sunucu (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar kutu yerine boşluk ve küçük başlıklarla ayrılır; seçili satır dolu lacivert yüzey ve açık metinle belirtilir.
 - **Kontrol:** birincil yükseklik `--control-h` 40, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 40. Girdi ve seçici aynı yükseklikte hizalanır.
 - **Şekil:** kontroller 8, liste ve panel dış köşeleri 12 piksel. Liste satırları tek yüzey içinde ince çizgilerle ayrılır. `--shadow-sm` kapalıdır; modal gibi yükseltilmiş katmanlarda `--shadow-md` kullanılır.
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
@@ -44,7 +44,7 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 - **API:** Bağlantı ve erişim / Uç nokta rehberi sekmeleri. Bağlantı formu ve gösterilen jeton sekme değişiminde korunur. Rehberde yöntem filtresi, arama ve açılabilir istek ayrıntıları bulunur.
 - **Günlükler:** kaynak sekmeleri, metin ve seviye filtresi, canlı akışı duraklat/sürdür, sona kaydırma ve görünen kayıtları kopyalama. Yükleme, boş sonuç ve okuma hatası ayrıdır. Okuma hatası son başarılı veriyi silmez; yeniden dene görünür. Bir okuma tamamlanmadan sonraki otomatik yenileme başlamaz; geç gelen eski kaynak yanıtı gösterilmez.
 
-İç sayfa stilleri `src/inner-pages.css` içinde mevcut renk ve ölçü tokenlarını kullanır. Proje detayında bilgiler çizgilerle ayrılan satırlardır; silme işlemi açıklamasıyla ayrı bir alt bölümde kalır. `.env` ve sürüm tarifi düzenleyicileri aynı proje içindeki sekme değişimlerinde taslağı korur; proje veya ana sayfa değişiminde bu geçici taslaklar kapanır. Hizmetlerin Durum ve işlemler / Ayarlar sekmeleri arasında ayar taslağı korunur.
+İç sayfa stilleri `src/inner-pages.css` içinde mevcut renk ve ölçü tokenlarını kullanır. Proje detayında bilgiler çizgilerle ayrılan satırlardır; silme işlemi açıklamasıyla ayrı bir alt bölümde kalır. `.env` ve sürüm tarifi düzenleyicileri aynı proje içindeki sekme değişimlerinde taslağı korur; proje veya ana sayfa değişiminde kaydedilmemiş taslaklar için Düzenlemeye dön / Kaydetmeden devam et seçimi gösterilir. Kayıt içerikleri tarayıcı depolamasına yazılmaz. Hizmetlerin Durum ve işlemler / Ayarlar sekmeleri arasında ayar taslağı korunur.
 
 ## Davranış ve erişilebilirlik
 
@@ -59,3 +59,12 @@ Arama Türkçe karakterlerle veya düz klavyeyle aynı sonuçları verir (`Tüne
 850 piksel altında kenar çubuğu simgelere daralır. 540 altında özet ve formlar yeniden yerleşir. Masaüstü pencere en az 900 × 650. Tarayıcı önizlemesi 320 piksele kadar yeniden yerleşir; günlük kaynakları ve görünüm seçenekleri dar alanda alt satıra geçer. Araç çubuğundaki sayfa araması 1150 altında simgeye daralır.
 
 `concept.png` tarihsel konsepttir. Güncel görüntüler [ekran görüntüleri](../screenshots/README.md) bölümündedir.
+
+
+## v1.3.3 durum ve taslak sözleşmeleri
+
+- `NavigationGuard` yalnızca kirli form etiketlerini bellekte tutar. Ayar, hizmet, API, ortam, kuyruk, sürüm ve Cloud eşleştirme taslakları ana sayfa geçişlerinde korunur. Proje değişimi de bu kapıdan geçer; işlem iptalinde odak tetikleyiciye döner.
+- Kuyruk ve zamanlayıcı aynı `useDraft` modelini kullanır. Temiz form uzaktan değişiklikleri izler; kirli form yazılanları korur. Kaydet ve Vazgeç ortak çubuktadır.
+- Sınır dışı sayı blur sırasında sessizce değiştirilmez. Hata alanın altında açıklanır; kuyruk/zamanlayıcı formlarında tarayıcının doğrulaması kaydı engeller. Vazgeç yerel sayısal alanları da sıfırlar.
+- Snapshot erişimi kesilirse ayrı, kalıcı bir uyarı son başarılı güncelleme saatini gösterir. İşlem başarısı ile okuma hatası birbirini maskelemez.
+- Başarı yüzeyleri `--success-soft` ve `--success-border` kullanır; lacivert tema başarılı/uyarılı/hatalı durumların anlamını değiştirmez.

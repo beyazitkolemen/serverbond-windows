@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useNavigationGuard";
 import { useEffect, useState } from "react";
 import { call } from "../api";
 import type { Project, ProjectEnv as EnvFile, Run } from "../types";
@@ -32,6 +33,7 @@ export default function ProjectEnv({
     };
   }, [project.id]);
   const dirty = file !== null && draft !== file.content;
+  useUnsavedChanges(dirty, `${project.name} · Ortam dosyası`);
   return (
     <div className="project-pane env-editor">
       <p className="section-note">
@@ -50,8 +52,15 @@ export default function ProjectEnv({
             : ".env henüz yok; kaydedince oluşturulur."}
           {file.example ? " .env.example bulundu." : null}
         </p>
-      ) : (
-        <p className="section-note">.env okunuyor…</p>
+      ) : !error ? (
+        <p className="section-note" role="status">
+          .env okunuyor…
+        </p>
+      ) : null}
+      {dirty && (
+        <p className="draft-indicator" role="status">
+          Kaydedilmemiş değişiklikler
+        </p>
       )}
       <label className="env-editor-label">
         .env

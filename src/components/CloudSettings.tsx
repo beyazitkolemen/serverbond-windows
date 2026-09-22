@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useNavigationGuard";
 import { useEffect, useState } from "react";
 import { Cloud, Radio, ShieldCheck } from "lucide-react";
 import { desktop } from "../api";
@@ -16,8 +17,10 @@ export default function CloudSettings() {
   const [status, setStatus] = useState<CloudStatus | null>(null);
   const { values: url, setValues: setUrl } = useDraft(
     status?.url ?? status?.defaultUrl ?? "",
+    "Cloud eşleştirmesi",
   );
   const [code, setCode] = useState("");
+  useUnsavedChanges(Boolean(code.trim()), "Cloud eşleştirmesi");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusError, setStatusError] = useState("");

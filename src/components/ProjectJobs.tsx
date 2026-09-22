@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useDraft } from "../hooks/useDraft";
+import { useCallback, useState, type SetStateAction } from "react";
 import {
   Play,
   Square,
@@ -46,53 +47,33 @@ function normalizeWorker(worker: QueueWorker): QueueWorker {
 export type ProjectJobsModel = ReturnType<typeof useProjectJobs>;
 
 export function useProjectJobs(project: Project) {
-  const [workers, setWorkers] = useState<QueueWorker[]>(() =>
-    (project.workers ?? []).map((worker) =>
-      normalizeWorker(structuredClone(worker)),
-    ),
+  const source = {
+    workers: (project.workers ?? []).map(normalizeWorker),
+    schedule: project.schedule ?? { enabled: false, autoStart: false },
+  };
+  const { values, setValues, dirty, reset } = useDraft(
+    source,
+    `${project.name} · Kuyruk ve zamanlayıcı`,
   );
-  const [schedule, setSchedule] = useState<ProjectSchedule>(
-    () => project.schedule ?? { enabled: false, autoStart: false },
+  const { workers, schedule } = values;
+  const setWorkers = useCallback(
+    (next: SetStateAction<QueueWorker[]>) =>
+      setValues((current) => ({
+        ...current,
+        workers: typeof next === "function" ? next(current.workers) : next,
+      })),
+    [setValues],
+  );
+  const setSchedule = useCallback(
+    (next: SetStateAction<ProjectSchedule>) =>
+      setValues((current) => ({
+        ...current,
+        schedule: typeof next === "function" ? next(current.schedule) : next,
+      })),
+    [setValues],
   );
   const [tasks, setTasks] = useState("");
   const [failed, setFailed] = useState("");
-  const sourceWorkers = JSON.stringify(
-    (project.workers ?? []).map(normalizeWorker),
-  );
-  const sourceSchedule = JSON.stringify(
-    project.schedule ?? { enabled: false, autoStart: false },
-  );
-  const dirty =
-    JSON.stringify(workers) !== sourceWorkers ||
-    JSON.stringify(schedule) !== sourceSchedule;
-  const wasDirty = useRef(false);
-  useEffect(() => {
-    wasDirty.current = dirty;
-  }, [dirty]);
-  useEffect(() => {
-    setWorkers(
-      (project.workers ?? []).map((worker) =>
-        normalizeWorker(structuredClone(worker)),
-      ),
-    );
-    setSchedule(project.schedule ?? { enabled: false, autoStart: false });
-    setTasks("");
-    setFailed("");
-    wasDirty.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id]);
-  useEffect(() => {
-    // Edits made outside this pane (CLI, API) replace a clean draft; unsaved
-    // edits are kept so nothing typed is lost.
-    if (wasDirty.current) return;
-    setWorkers(
-      (project.workers ?? []).map((worker) =>
-        normalizeWorker(structuredClone(worker)),
-      ),
-    );
-    setSchedule(project.schedule ?? { enabled: false, autoStart: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceWorkers, sourceSchedule]);
   const runningWorkers = (project.workerStates ?? []).filter(
     (item) => item.running > 0,
   ).length;
@@ -112,6 +93,7 @@ export function useProjectJobs(project: Project) {
     failed,
     setFailed,
     dirty,
+    reset,
     runningWorkers,
     update,
     locked,
@@ -119,36 +101,36 @@ export function useProjectJobs(project: Project) {
 }
 
 export function JobsSaveBar({
-  project,
   busy,
-  run,
   jobs,
 }: {
-  project: Project;
   busy: boolean;
-  run: Run;
   jobs: ProjectJobsModel;
 }) {
   return (
     <>
-      <span className="muted">
-        {jobs.dirty ? "Kaydedilmemiş değişiklik var." : "Ayarlar güncel."}
+      <span className="muted" role="status">
+        {jobs.dirty ? "Kaydedilmemiş değişiklikler" : "Ayarlar güncel"}
       </span>
+      {jobs.dirty && (
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy}
+          onClick={(event) => {
+            jobs.reset();
+            event.currentTarget.form?.dispatchEvent(new Event("reset"));
+          }}
+        >
+          Vazgeç
+        </button>
+      )}
       <button
-        type="button"
+        type="submit"
         className="button primary small"
         disabled={busy || !jobs.dirty}
-        onClick={() =>
-          void run("Kuyruk ayarları kaydediliyor…", () =>
-            call("save_project_jobs", {
-              id: project.id,
-              workers: jobs.workers,
-              schedule: jobs.schedule,
-            }),
-          )
-        }
       >
-        Kaydet
+        Ayarları kaydet
       </button>
     </>
   );
@@ -167,7 +149,20 @@ export function ScheduleSection({
 }) {
   const { schedule, setSchedule, dirty, locked, tasks, setTasks } = jobs;
   return (
-    <div className="project-jobs-panel">
+    <form
+      className="project-jobs-panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (busy || !jobs.dirty) return;
+        void run("Kuyruk ve zamanlayıcı ayarları kaydediliyor…", () =>
+          call("save_project_jobs", {
+            id: project.id,
+            workers: jobs.workers,
+            schedule: jobs.schedule,
+          }),
+        );
+      }}
+    >
       <p className="section-note">
         Laravel’in zamanlanmış görevlerini çalıştırır.
       </p>
@@ -284,9 +279,9 @@ export function ScheduleSection({
       ) : null}
       {tasks ? <pre className="project-console">{tasks}</pre> : null}
       <div className="project-jobs-footer">
-        <JobsSaveBar project={project} busy={busy} run={run} jobs={jobs} />
+        <JobsSaveBar busy={busy} jobs={jobs} />
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -304,7 +299,20 @@ export function QueueSection({
   const { workers, setWorkers, dirty, locked, update, failed, setFailed } =
     jobs;
   return (
-    <div className="project-jobs-panel">
+    <form
+      className="project-jobs-panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (busy || !jobs.dirty) return;
+        void run("Kuyruk ve zamanlayıcı ayarları kaydediliyor…", () =>
+          call("save_project_jobs", {
+            id: project.id,
+            workers: jobs.workers,
+            schedule: jobs.schedule,
+          }),
+        );
+      }}
+    >
       <p className="section-note">
         Kuyruktaki işleri çalıştırır. Yeniden başlatma, süren işin bitmesini
         bekler.
@@ -593,8 +601,8 @@ export function QueueSection({
           <Plus size={16} />
           İşçi ekle
         </button>
-        <JobsSaveBar project={project} busy={busy} run={run} jobs={jobs} />
+        <JobsSaveBar busy={busy} jobs={jobs} />
       </div>
-    </div>
+    </form>
   );
 }

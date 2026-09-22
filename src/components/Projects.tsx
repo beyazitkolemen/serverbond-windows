@@ -1,3 +1,4 @@
+import { useNavigationGuard } from "../hooks/useNavigationGuard";
 import { useEffect, useRef, useState } from "react";
 import { Folder, Plus, X, FolderOpen, ExternalLink } from "lucide-react";
 import { call, chooseFolder, chooseSqlFile } from "../api";
@@ -80,6 +81,7 @@ export default function Projects({
   compact?: boolean;
   onOpen?: () => void;
 }) {
+  const navigate = useNavigationGuard();
   const [modal, setModal] = useState(false);
   const [remove, setRemove] = useState<Project | null>(null);
   const [restore, setRestore] = useState<Project | null>(null);
@@ -197,12 +199,15 @@ export default function Projects({
         <div className="project-workspace">
           {selected ? (
             <ProjectDetail
+              key={selected.id}
               project={selected}
               projectPicker={
                 <ProjectSwitcher
                   projects={projects}
                   selected={selected}
-                  onSelect={setSelectedId}
+                  onSelect={(id) => {
+                    if (id !== selectedId) navigate(() => setSelectedId(id));
+                  }}
                 />
               }
               busy={busy}
@@ -370,9 +375,7 @@ function ProjectDialog({
       return;
     }
     if (fromGithub && !repository.trim()) {
-      setError(
-        "Listeden bir depo seçin veya Git adresini girin.",
-      );
+      setError("Listeden bir depo seçin veya Git adresini girin.");
       return;
     }
     if (!fromGithub && !path.trim()) {

@@ -30,22 +30,20 @@ export default function ReleasePane({
   run: Run;
 }) {
   const source = normalize(project.release);
-  const { values: saved, setValues: setSaved } = useDraft(source);
-  // The textarea keeps the raw text so Enter, indentation and trailing
-  // spaces survive typing; the command list is derived from it.
-  const [extra, setExtra] = useState(() => saved.extraArtisan.join("\n"));
-  const extraLines = extra
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const draft: ProjectRelease = { ...saved, extraArtisan: extraLines };
-  const savedExtra = saved.extraArtisan.join("\n");
-  useEffect(() => {
-    // Follow the draft when it is reset or refreshed from the snapshot.
-    setExtra(savedExtra);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedExtra, project.id]);
+  const { values, setValues, reset } = useDraft(
+    { release: source, extra: source.extraArtisan.join("\n") },
+    `${project.name} · Sürüm tarifi`,
+  );
+  const { release: saved, extra } = values;
+  const draft: ProjectRelease = {
+    ...saved,
+    extraArtisan: extra
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean),
+  };
   const [history, setHistory] = useState<ReleaseRecord[]>([]);
+  const [historyError, setHistoryError] = useState("");
   const [consoleText, setConsoleText] = useState("");
   const dirty = JSON.stringify(draft) !== JSON.stringify(source);
   const last = history[0];
@@ -54,12 +52,13 @@ export default function ReleasePane({
     void call<ReleaseRecord[]>("list_project_releases", { id: project.id })
       .then((records) => {
         if (!cancelled) {
+          setHistoryError("");
           setHistory(records);
           setConsoleText(records[0]?.output ?? "");
         }
       })
       .catch(() => {
-        if (!cancelled) setHistory([]);
+        if (!cancelled) setHistoryError("Sürüm geçmişi okunamadı.");
       });
     return () => {
       cancelled = true;
@@ -68,10 +67,19 @@ export default function ReleasePane({
   const update = <K extends keyof ProjectRelease>(
     key: K,
     value: ProjectRelease[K],
-  ) => setSaved((current) => ({ ...current, [key]: value }));
+  ) =>
+    setValues((current) => ({
+      ...current,
+      release: { ...current.release, [key]: value },
+    }));
+  const saveRecipe = async () => {
+    await call("save_project_release", { id: project.id, release: draft });
+    setValues({ release: draft, extra: draft.extraArtisan.join("\n") });
+  };
   const refreshHistory = () =>
     call<ReleaseRecord[]>("list_project_releases", { id: project.id }).then(
       (records) => {
+        setHistoryError("");
         setHistory(records);
         if (records[0]) setConsoleText(records[0].output);
       },
@@ -89,21 +97,26 @@ export default function ReleasePane({
             ? last.success
               ? `Son sürüm başarılı · ${last.startedAt}`
               : `Son sürüm başarısız · ${last.startedAt}`
-            : "Henüz sürüm çalıştırılmadı"}
+            : historyError
+              ? "Sürüm durumu okunamadı"
+              : "Henüz sürüm çalıştırılmadı"}
         </StatusBadge>
         <div className="release-actions">
+          {dirty && (
+            <button
+              type="button"
+              className="button secondary small"
+              disabled={busy}
+              onClick={reset}
+            >
+              Vazgeç
+            </button>
+          )}
           <button
             type="button"
             className="button secondary small"
             disabled={busy || !dirty}
-            onClick={() =>
-              void run("Sürüm tarifi kaydediliyor…", () =>
-                call("save_project_release", {
-                  id: project.id,
-                  release: draft,
-                }),
-              )
-            }
+            onClick={() => void run("Sürüm tarifi kaydediliyor…", saveRecipe)}
           >
             Kaydet
           </button>
@@ -114,19 +127,20 @@ export default function ReleasePane({
             onClick={() =>
               void run("Yerel sürüm çalışıyor…", async () => {
                 if (dirty) {
-                  await call("save_project_release", {
-                    id: project.id,
-                    release: draft,
-                  });
+                  await saveRecipe();
                 }
                 const record = await call<ReleaseRecord>("deploy_project", {
                   id: project.id,
                 }).catch(async (error: unknown) => {
-                  await refreshHistory();
+                  await refreshHistory().catch(() =>
+                    setHistoryError("Sürüm geçmişi okunamadı."),
+                  );
                   throw error;
                 });
                 setConsoleText(record.output);
-                await refreshHistory();
+                await refreshHistory().catch(() =>
+                  setHistoryError("Sürüm uygulandı ancak geçmiş yenilenemedi."),
+                );
                 return record;
               })
             }
@@ -136,6 +150,11 @@ export default function ReleasePane({
           </button>
         </div>
       </div>
+      {historyError && (
+        <p className="field-error" role="alert">
+          {historyError}
+        </p>
+      )}
       <fieldset className="release-steps" disabled={busy}>
         <legend>Tarif</legend>
         <label className="setting-toggle">
@@ -202,7 +221,9 @@ export default function ReleasePane({
             rows={3}
             value={extra}
             placeholder={"config:cache\nroute:cache --no-ansi"}
-            onChange={(e) => setExtra(e.target.value)}
+            onChange={(e) =>
+              setValues((current) => ({ ...current, extra: e.target.value }))
+            }
           />
           <span className="muted">
             Her satır bir komut; yalnızca a-z0-9:_- ve --bayrak /
@@ -261,6 +282,7 @@ export function SummaryGit({
   const [git, setGit] = useState<ProjectGitStatus | null>(null);
   useEffect(() => {
     let cancelled = false;
+    setGit(null);
     void call<ProjectGitStatus>("project_git_status", { id: project.id })
       .then((status) => {
         if (!cancelled) setGit(status);

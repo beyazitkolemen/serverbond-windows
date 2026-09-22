@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "./useNavigationGuard";
 import {
   useCallback,
   useEffect,
@@ -15,7 +16,10 @@ import {
  * elsewhere — another pane, the CLI, a save that normalised the input — shows
  * up without remounting the form and without wiping what the user typed.
  */
-export function useDraft<T>(source: T): {
+export function useDraft<T>(
+  source: T,
+  label = "Ayar değişiklikleri",
+): {
   values: T;
   setValues: Dispatch<SetStateAction<T>>;
   dirty: boolean;
@@ -52,5 +56,6 @@ export function useDraft<T>(source: T): {
     setValues(structuredClone(source));
   }, [source]);
 
+  useUnsavedChanges(dirty, label);
   return { values, setValues, dirty, reset };
 }

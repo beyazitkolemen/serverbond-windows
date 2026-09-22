@@ -27,7 +27,10 @@ export default function SaveBar({
           type="button"
           className="button secondary"
           disabled={busy}
-          onClick={onReset}
+          onClick={(event) => {
+            onReset();
+            event.currentTarget.form?.dispatchEvent(new Event("reset"));
+          }}
         >
           Vazgeç
         </button>

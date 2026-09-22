@@ -1,3 +1,7 @@
+import {
+  NavigationGuard,
+  useNavigationGuard,
+} from "./hooks/useNavigationGuard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -45,14 +49,45 @@ const headings: Record<AppPage, string> = {
 };
 
 export default function App() {
-  const [page, setPage] = useState<AppPage>(Page.Overview);
+  return (
+    <NavigationGuard>
+      <WorkspaceApp />
+    </NavigationGuard>
+  );
+}
+
+function WorkspaceApp() {
+  const [page, setPageState] = useState<AppPage>(Page.Overview);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const navigate = useNavigationGuard();
+  const setPage = useCallback(
+    (next: AppPage) => {
+      if (next !== pageRef.current) navigate(() => setPageState(next));
+    },
+    [navigate],
+  );
   const [state, setState] = useState<Snapshot | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [connectionError, setConnectionError] = useState("");
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [message, setMessage] = useState("");
   const [appUpdate, setAppUpdate] = useState<UpdateInfo | null>(null);
   const [openUpdates, setOpenUpdates] = useState(0);
+  const openUpdatesPage = useCallback(
+    () =>
+      navigate(
+        () => {
+          setPageState(Page.Settings);
+          setOpenUpdates((n) => n + 1);
+        },
+        pageRef.current === Page.Settings
+          ? ["Windows tercihleri", "Cloud eşleştirmesi"]
+          : undefined,
+      ),
+    [navigate],
+  );
   const [leaveOpen, setLeaveOpen] = useState(false);
   const { error: themeError } = useTheme();
   useEffect(() => {
@@ -67,6 +102,7 @@ export default function App() {
       const next = await snapshotRepository.get();
       if (request === requestNumber.current) {
         setState(next);
+        setLastRefresh(new Date());
         setConnectionError("");
       }
     } catch (error) {
@@ -105,8 +141,7 @@ export default function App() {
     const cleanup: (() => void)[] = [];
     const navigate = (target: string | null) => {
       if (active && target === "updates") {
-        setPage(Page.Settings);
-        setOpenUpdates((n) => n + 1);
+        openUpdatesPage();
         return;
       }
       if (active && target && Object.hasOwn(headings, target))
@@ -134,8 +169,7 @@ export default function App() {
       navigate(await call<string | null>("desktop_navigation"));
       const updates = await listen("desktop:check-update", () => {
         if (active) {
-          setPage(Page.Settings);
-          setOpenUpdates((n) => n + 1);
+          openUpdatesPage();
         }
       });
       if (!active) {
@@ -202,18 +236,16 @@ export default function App() {
   );
   const running = state?.anyRunning ?? false;
   const installed = state?.packages.every((p) => p.installed) ?? false;
-  const servicesInstalled =
-    state?.packages
-      .filter((p) => (CORE_COMPONENTS as readonly string[]).includes(p.id))
-      .every((p) => p.installed) ?? false;
+  const servicesInstalled = CORE_COMPONENTS.every((id) =>
+    state?.packages.some((p) => p.id === id && p.installed),
+  );
   return (
     <Shell
       page={page}
       onPage={setPage}
       updateAvailable={Boolean(appUpdate)}
       onOpenUpdates={() => {
-        setPage(Page.Settings);
-        setOpenUpdates((n) => n + 1);
+        openUpdatesPage();
       }}
       toolbar={
         <div className="workspace-toolbar">
@@ -320,8 +352,30 @@ export default function App() {
       {state?.installProgress && (
         <InstallationProgress progress={state.installProgress} />
       )}
+      {connectionError && (
+        <div className="connection-notice" role="alert">
+          <div>
+            <strong>Sunucu bilgileri güncellenemiyor</strong>
+            <p>{connectionError}</p>
+            {lastRefresh && (
+              <small>
+                Son başarılı güncelleme:{" "}
+                {lastRefresh.toLocaleTimeString("tr-TR")}. Gösterilen bilgiler
+                eski olabilir.
+              </small>
+            )}
+          </div>
+          <button
+            type="button"
+            className="button secondary small"
+            onClick={() => void refresh().catch(() => {})}
+          >
+            Yeniden dene
+          </button>
+        </div>
+      )}
       <Notice
-        error={error || connectionError}
+        error={error}
         busy={
           state?.installProgress
             ? ""
@@ -398,8 +452,7 @@ export default function App() {
               <button
                 className="button banner-button"
                 onClick={() => {
-                  setPage(Page.Settings);
-                  setOpenUpdates((n) => n + 1);
+                  openUpdatesPage();
                 }}
               >
                 Güncellemeyi gör
@@ -527,6 +580,7 @@ export default function App() {
               appUpdate={appUpdate}
               onAppUpdate={setAppUpdate}
               openUpdates={openUpdates}
+              onUpdatesOpened={() => setOpenUpdates(0)}
             />
           ) : null}
           {page === Page.Api ? (

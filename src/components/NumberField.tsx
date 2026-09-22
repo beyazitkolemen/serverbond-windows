@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 /**
  * Numeric input that lets the user clear the field or type a leading minus
@@ -27,6 +27,13 @@ export default function NumberField({
 }) {
   const [text, setText] = useState(String(value));
   const id = useId();
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const form = input.current?.form;
+    const reset = () => setText(String(value));
+    form?.addEventListener("reset", reset);
+    return () => form?.removeEventListener("reset", reset);
+  }, [value]);
   useEffect(() => {
     // Follow outside changes (reset, saved value) unless the user is mid-edit
     // on an equivalent number such as "08" or "-".
@@ -39,10 +46,15 @@ export default function NumberField({
     <label>
       {label}
       <input
+        ref={input}
         required
         type="number"
         aria-label={label}
-        aria-describedby={hint ? `${id}-hint` : undefined}
+        aria-describedby={
+          [hint ? `${id}-hint` : "", invalid ? `${id}-error` : ""]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         inputMode="numeric"
         min={min}
         max={max}
@@ -56,10 +68,12 @@ export default function NumberField({
           const n = next.trim() === "" ? NaN : Number(next);
           if (Number.isInteger(n) && n >= min && n <= max) onChange(n);
         }}
-        onBlur={() => {
-          if (invalid) setText(String(value));
-        }}
       />
+      {invalid && (
+        <small id={`${id}-error`} className="field-error">
+          {min}–{max} arasında bir tam sayı girin.
+        </small>
+      )}
       {hint ? <small id={`${id}-hint`}>{hint}</small> : null}
     </label>
   );

@@ -24,6 +24,8 @@ jobs:
         run: npm ci
       - name: Frontend build
         run: npm run build
+      - name: Focused UI regressions
+        run: npm run test:ui
       - name: Rust formatting
         run: cargo fmt --all -- --check
       - name: Core and desktop tests

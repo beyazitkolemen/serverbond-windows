@@ -1,3 +1,4 @@
+import { useNavigationGuard } from "../hooks/useNavigationGuard";
 import { useEffect, useRef, useState } from "react";
 import { FolderOpen, Eye, EyeOff } from "lucide-react";
 import { call, chooseFolder } from "../api";
@@ -99,6 +100,7 @@ export default function Settings({
   appUpdate,
   onAppUpdate,
   openUpdates,
+  onUpdatesOpened,
 }: {
   settings: Values;
   versions: PackageStatus[];
@@ -113,17 +115,22 @@ export default function Settings({
   appUpdate: UpdateInfo | null;
   onAppUpdate: (update: UpdateInfo | null) => void;
   openUpdates: number;
+  onUpdatesOpened: () => void;
 }) {
-  const { values, setValues, dirty, reset } = useDraft(settings);
+  const navigate = useNavigationGuard();
+  const { values, setValues, dirty, reset } = useDraft(
+    settings,
+    "Sunucu ayarları",
+  );
   const [section, setSection] = useState<(typeof sections)[number]>("Genel");
-  // One-shot: jump to updates for a new request only, not on every mount.
-  const handledUpdates = useRef(0);
+  const [updateRequest, setUpdateRequest] = useState(0);
   useEffect(() => {
-    if (openUpdates && openUpdates !== handledUpdates.current) {
-      handledUpdates.current = openUpdates;
+    if (openUpdates) {
       setSection("Güncellemeler");
+      setUpdateRequest((value) => value + 1);
+      onUpdatesOpened();
     }
-  }, [openUpdates]);
+  }, [openUpdates, onUpdatesOpened]);
   const [version, setVersion] = useState("");
   const [password, setPassword] = useState("");
   const [nextPassword, setNextPassword] = useState("");
@@ -206,7 +213,13 @@ export default function Settings({
                   key={s}
                   aria-current={s === section ? "page" : undefined}
                   aria-controls="settings-content"
-                  onClick={() => setSection(s)}
+                  onClick={() => {
+                    if (s !== section)
+                      navigate(
+                        () => setSection(s),
+                        ["Windows tercihleri", "Cloud eşleştirmesi"],
+                      );
+                  }}
                 >
                   {s}
                 </button>
@@ -241,6 +254,7 @@ export default function Settings({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!canSave) return;
             void run("Ayarlar doğrulanıyor ve kaydediliyor…", () =>
               call("save_settings", { settings: values }),
             );
@@ -922,7 +936,7 @@ export default function Settings({
             run={run}
             available={appUpdate}
             onAvailable={onAppUpdate}
-            openUpdates={openUpdates}
+            openUpdates={updateRequest}
           />
         )}
       </div>

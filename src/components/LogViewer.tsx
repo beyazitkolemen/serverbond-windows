@@ -75,6 +75,12 @@ export default function LogViewer({
     }
   }, [first, source, sources]);
   useEffect(() => {
+    setText("");
+    setError("");
+    setCopied(false);
+    setCopyError("");
+  }, [source]);
+  useEffect(() => {
     let cancelled = false;
     const current = source || first;
     if (!current) {
