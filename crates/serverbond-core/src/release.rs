@@ -288,6 +288,15 @@ fn run_command(cmd: Command, timeout: Duration) -> Result<String> {
 }
 
 fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<Command> {
+    git_command_with_token(manager, project, args, None)
+}
+
+fn git_command_with_token(
+    manager: &Manager,
+    project: &Project,
+    args: &[String],
+    access_token: Option<&str>,
+) -> Result<Command> {
     let git = git_program()?;
     let mut cmd = command(git);
     cmd.args(args).current_dir(&project.path);
@@ -301,7 +310,7 @@ fn git_command(manager: &Manager, project: &Project, args: &[String]) -> Result<
             .filter_map(|line| line.split_whitespace().nth(1))
             .any(crate::github::is_github_https_url);
     if github_remote {
-        manager.apply_github_git_auth(&mut cmd)?;
+        manager.apply_github_git_auth_with(&mut cmd, access_token)?;
     } else {
         crate::github::apply_github_git_auth(&mut cmd, None);
     }
@@ -415,6 +424,15 @@ impl Manager {
         id: &str,
         expected: Option<&str>,
     ) -> Result<ReleaseRecord> {
+        self.deploy_project_checked_with_token(id, expected, None)
+    }
+
+    pub fn deploy_project_checked_with_token(
+        &self,
+        id: &str,
+        expected: Option<&str>,
+        access_token: Option<&str>,
+    ) -> Result<ReleaseRecord> {
         let _guard = self.gate()?;
         let project = self.project(id)?;
         if let Some(expected) = expected {
@@ -455,7 +473,7 @@ impl Manager {
                 _ => "configure",
             });
             chunks.push(format!("--- {} ---", step.name));
-            match self.run_release_step(&project, &step, deadline) {
+            match self.run_release_step_with_token(&project, &step, deadline, access_token) {
                 Ok(output) => {
                     if !output.is_empty() {
                         // Cap per step: a chatty composer run must not hold
@@ -519,12 +537,25 @@ impl Manager {
         step: &ReleaseStep,
         deadline: Instant,
     ) -> Result<String> {
+        self.run_release_step_with_token(project, step, deadline, None)
+    }
+
+    fn run_release_step_with_token(
+        &self,
+        project: &Project,
+        step: &ReleaseStep,
+        deadline: Instant,
+        access_token: Option<&str>,
+    ) -> Result<String> {
         let timeout = remaining(deadline)?;
         match step.name.as_str() {
             "git" => {
                 let branch = project.release.branch.as_str();
                 if branch.is_empty() {
-                    return run_command(git_command(self, project, &step.args)?, timeout);
+                    return run_command(
+                        git_command_with_token(self, project, &step.args, access_token)?,
+                        timeout,
+                    );
                 }
                 // Single-branch clones only track the branch they were created
                 // with, so fetch the requested branch explicitly before switching;
@@ -537,7 +568,7 @@ impl Manager {
                 // with; widen the remote so the release branch becomes a real
                 // remote-tracking branch that `--track` and future pulls accept.
                 run_command(
-                    git_command(
+                    git_command_with_token(
                         self,
                         project,
                         &[
@@ -547,6 +578,7 @@ impl Manager {
                             remote.clone(),
                             branch.into(),
                         ],
+                        access_token,
                     )?,
                     timeout,
                 )?;
@@ -556,8 +588,10 @@ impl Manager {
                     remote.clone(),
                     branch.into(),
                 ];
-                let output =
-                    run_command(git_command(self, project, &fetch)?, remaining(deadline)?)?;
+                let output = run_command(
+                    git_command_with_token(self, project, &fetch, access_token)?,
+                    remaining(deadline)?,
+                )?;
                 if !output.is_empty() {
                     parts.push(output);
                 }
@@ -593,8 +627,10 @@ impl Manager {
                         branch.into(),
                     ],
                 ] {
-                    let output =
-                        run_command(git_command(self, project, &args)?, remaining(deadline)?)?;
+                    let output = run_command(
+                        git_command_with_token(self, project, &args, access_token)?,
+                        remaining(deadline)?,
+                    )?;
                     if !output.is_empty() {
                         parts.push(output);
                     }

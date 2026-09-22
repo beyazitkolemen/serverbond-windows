@@ -131,6 +131,7 @@ pub fn validate_github_token(raw: &str) -> Result<String> {
         || token.starts_with("github_pat_")
         || token.starts_with("gho_")
         || token.starts_with("ghu_")
+        || token.starts_with("ghs_")
         || (token.len() == 40 && token.bytes().all(|b| b.is_ascii_hexdigit()));
     if !known
         || !token
@@ -231,6 +232,16 @@ impl Manager {
         name: String,
         branch: String,
     ) -> Result<Project> {
+        self.import_github_project_with_token(repository, name, branch, None)
+    }
+
+    pub fn import_github_project_with_token(
+        &self,
+        repository: &str,
+        name: String,
+        branch: String,
+        access_token: Option<&str>,
+    ) -> Result<Project> {
         let repo = parse_github_repository(repository)?;
         let name = if name.trim().is_empty() {
             slug_from_folder(&repo.name)?
@@ -238,13 +249,23 @@ impl Manager {
             name
         };
         let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
-        self.import_git_project(&url, name, branch)
+        self.import_git_project_with_token(&url, name, branch, access_token)
     }
 
     /// Clone any `https://` or `file://` repository into the projects folder and
     /// register it. The GitHub token, when saved, is attached to every remote
     /// call so private repositories work without credential prompts.
     pub fn import_git_project(&self, url: &str, name: String, branch: String) -> Result<Project> {
+        self.import_git_project_with_token(url, name, branch, None)
+    }
+
+    pub fn import_git_project_with_token(
+        &self,
+        url: &str,
+        name: String,
+        branch: String,
+        access_token: Option<&str>,
+    ) -> Result<Project> {
         let _guard = self.gate()?;
         let url = validate_git_url(url)?;
         validate_git_branch(&branch)?;
@@ -277,7 +298,7 @@ impl Manager {
         }
         std::fs::create_dir_all(&parent).context("Proje çalışma alanı oluşturulamadı.")?;
         crate::storage::require_space(&parent, 64 * 1024 * 1024)?;
-        self.clone_git_repository(&url, &destination, &branch)?;
+        self.clone_git_repository_with_token(&url, &destination, &branch, access_token)?;
         if !destination.join("public/index.php").is_file() {
             bail!(
                 "Depo klonlandı ama public/index.php yok. Laravel kökünü seçin; oluşan klasör korundu."
@@ -299,12 +320,25 @@ impl Manager {
     }
 
     pub(crate) fn apply_github_git_auth(&self, cmd: &mut Command) -> Result<()> {
-        let token = if self.github_has_token() {
-            Some(self.github_token()?)
+        self.apply_github_git_auth_with(cmd, None)
+    }
+
+    pub(crate) fn apply_github_git_auth_with(
+        &self,
+        cmd: &mut Command,
+        access_token: Option<&str>,
+    ) -> Result<()> {
+        let owned;
+        let token = if let Some(token) = access_token {
+            owned = Some(validate_github_token(token)?);
+            owned.as_deref()
+        } else if self.github_has_token() {
+            owned = Some(self.github_token()?);
+            owned.as_deref()
         } else {
             None
         };
-        apply_github_git_auth(cmd, token.as_deref());
+        apply_github_git_auth(cmd, token);
         Ok(())
     }
 
@@ -352,6 +386,16 @@ impl Manager {
         destination: &Path,
         branch: &str,
     ) -> Result<()> {
+        self.clone_git_repository_with_token(url, destination, branch, None)
+    }
+
+    pub(crate) fn clone_git_repository_with_token(
+        &self,
+        url: &str,
+        destination: &Path,
+        branch: &str,
+        access_token: Option<&str>,
+    ) -> Result<()> {
         let git = git_program()?;
         let mut cmd = command(git);
         cmd.arg("clone").arg("--no-tags");
@@ -360,7 +404,7 @@ impl Manager {
         }
         cmd.arg("--").arg(url).arg(destination);
         if is_github_https_url(url) {
-            self.apply_github_git_auth(&mut cmd)?;
+            self.apply_github_git_auth_with(&mut cmd, access_token)?;
         } else {
             apply_github_git_auth(&mut cmd, None);
         }
@@ -380,7 +424,7 @@ impl Manager {
             if destination.exists() {
                 let _ = std::fs::remove_dir_all(destination);
             }
-            let hint = if self.github_has_token() {
+            let hint = if access_token.is_some() || self.github_has_token() {
                 "Git deposu klonlanamadı. github günlüğünü kontrol edin."
             } else {
                 "Git deposu klonlanamadı. Özel depolar için Hizmetler → GitHub ekranından jeton kaydedin."
@@ -465,6 +509,7 @@ mod tests {
     fn accepts_known_personal_access_tokens() {
         assert!(validate_github_token(&format!("ghp_{}", "a".repeat(36))).is_ok());
         assert!(validate_github_token(&format!("github_pat_{}", "b".repeat(40))).is_ok());
+        assert!(validate_github_token(&format!("ghs_{}", "c".repeat(36))).is_ok());
         assert!(validate_github_token(&"c".repeat(40)).is_ok());
         assert!(validate_github_token("too-short").is_err());
         assert!(validate_github_token("ghp_bad token spaces").is_err());

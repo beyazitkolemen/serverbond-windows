@@ -147,6 +147,8 @@ pub(super) struct Deploy {
     id: String,
     expected_revision: String,
     confirm: bool,
+    #[serde(default)]
+    access_token: Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -158,13 +160,15 @@ pub(super) struct Import {
     branch: String,
 }
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct Github {
     repository: String,
     #[serde(default)]
     name: String,
     #[serde(default)]
     branch: String,
+    #[serde(default)]
+    access_token: Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -496,8 +500,11 @@ impl Operation {
             Self::Deploy(input) => {
                 uuid::Uuid::parse_str(&input.id)?;
                 ensure!(input.confirm, "Dağıtım onayı gerekli.");
-                let record =
-                    manager.deploy_project_checked(&input.id, Some(&input.expected_revision))?;
+                let record = manager.deploy_project_checked_with_token(
+                    &input.id,
+                    Some(&input.expected_revision),
+                    input.access_token.as_deref(),
+                )?;
                 return Ok(json!({"projectId":input.id, "deployment":release_summary(record)}));
             }
             Self::List(page) => return project_page(manager, page.offset),
@@ -526,7 +533,12 @@ impl Operation {
                 manager.import_git_project(&input.url, input.name, input.branch)?;
             }
             Self::Github(input) => {
-                manager.import_github_project(&input.repository, input.name, input.branch)?;
+                manager.import_github_project_with_token(
+                    &input.repository,
+                    input.name,
+                    input.branch,
+                    input.access_token.as_deref(),
+                )?;
             }
             Self::ImportFolders(input) => {
                 ensure!(

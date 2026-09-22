@@ -29,6 +29,8 @@ pub struct SetupRequest {
     pub install_dependencies: bool,
     pub composer: bool,
     pub build: bool,
+    #[serde(default)]
+    pub access_token: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -77,7 +79,9 @@ impl SetupRequest {
         Ok(())
     }
     fn fingerprint(&self) -> Result<String> {
-        Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(self)?)))
+        let mut clone = self.clone();
+        clone.access_token = None;
+        Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(&clone)?)))
     }
 }
 
@@ -247,10 +251,15 @@ impl Manager {
             } else {
                 input.location.clone()
             };
-            self.clone_git_repository(&url, &path, &input.branch)
-                .map_err(|_| {
-                    ProjectError("Depo alınamadı. GitHub erişimini ve seçili dalı kontrol edin.")
-                })?;
+            self.clone_git_repository_with_token(
+                &url,
+                &path,
+                &input.branch,
+                input.access_token.as_deref(),
+            )
+            .map_err(|_| {
+                ProjectError("Depo alınamadı. GitHub erişimini ve seçili dalı kontrol edin.")
+            })?;
         }
         if !path.join("public/index.php").is_file() {
             return Err(
@@ -400,6 +409,7 @@ mod tests {
             install_dependencies: false,
             composer: false,
             build: false,
+            access_token: None,
         }
     }
     #[test]

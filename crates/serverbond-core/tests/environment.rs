@@ -56,6 +56,7 @@ fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
         install_dependencies: false,
         composer: false,
         build: false,
+        access_token: None,
     };
     assert_eq!(manager.setup_preflight(&setup)?["ready"], true);
     let project = manager.setup_project(setup.clone())?;
