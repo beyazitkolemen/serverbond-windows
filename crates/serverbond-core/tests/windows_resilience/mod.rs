@@ -183,12 +183,21 @@ mod windows {
         assert!(fs::OpenOptions::new().write(true).open(&lock_path).is_err());
         assert!(child.wait_timeout(Duration::from_millis(50)).is_err());
         // Keep `child` alive: timeout itself must terminate its entire job.
-        fs::OpenOptions::new()
-            .write(true)
-            .open(&lock_path)
-            .unwrap()
-            .write_all(b"released")
-            .unwrap();
+        // A sharing violation may persist briefly while Windows completes
+        // process teardown; an escaped descendant will exceed this deadline.
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            match fs::OpenOptions::new().write(true).open(&lock_path) {
+                Ok(mut file) => {
+                    file.write_all(b"released").unwrap();
+                    break;
+                }
+                Err(error) if error.raw_os_error() == Some(32) && Instant::now() < deadline => {
+                    thread::sleep(Duration::from_millis(20));
+                }
+                Err(error) => panic!("descendant file handle remained locked: {error}"),
+            }
+        }
         drop(child);
     }
 
