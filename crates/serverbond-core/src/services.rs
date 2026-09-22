@@ -275,12 +275,16 @@ impl Manager {
     pub fn restart(&self) -> Result<()> {
         let _guard = self.gate()?;
         self.stop_inner()?;
-        self.start_inner("all")
+        self.start_inner("all")?;
+        self.mark_state_dirty();
+        Ok(())
     }
 
     pub fn start(&self, id: &str) -> Result<()> {
         let _guard = self.gate()?;
-        self.start_inner(id)
+        self.start_inner(id)?;
+        self.mark_state_dirty();
+        Ok(())
     }
 
     fn start_inner(&self, id: &str) -> Result<()> {
@@ -547,7 +551,7 @@ impl Manager {
     pub fn stop(&self, id: &str) -> Result<()> {
         let _guard = self.cleanup_gate()?;
         if id == "all" {
-            self.stop_inner()
+            self.stop_inner()?;
         } else {
             if id == "php" {
                 self.stop_service("caddy")?;
@@ -558,8 +562,10 @@ impl Manager {
                     .unwrap_or_else(|e| e.into_inner())
                     .clear();
             }
-            self.stop_service(id)
+            self.stop_service(id)?;
         }
+        self.mark_state_dirty();
+        Ok(())
     }
 
     pub(crate) fn stop_inner(&self) -> Result<()> {

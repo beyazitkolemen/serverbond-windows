@@ -616,6 +616,7 @@ impl Manager {
         storage::atomic_write(&layout.last_good(), previous)?;
         storage::atomic_write(&path, bytes)?;
         *self.config.lock().unwrap_or_else(|e| e.into_inner()) = config.clone();
+        self.mark_state_dirty();
         Ok(())
     }
 

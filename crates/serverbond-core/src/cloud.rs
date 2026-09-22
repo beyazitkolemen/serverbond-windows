@@ -12,7 +12,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 mod database;
 mod desktop;
@@ -23,6 +23,7 @@ mod mysql;
 mod operations;
 mod postgres;
 mod settings;
+mod state;
 mod tunnel;
 pub const DEFAULT_CLOUD_URL: &str = "https://serverbond.on-forge.com";
 const SERVICES: &[&str] = &[
@@ -103,6 +104,9 @@ struct Runtime {
     after_ack: Option<AfterAck>,
     connection: CloudConnection,
     socket_endpoint: Option<String>,
+    state_dirty: bool,
+    state_fingerprints: BTreeMap<String, String>,
+    last_state_scan: Option<Instant>,
 }
 #[derive(Clone, Copy, Default, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -156,6 +160,15 @@ struct Poll {
     command: Option<Command>,
     #[serde(default)]
     commands_pending: bool,
+    #[serde(default)]
+    state_sync: Vec<StateSyncItem>,
+}
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StateSyncItem {
+    section: String,
+    #[serde(default)]
+    target_id: String,
 }
 #[derive(Deserialize)]
 struct Pair {
@@ -434,6 +447,72 @@ impl Manager {
             runtime.progress.push(stage.to_string());
         }
     }
+    pub(crate) fn mark_state_dirty(&self) {
+        self.cloud
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .state_dirty = true;
+        self.cloud.wake();
+    }
+    fn cloud_push_state(
+        self: &Arc<Self>,
+        http: &Client,
+        c: &Credentials,
+        force: &[StateSyncItem],
+    ) -> Result<()> {
+        let current = state::sections(self);
+        let previous = {
+            self.cloud
+                .inner
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .state_fingerprints
+                .clone()
+        };
+        let (mut changed, removed) = state::diff(&current, &previous);
+        if !force.is_empty() {
+            for item in force {
+                let key = state::fingerprint_key(&item.section, &item.target_id);
+                if let Some(section) = current.get(&key) {
+                    if !changed.iter().any(|entry| {
+                        entry.section == section.section && entry.target_id == section.target_id
+                    }) {
+                        changed.push(section.clone());
+                    }
+                }
+            }
+        }
+        if changed.is_empty() && removed.is_empty() {
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            runtime.state_dirty = false;
+            runtime.last_state_scan = Some(Instant::now());
+            runtime.state_fingerprints = state::fingerprint_map(&current);
+            return Ok(());
+        }
+        for body in state::bodies(&changed, &removed)? {
+            let (status, _) = post(http, c, "state", &body)?;
+            if status == 401 {
+                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                runtime.disabled = true;
+                runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+                return Ok(());
+            }
+            anyhow::ensure!(status == 200, "Durum raporu gönderilemedi.");
+        }
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if self
+            .cloud_credentials()?
+            .as_ref()
+            .is_none_or(|current| current.key != c.key)
+        {
+            return Ok(());
+        }
+        runtime.state_dirty = false;
+        runtime.last_state_scan = Some(Instant::now());
+        runtime.state_fingerprints = state::fingerprint_map(&current);
+        Ok(())
+    }
     fn cloud_tick(self: &Arc<Self>, claim: bool) -> Result<()> {
         let c = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
@@ -491,7 +570,7 @@ impl Manager {
             }
             return Ok(());
         }
-        let (progress, connection) = {
+        let (progress, connection, state_map) = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             (
                 runtime
@@ -499,13 +578,18 @@ impl Manager {
                     .as_ref()
                     .map(|id| json!({"commandId":id,"stages":runtime.progress})),
                 json!({"state":runtime.connection,"lastSocketMessage":runtime.last_socket_message}),
+                runtime
+                    .state_fingerprints
+                    .iter()
+                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                    .collect::<serde_json::Map<String, Value>>(),
             )
         };
         let (status, reply) = post(
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
+            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>(),"state":state_map}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -524,14 +608,19 @@ impl Manager {
         runtime.last_contact = Some(chrono::Utc::now().to_rfc3339());
         runtime.error = None;
         let p: Poll = serde_json::from_value(reply)?;
+        let state_sync = p.state_sync;
+        drop(runtime);
+        if !claim && !state_sync.is_empty() {
+            self.cloud_push_state(&http, &c, &state_sync)?;
+        }
         if !claim && p.commands_pending {
             // Heartbeat is only a wake-up hint. Poll owns delivery and journal replay.
-            drop(runtime);
             return self.cloud_tick(true);
         }
         let Some(command) = p.command else {
             return Ok(());
         };
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         uuid::Uuid::parse_str(&command.id)?;
         let mut journal = self.journal(&c)?;
         if let Some(saved) = journal.get(&command.id).cloned() {
@@ -635,6 +724,7 @@ impl Manager {
         self.save_journal(&c, &journal)?;
         if state != "running" {
             runtime.completed = true;
+            runtime.state_dirty = true;
             return Ok(());
         }
         runtime.active = Some(command.id.clone());
@@ -704,6 +794,7 @@ impl Manager {
             }
             runtime.active = None;
             runtime.completed = true;
+            runtime.state_dirty = true;
         });
         Ok(())
     }
@@ -820,6 +911,17 @@ impl Manager {
             if subscribed && completed {
                 // Completion is persisted first. Recover the same delivered command and send its result.
                 self.cloud_tick(true)?;
+            }
+            let should_scan = {
+                let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                runtime.state_dirty
+                    || runtime
+                        .last_state_scan
+                        .map(|at| at.elapsed() >= Duration::from_secs(60))
+                        .unwrap_or(true)
+            };
+            if subscribed && should_scan {
+                let _ = self.cloud_push_state(&http, &c, &[]);
             }
             if !subscribed && started.elapsed() > Duration::from_secs(20) {
                 bail!("Reverb aboneliği zaman aşımına uğradı.");
@@ -1033,6 +1135,69 @@ mod windows_cloud_tests {
         assert!(exchange(&m, &mut c, vec![(401, json!({}))]).is_err());
         assert!(!installed.load(Ordering::Acquire));
         assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+    }
+    #[test]
+    fn dirty_state_posts_sections_once_for_stable_fingerprints() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        m.mark_state_dirty();
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        c.url = format!("http://{}", server.server_addr());
+        m.save_cloud_credentials(&c).unwrap();
+        let handler = std::thread::spawn(move || {
+            let mut request = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .expect("missing state request");
+            let mut text = String::new();
+            request.as_reader().read_to_string(&mut text).unwrap();
+            let body: Value = serde_json::from_str(&text).unwrap();
+            request
+                .respond(
+                    tiny_http::Response::from_string(json!({"ok":true}).to_string())
+                        .with_status_code(200),
+                )
+                .unwrap();
+            body
+        });
+        let http = client().unwrap();
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        let body = handler.join().unwrap();
+        assert!(body["sections"].as_array().unwrap().len() >= 4);
+        assert!(body["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|section| section["section"] == "php"));
+        assert!(!m.cloud.inner.lock().unwrap().state_dirty);
+        assert!(!m.cloud.inner.lock().unwrap().state_fingerprints.is_empty());
+        // Unchanged fingerprints must not open another HTTP request.
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        let sync = exchange_tick(
+            &m,
+            &mut c,
+            vec![(
+                200,
+                json!({"command":null,"commands_pending":false,"state_sync":[{"section":"php","targetId":""}]}),
+            ), (200, json!({"ok":true}))],
+            false,
+        )
+        .unwrap();
+        assert_eq!(sync.len(), 2);
+        assert_eq!(sync[1]["sections"][0]["section"], "php");
+        assert_eq!(
+            sync[1]["sections"][0]["fingerprint"],
+            m.cloud.inner.lock().unwrap().state_fingerprints["php"]
+        );
     }
     fn exchange(
         m: &Arc<Manager>,
