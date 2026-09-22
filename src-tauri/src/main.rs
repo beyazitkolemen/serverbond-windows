@@ -37,11 +37,14 @@ async fn cloud_status(
 #[tauri::command]
 async fn cloud_pair(
     state: tauri::State<'_, State>,
-    url: String,
+    url: Option<String>,
     code: String,
 ) -> Result<(), String> {
     let manager = state.inner().clone();
-    blocking(manager.clone(), move || manager.cloud_pair(&url, &code)).await
+    blocking(manager.clone(), move || {
+        manager.cloud_pair(url.as_deref().unwrap_or_default(), &code)
+    })
+    .await
 }
 
 #[tauri::command]

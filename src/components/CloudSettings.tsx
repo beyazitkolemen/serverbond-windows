@@ -1,19 +1,25 @@
 import { useUnsavedChanges } from "../hooks/useNavigationGuard";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Cloud, Radio, ShieldCheck } from "lucide-react";
 import { desktop } from "../api";
 import { useDraft } from "../hooks/useDraft";
-import { cloudService, type CloudStatus } from "../services/cloud";
+import {
+  cloudService,
+  normalizePairingCode,
+  type CloudStatus,
+} from "../services/cloud";
 
 const connectionLabels: Record<CloudStatus["connection"], string> = {
   disconnected: "Eşleştirme bekleniyor",
-  connecting: "Sokete bağlanıyor",
-  connected: "Soket bağlı",
+  connecting: "Cloud’a bağlanıyor",
+  connected: "Cloud’a bağlı",
   retrying: "Yeniden bağlanıyor",
   revoked: "Yeniden eşleştirin",
 };
 
 export default function CloudSettings() {
+  const actionActive = useRef(false);
+  const statusRevision = useRef(0);
   const [status, setStatus] = useState<CloudStatus | null>(null);
   const { values: url, setValues: setUrl } = useDraft(
     status?.url ?? status?.defaultUrl ?? "",
@@ -28,14 +34,16 @@ export default function CloudSettings() {
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
     const refresh = async () => {
+      const revision = statusRevision.current;
       try {
+        if (actionActive.current) return;
         const value = await cloudService.status();
-        if (!disposed) {
+        if (!disposed && revision === statusRevision.current) {
           setStatus(value);
           setStatusError("");
         }
       } catch {
-        if (!disposed)
+        if (!disposed && revision === statusRevision.current)
           setStatusError(
             "Cloud bağlantı durumu okunamadı. Tekrar denetleniyor.",
           );
@@ -50,16 +58,26 @@ export default function CloudSettings() {
     };
   }, []);
   const act = async (action: () => Promise<void>) => {
+    if (actionActive.current) return;
+    actionActive.current = true;
+    ++statusRevision.current;
     setBusy(true);
     setError("");
     try {
       await action();
       setCode("");
-      setStatus(await cloudService.status());
-      setStatusError("");
+      try {
+        setStatus(await cloudService.status());
+        setStatusError("");
+      } catch {
+        setStatusError(
+          "İşlem tamamlandı. Bağlantı durumu yeniden denetleniyor.",
+        );
+      }
     } catch (e) {
       setError(String(e));
     } finally {
+      actionActive.current = false;
       setBusy(false);
     }
   };
@@ -74,7 +92,7 @@ export default function CloudSettings() {
           <div>
             <h2>Cloud bağlantısı</h2>
             <p className="muted">
-              Cihazınızı ve projelerinizi uzaktan yönetin.
+              Cloud’dan aldığınız tek kodla bu bilgisayarı bağlayın.
             </p>
           </div>
         </div>
@@ -103,6 +121,13 @@ export default function CloudSettings() {
       )}
       {status?.paired ? (
         <>
+          <p className="cloud-notice" role="status">
+            {connection === "connected"
+              ? "Bu cihaz artık Cloud hesabınıza bağlı. Servislerinizi ve projelerinizi panelden yönetebilirsiniz."
+              : connection === "revoked"
+                ? "Cloud erişimi kaldırılmış. Eşleştirmeyi kaldırıp panelden yeni bir cihaz kodu alın."
+                : "Cihaz hesabınızla eşleştirildi. Güvenli bağlantı otomatik kuruluyor; yeniden kod girmeniz gerekmez."}
+          </p>
           <dl className="cloud-details">
             <div>
               <dt>Cihaz</dt>
@@ -111,14 +136,6 @@ export default function CloudSettings() {
             <div>
               <dt>Hesap</dt>
               <dd>{status.account || "—"}</dd>
-            </div>
-            <div>
-              <dt>Cloud sunucusu</dt>
-              <dd>{status.url}</dd>
-            </div>
-            <div>
-              <dt>Soket adresi · otomatik</dt>
-              <dd>{status.socketEndpoint || "Cloud’dan alınıyor…"}</dd>
             </div>
             <div>
               <dt>Son başarılı iletişim</dt>
@@ -133,6 +150,19 @@ export default function CloudSettings() {
               <dd>Uygulama açıkken otomatik</dd>
             </div>
           </dl>
+          <details className="cloud-advanced">
+            <summary>Bağlantı ayrıntıları</summary>
+            <dl className="cloud-details">
+              <div>
+                <dt>Cloud sunucusu</dt>
+                <dd>{status.url}</dd>
+              </div>
+              <div>
+                <dt>Soket adresi · otomatik</dt>
+                <dd>{status.socketEndpoint || "Cloud’dan alınıyor…"}</dd>
+              </div>
+            </dl>
+          </details>
           <p className="cloud-notice">
             <Radio size={18} aria-hidden="true" /> Bağlantı kesildiğinde
             otomatik tekrar denenir. Uygulamayı yeniden açtığınızda bağlantı
@@ -156,58 +186,36 @@ export default function CloudSettings() {
           className="cloud-form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!locked) void act(() => cloudService.pair(url, code));
+            if (!locked && /^[A-F0-9]{32}$/.test(code))
+              void act(() =>
+                cloudService.pair(
+                  code,
+                  url.replace(/\/$/, "") === status?.defaultUrl
+                    ? undefined
+                    : url,
+                ),
+              );
           }}
         >
-          <div className="cloud-server">
-            <div className="cloud-field-heading">
-              <label htmlFor="cloud-url">Cloud sunucusu</label>
-              <span className="muted">
-                {url.replace(/\/$/, "") === status?.defaultUrl
-                  ? "Varsayılan sunucu"
-                  : "Özel sunucu"}
-              </span>
-            </div>
-            <input
-              id="cloud-url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-              disabled={locked}
-              spellCheck={false}
-              autoCapitalize="none"
-              aria-describedby="cloud-server-help"
-            />
-            <p id="cloud-server-help" className="muted">
-              Forge sunucusu hazır gelir. Soket adresi ve bağlantı ayarları
-              Cloud’dan otomatik alınır.
-            </p>
-            {status && url.replace(/\/$/, "") !== status.defaultUrl && (
-              <button
-                type="button"
-                className="button secondary small"
-                disabled={locked}
-                onClick={() => setUrl(status.defaultUrl)}
-              >
-                Varsayılan sunucuyu kullan
-              </button>
-            )}
-          </div>
           <div className="cloud-pairing">
             <label htmlFor="cloud-code">Bağlantı kodu</label>
             <p className="muted" id="cloud-code-help">
-              Cloud panelinde cihaz ekleyerek oluşturduğunuz 32 karakterli kodu
-              yapıştırın. Bu işlem yalnızca ilk bağlantıda gerekir.
+              Cloud panelinde cihazınızı ekleyin, kodu kopyalayıp buraya
+              yapıştırın. Hesabınız, cihazınız ve soket bağlantısı otomatik
+              tanımlanır.
             </p>
             <input
               id="cloud-code"
               className="cloud-code"
               value={code}
-              onChange={(e) => setCode(e.target.value.trim().toUpperCase())}
+              onChange={(e) => setCode(normalizePairingCode(e.target.value))}
+              onPaste={(e) => {
+                e.preventDefault();
+                setCode(normalizePairingCode(e.clipboardData.getData("text")));
+              }}
               required
               minLength={32}
-              maxLength={32}
+              maxLength={256}
               pattern="[A-Fa-f0-9]{32}"
               title="32 karakterli bağlantı kodunu girin."
               autoComplete="off"
@@ -215,7 +223,7 @@ export default function CloudSettings() {
               spellCheck={false}
               disabled={locked}
               aria-describedby="cloud-code-help"
-              placeholder="32 karakterli bağlantı kodu"
+              placeholder="Cloud’dan kopyaladığınız kod"
             />
           </div>
           <div className="cloud-actions">
@@ -223,8 +231,55 @@ export default function CloudSettings() {
               className="button primary"
               disabled={locked || !/^[A-F0-9]{32}$/.test(code)}
             >
-              {busy ? "Eşleştiriliyor…" : "Cihazı bağla"}
+              {busy ? "Cloud’a bağlanıyor…" : "Cloud’a bağlan"}
             </button>
+          </div>
+          {status && url.replace(/\/$/, "") !== status.defaultUrl && (
+            <p className="cloud-notice">
+              Kayıtlı özel sunucu: {url}. Değiştirmek için gelişmiş ayarları
+              açın.
+            </p>
+          )}
+          <details className="cloud-advanced">
+            <summary>Gelişmiş bağlantı ayarları</summary>
+            <div className="cloud-server">
+              <div className="cloud-field-heading">
+                <label htmlFor="cloud-url">Cloud sunucusu</label>
+                <span className="muted">
+                  {url.replace(/\/$/, "") === status?.defaultUrl
+                    ? "Varsayılan sunucu"
+                    : "Özel sunucu"}
+                </span>
+              </div>
+              <input
+                id="cloud-url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onInvalid={(e) =>
+                  e.currentTarget.closest("details")?.setAttribute("open", "")
+                }
+                required
+                disabled={locked}
+                spellCheck={false}
+                autoCapitalize="none"
+                aria-describedby="cloud-server-help"
+              />
+              <p id="cloud-server-help" className="muted">
+                Forge sunucusu hazır gelir. Soket adresi ve bağlantı ayarları
+                Cloud’dan otomatik alınır.
+              </p>
+              {status && url.replace(/\/$/, "") !== status.defaultUrl && (
+                <button
+                  type="button"
+                  className="button secondary small"
+                  disabled={locked}
+                  onClick={() => setUrl(status.defaultUrl)}
+                >
+                  Varsayılan sunucuyu kullan
+                </button>
+              )}
+            </div>
             {status?.url && (
               <button
                 type="button"
@@ -235,11 +290,11 @@ export default function CloudSettings() {
                 Kayıtlı eşleştirmeyi temizle
               </button>
             )}
-          </div>
+          </details>
           <p className="cloud-notice">
-            <ShieldCheck size={18} aria-hidden="true" /> Eşleştirme bu Windows
-            kullanıcısına kaydedilir. Sonraki açılışlarda güvenli bağlantı
-            otomatik kurulur.
+            <ShieldCheck size={18} aria-hidden="true" /> Sunucu adresi, soket
+            anahtarı veya port girmeniz gerekmez. Bağlantı kaydedilir ve sonraki
+            açılışlarda otomatik kurulur.
           </p>
         </form>
       )}

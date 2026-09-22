@@ -13,6 +13,10 @@ export type CloudStatus = {
   error: string | null;
 };
 
+export function normalizePairingCode(value: string): string {
+  return value.replace(/[\s-]/g, "").toUpperCase();
+}
+
 export const cloudService = {
   status: (): Promise<CloudStatus> =>
     desktop
@@ -28,6 +32,10 @@ export const cloudService = {
           lastContact: null,
           error: null,
         }),
-  pair: (url: string, code: string) => call<void>("cloud_pair", { url, code }),
+  pair: (code: string, url?: string) =>
+    call<void>("cloud_pair", {
+      code: normalizePairingCode(code),
+      ...(url ? { url } : {}),
+    }),
   disconnect: () => call<void>("cloud_disconnect"),
 };

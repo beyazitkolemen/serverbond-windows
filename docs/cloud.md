@@ -1,6 +1,6 @@
 # ServerBond Cloud bağlantısı
 
-Ayarlar → Cloud bölümünde Cloud adresi ve panelden aldığınız kod ile eşleştirin. Uygulama açıkken servislerinizi uzaktan yönetebilirsiniz; tepside çalışması yeterlidir.
+Cloud panelinde cihaz ekleyip bağlantı kodunu kopyalayın. Windows uygulamasında Ayarlar → Cloud bölümüne yalnızca bu kodu yapıştırıp **Cloud’a bağlan** düğmesine basın. Hesap, cihaz ve soket ayarları otomatik alınır; adres, port veya soket anahtarı girmeniz gerekmez. Uygulama açıkken servislerinizi uzaktan yönetebilirsiniz; tepside çalışması yeterlidir.
 
 Bağlantı için yerel API'yi açmanız veya API jetonunu paylaşmanız gerekmez. Cihaz anahtarı config/cloud.dpapi içinde kullanıcıya bağlı Windows DPAPI ile korunur. Cloud çalışmazsa yerel servisler çalışmaya devam eder.
 
@@ -89,3 +89,7 @@ Ayarlar → Cloud ekranı yeni kurulumda `https://serverbond.on-forge.com` adres
 WebSocket hostu, portu, uygulama anahtarı ve özel cihaz kanalı Cloud API üzerinden otomatik alınır. Kullanıcının `/sockets` sayfa adresini veya bir Reverb anahtarını girmesi gerekmez. Windows başlangıcında kaydedilmiş eşleştirme kullanılır; ağ kesintilerinde mevcut artan bekleme süresiyle yeniden bağlanılır.
 
 Ekran eşleştirme, sokete bağlanma, canlı abonelik, yeniden deneme ve erişim iptali durumlarını ayrı gösterir. “Soket bağlı” durumu yalnızca özel kanal aboneliği ve ilk Cloud iletişimi başarılı olduktan sonra görünür. Sunucu, anahtar içermeyen soket adresi ve son başarılı iletişim görüntülenir. Bağlantı kodu veya cihaz anahtarı durum yanıtında bulunmaz.
+
+## Tek kodla bağlantı (v1.3.4)
+
+Varsayılan Forge sunucusu için IPC çağrısında da adres gerekmez. Özel Cloud sunucuları gelişmiş bağlantı ayarlarından seçilebilir; kayıtlı özel adresler korunur ve kod gönderilmeden önce ekranda gösterilir. Kopyalanmış koddaki boşluk ve tireler temizlenir. Eşleştirme tamamlanınca bağlantı döngüsü beklemeden uyandırılır. Başarılı eşleştirme ile canlı Cloud bağlantısı ayrı durumlar olarak gösterilir; yinelenen gönderimler ve eski durum sorgularının yeni sonucu ezmesi engellenir.

@@ -74,8 +74,22 @@ fn service_report(inventory: Vec<Value>) -> Vec<Value> {
 #[derive(Default)]
 pub(crate) struct CloudState {
     started: AtomicBool,
+    connector: Mutex<Option<std::thread::Thread>>,
     inner: Mutex<Runtime>,
 }
+impl CloudState {
+    fn wake(&self) {
+        if let Some(connector) = self
+            .connector
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            connector.unpark();
+        }
+    }
+}
+
 type AfterAck = (String, Box<dyn FnOnce() -> Result<()> + Send>);
 #[derive(Default)]
 struct Runtime {
@@ -156,6 +170,20 @@ fn connection_status(paired: bool, runtime: &Runtime) -> CloudConnection {
     } else {
         runtime.connection
     }
+}
+
+fn pairing_code(input: &str) -> Result<String> {
+    anyhow::ensure!(input.len() <= 256, "Bağlantı kodu çok uzun.");
+    let code: String = input
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '-')
+        .map(|c| c.to_ascii_uppercase())
+        .collect();
+    anyhow::ensure!(
+        code.len() == 32 && code.bytes().all(|b| b.is_ascii_hexdigit()),
+        "Cloud’dan aldığınız 32 karakterli bağlantı kodunu yapıştırın."
+    );
+    Ok(code)
 }
 
 fn base_url(input: &str, allow_http: bool) -> Result<String> {
@@ -249,11 +277,7 @@ impl Manager {
     }
     pub fn cloud_pair(&self, url: &str, code: &str) -> Result<()> {
         let url = base_url(url, allow_http())?;
-        let code = code.trim().to_ascii_uppercase();
-        anyhow::ensure!(
-            code.len() == 32 && code.bytes().all(|b| b.is_ascii_hexdigit()),
-            "Bağlantı kodu 32 karakter olmalı."
-        );
+        let code = pairing_code(code)?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         anyhow::ensure!(runtime.active.is_none(), "Cloud işlemi devam ediyor.");
         let old = self.cloud_credentials()?;
@@ -283,10 +307,12 @@ impl Manager {
         // Persist first: the same key can complete pairing after a lost response.
         self.save_cloud_credentials(&c)?;
         let (status, reply) = post(&client()?, &c, "pair", &json!({"code":code,"key":c.key}))?;
-        anyhow::ensure!(
-            status == 200,
-            "Eşleştirme reddedildi ({status}); kodu ve Cloud adresini kontrol edin."
-        );
+        match status {
+            200 => {},
+            422 => bail!("Kod geçersiz veya başka bir cihazda kullanılmış. Cloud panelindeki cihazın bağlantı kodunu kontrol edin."),
+            429 => bail!("Çok fazla bağlantı denemesi yapıldı. Bir dakika sonra yeniden deneyin."),
+            _ => bail!("Cloud eşleştirmesi tamamlanamadı ({status}). Aynı kodla yeniden deneyebilirsiniz."),
+        }
         let p: Pair = serde_json::from_value(reply)?;
         uuid::Uuid::parse_str(&p.device_id)?;
         c.device_id = Some(p.device_id);
@@ -299,6 +325,7 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Connecting;
         runtime.socket_endpoint = None;
+        self.cloud.wake();
         Ok(())
     }
     pub fn cloud_disconnect(&self) -> Result<()> {
@@ -319,6 +346,7 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Disconnected;
         runtime.socket_endpoint = None;
+        self.cloud.wake();
         Ok(())
     }
     /// One connector per desktop Manager, stopped when the Manager is dropped.
@@ -327,7 +355,7 @@ impl Manager {
             return;
         }
         let weak = Arc::downgrade(self);
-        std::thread::spawn(move || {
+        let connector = std::thread::spawn(move || {
             let mut delay = 5;
             loop {
                 let Some(m) = weak.upgrade() else { break };
@@ -356,9 +384,14 @@ impl Manager {
                     }
                 }
                 drop(m);
-                std::thread::sleep(Duration::from_secs(delay));
+                std::thread::park_timeout(Duration::from_secs(delay));
             }
         });
+        *self
+            .cloud
+            .connector
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(connector.thread().clone());
     }
     fn cloud_journal_path(&self, c: &Credentials) -> Result<std::path::PathBuf> {
         let id = uuid::Uuid::parse_str(c.device_id.as_deref().context("Cihaz eşleştirilmedi.")?)?;
@@ -1026,6 +1059,18 @@ mod windows_cloud_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn pairing_codes_accept_copied_formatting_without_accepting_invalid_codes() {
+        let code = "0123456789ABCDEF0123456789ABCDEF";
+        assert_eq!(
+            pairing_code(" 01234567-89abcdef 01234567-89abcdef\r\n").unwrap(),
+            code
+        );
+        assert!(pairing_code("0123456789ABCDEF0123456789ABCDEG").is_err());
+        assert!(pairing_code("short").is_err());
+        assert!(pairing_code(&"a".repeat(257)).is_err());
+        assert!(pairing_code("0123456789ABCDEF0123456789ABCDEFextra").is_err());
+    }
     #[test]
     fn cloud_default_uses_forge_without_replacing_custom_servers() {
         assert_eq!(base_url("", false).unwrap(), DEFAULT_CLOUD_URL);

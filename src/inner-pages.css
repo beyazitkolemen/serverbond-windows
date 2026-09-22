@@ -827,3 +827,24 @@ small.field-error {
     width: 100%;
   }
 }
+
+.cloud-advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.cloud-advanced > summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  width: fit-content;
+}
+.cloud-advanced > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.cloud-advanced[open] > summary {
+  margin-bottom: 16px;
+}
+.cloud-advanced > button {
+  margin-top: 12px;
+}
