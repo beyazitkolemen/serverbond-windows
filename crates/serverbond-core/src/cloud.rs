@@ -1138,7 +1138,7 @@ mod windows_cloud_tests {
         assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
     }
     #[test]
-    fn dirty_state_posts_sections_once_for_stable_fingerprints() {
+    fn dirty_state_posts_sections_and_replays_forced_sync() {
         let home = tempfile::tempdir().unwrap();
         let m = Arc::new(Manager::new(home.path().into()).unwrap());
         let mut c = Credentials {
@@ -1181,8 +1181,6 @@ mod windows_cloud_tests {
             .any(|section| section["section"] == "php"));
         assert!(!m.cloud.inner.lock().unwrap().state_dirty);
         assert!(!m.cloud.inner.lock().unwrap().state_fingerprints.is_empty());
-        // Unchanged fingerprints must not open another HTTP request.
-        m.cloud_push_state(&http, &c, &[]).unwrap();
         let sync = exchange_tick(
             &m,
             &mut c,

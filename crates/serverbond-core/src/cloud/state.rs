@@ -255,5 +255,10 @@ mod tests {
         assert_eq!(changed[0].section, "php");
         assert_eq!(removed.len(), 1);
         assert_eq!(removed[0].0, "project");
+        // Identical snapshots never trigger a second POST. Live diagnostics may
+        // legitimately change between scans, so this invariant uses fixed data.
+        let (unchanged, missing) = diff(&current, &fingerprint_map(&current));
+        assert!(unchanged.is_empty());
+        assert!(missing.is_empty());
     }
 }
