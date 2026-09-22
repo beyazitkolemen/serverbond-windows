@@ -218,6 +218,15 @@ impl Manager {
     }
 
     pub(crate) fn add_project_inner(&self, name: String, path: PathBuf) -> Result<Project> {
+        self.register_project(name, path, None)
+    }
+
+    fn register_project(
+        &self,
+        name: String,
+        path: PathBuf,
+        template: Option<&crate::project_workflow::ProjectTemplate>,
+    ) -> Result<Project> {
         validate_slug(&name)?;
         let path =
             dunce::canonicalize(path).map_err(|_| ProjectError("Proje klasörü bulunamadı."))?;
@@ -239,7 +248,7 @@ impl Manager {
         {
             return Err(ProjectError("Bu proje veya alan adı zaten kayıtlı.").into());
         }
-        let project = Project {
+        let mut project = Project {
             id: uuid::Uuid::new_v4().to_string(),
             host: original.settings.project_host(&name),
             name,
@@ -249,13 +258,18 @@ impl Manager {
             schedule: Default::default(),
             release: Default::default(),
         };
+        if let Some(template) = template {
+            template.apply(&mut project);
+        }
         if crate::product::is_phpmyadmin_host(&project.host) {
             bail!("Bu adres phpMyAdmin için ayrılmış.");
         }
         let mut config = original.clone();
         config.projects.push(project.clone());
         self.apply_project_config(&original, &config)?;
-        self.maybe_create_project_database(&project.name);
+        if template.is_none() {
+            self.maybe_create_project_database(&project.name);
+        }
         self.log(format!("Proje eklendi: {}", project.name));
         Ok(project)
     }
@@ -399,8 +413,37 @@ impl Manager {
     }
 
     pub fn create_project(&self, name: String, parent: PathBuf) -> Result<Project> {
+        self.create_project_with_template(name, parent, None)
+    }
+
+    pub(crate) fn create_project_with_template(
+        &self,
+        name: String,
+        parent: PathBuf,
+        template: Option<crate::project_workflow::ProjectTemplate>,
+    ) -> Result<Project> {
         let _guard = self.gate()?;
-        let version = self.package("php")?.version;
+        self.cloud_stage("preflight");
+        if let Some(template) = &template {
+            template.validate()?;
+        }
+        let version = template
+            .as_ref()
+            .map(|t| t.php_version.clone())
+            .unwrap_or(self.package("php")?.version);
+        if template.as_ref().is_some_and(|t| t.database)
+            && !self
+                .snapshot()?
+                .packages
+                .iter()
+                .any(|p| p.package.id == "mysql" && p.running)
+        {
+            return Err(ProjectError(
+                "Şablon MySQL veritabanı istiyor. Önce MySQL servisini başlatın.",
+            )
+            .into());
+        }
+
         if !crate::model::php_supports_laravel12(&version) {
             return Err(ProjectError("Yeni Laravel 12 projesi için PHP 8.2 veya üzerini seçin. Eski PHP sürümleriyle mevcut projelerinizi ekleyebilirsiniz.").into());
         }
@@ -425,17 +468,32 @@ impl Manager {
             )
             .into());
         }
-        self.executable("php").map_err(|_| {
+        let preflight = self.project_preflight_at(&parent, &version)?;
+        if !preflight["ready"].as_bool().unwrap_or(false) {
+            return Err(ProjectError("Kurulum ön kontrolü başarısız. PHP, Composer ve proje klasörü denetimlerini tamamlayın.").into());
+        }
+        let php_package = crate::model::php_package(&version)?;
+        let php_dir = self.home.join("bin/php").join(&version);
+        crate::install::validate_installation(&php_dir, &php_package).map_err(|_| {
             ProjectError(
                 "Seçili PHP sürümü kurulu değil. Önce PHP kurulumu veya onarımını tamamlayın.",
             )
         })?;
         let composer = self.executable("composer").map_err(|_| ProjectError("Composer kurulu değil. Servisler ekranından Composer kurulumu veya onarımını tamamlayın."))?;
-        self.write_php_config()?;
+        let ini = self.write_php_config_for(&version)?;
+        self.cloud_stage("composer");
         self.log(format!(
             "Laravel projesi oluşturuluyor: {name}. Composer günlüğünden takip edebilirsiniz."
         ));
-        let mut cmd = self.php_command()?;
+        let mut cmd = crate::process::command(php_dir.join(&php_package.executable));
+        cmd.arg("-c")
+            .arg(&ini)
+            .arg("-d")
+            .arg(format!(
+                "extension_dir=\"{}\"",
+                crate::portable_path(&php_dir.join("ext"))
+            ))
+            .env("SERVERBOND_PHP_EXT", php_dir.join("ext"));
         cmd.arg(composer)
             .args([
                 "create-project",
@@ -446,15 +504,22 @@ impl Manager {
             ])
             .arg(&destination);
         cmd.current_dir(&parent);
-        let mut paths = vec![self.package_dir("php")?];
+        let mut paths = vec![php_dir];
         if let Some(existing) = std::env::var_os("PATH") {
             paths.extend(std::env::split_paths(&existing));
         }
         cmd.env("PATH", std::env::join_paths(paths)?)
-            .env("PHPRC", self.php_ini_path()?)
+            .env("PHPRC", ini)
             .env("PHP_INI_SCAN_DIR", "");
         let mut child = ManagedChild::spawn(cmd, &self.home.join("logs/composer.log"))?;
         child.wait_timeout(Duration::from_secs(900)).map_err(|_| ProjectError("Laravel oluşturulamadı. Composer günlüğünü kontrol edin. Oluşan dosyalar inceleme için korundu."))?;
-        self.add_project_inner(name, destination)
+        self.cloud_stage("register");
+        let project = self.register_project(name, destination, template.as_ref())?;
+        if template.as_ref().is_some_and(|t| t.database) {
+            self.cloud_stage("database");
+            self.create_database_inner(&project.name).map_err(|_| ProjectError("Proje kaydedildi ancak MySQL veritabanı oluşturulamadı. Proje veritabanı ekranından tekrar deneyin."))?;
+        }
+        self.cloud_stage("completed");
+        Ok(project)
     }
 }

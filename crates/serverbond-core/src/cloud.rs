@@ -95,6 +95,8 @@ type AfterAck = (String, Box<dyn FnOnce() -> Result<()> + Send>);
 struct Runtime {
     completed: bool,
     active: Option<String>,
+    progress: Vec<String>,
+    last_socket_message: Option<String>,
     error: Option<String>,
     last_contact: Option<String>,
     disabled: bool,
@@ -382,7 +384,10 @@ impl Manager {
                                     .into(),
                             );
                         }
-                        delay = (delay * 2).min(60);
+                        drop(runtime);
+                        // Keep command delivery and diagnostics available over HTTPS while Reverb recovers.
+                        let _ = m.cloud_tick(false);
+                        delay = (delay * 2).min(15);
                     }
                 }
                 drop(m);
@@ -419,6 +424,15 @@ impl Manager {
         Ok(self
             .home
             .join(format!("config/cloud-output-{device}-{command}.dpapi")))
+    }
+    pub(crate) fn cloud_stage(&self, stage: &str) {
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if runtime.active.is_some()
+            && runtime.progress.last().is_none_or(|last| last != stage)
+            && runtime.progress.len() < 16
+        {
+            runtime.progress.push(stage.to_string());
+        }
     }
     fn cloud_tick(self: &Arc<Self>, claim: bool) -> Result<()> {
         let c = {
@@ -477,11 +491,21 @@ impl Manager {
             }
             return Ok(());
         }
+        let (progress, connection) = {
+            let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            (
+                runtime
+                    .active
+                    .as_ref()
+                    .map(|id| json!({"commandId":id,"stages":runtime.progress})),
+                json!({"state":runtime.connection,"lastSocketMessage":runtime.last_socket_message}),
+            )
+        };
         let (status, reply) = post(
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
+            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -614,6 +638,7 @@ impl Manager {
             return Ok(());
         }
         runtime.active = Some(command.id.clone());
+        runtime.progress = vec!["started".into()];
         let m = self.clone();
         std::thread::spawn(move || {
             let mut result = m.contain(|| match parsed_operation {
@@ -825,6 +850,11 @@ impl Manager {
                 Err(e) => return Err(e.into()),
             };
             last_message = Instant::now();
+            self.cloud
+                .inner
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .last_socket_message = Some(chrono::Utc::now().to_rfc3339());
             match message {
                 Message::Text(text) => {
                     let event: Value = serde_json::from_str(&text)?;

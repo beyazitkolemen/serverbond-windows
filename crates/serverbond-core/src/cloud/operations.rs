@@ -47,6 +47,9 @@ pub(super) const NAMES: &[&str] = &[
     "database.create",
     "database.backup",
     "database.restore",
+    "projects.preflight",
+    "projects.health",
+    "projects.create-template",
     "projects.list",
     "projects.add",
     "projects.remove",
@@ -120,6 +123,12 @@ pub(super) struct Create {
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(super) struct CreateTemplate {
+    name: String,
+    template: crate::project_workflow::ProjectTemplate,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct Remove {
     id: String,
 }
@@ -164,6 +173,12 @@ pub(super) struct Paths {
 #[derive(Deserialize)]
 #[serde(tag = "operation", content = "parameters", deny_unknown_fields)]
 pub(super) enum Operation {
+    #[serde(rename = "projects.preflight")]
+    Preflight(Empty),
+    #[serde(rename = "projects.health")]
+    Health(Remove),
+    #[serde(rename = "projects.create-template")]
+    CreateTemplate(CreateTemplate),
     #[serde(rename = "desktop.update-check")]
     DesktopUpdateCheck(Empty),
     #[serde(rename = "desktop.update-install")]
@@ -315,6 +330,15 @@ impl Operation {
     }
     pub(super) fn execute(self, manager: &Manager) -> Result<Value> {
         match self {
+            Self::Preflight(_) => return manager.project_preflight(),
+            Self::Health(input) => return manager.project_health(&input.id),
+            Self::CreateTemplate(input) => {
+                manager.create_project_with_template(
+                    input.name,
+                    manager.cloud_project_parent(),
+                    Some(input.template),
+                )?;
+            }
             Self::DesktopUpdateCheck(_) => return super::desktop::update_check(manager),
             Self::DesktopUpdateInstall(_) => anyhow::bail!("Update requires acknowledged delivery"),
             Self::DesktopShow(_) => return super::desktop::show(manager),
