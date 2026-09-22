@@ -1,4 +1,5 @@
 #![cfg(windows)]
+mod support;
 use anyhow::Result;
 use serverbond_core::Manager;
 use std::{fs, time::Duration};
@@ -20,18 +21,9 @@ fn user_preferences_reach_real_runtimes_and_survive_repair() -> Result<()> {
     settings.web.https_port = listeners[3].local_addr()?.port();
     drop(listeners);
     manager.save_settings(settings)?;
-    if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
-        for item in fs::read_dir(cache)? {
-            let item = item?;
-            if item.file_type()?.is_file() {
-                fs::copy(
-                    item.path(),
-                    home.path().join("cache").join(item.file_name()),
-                )?;
-            }
-        }
-    }
+    support::restore_package_cache(home.path())?;
     manager.install("all")?;
+    support::save_package_cache(home.path())?;
     manager.select_php("7.4.33")?;
     let path = manager.home.join("www/check");
     fs::create_dir_all(path.join("public"))?;

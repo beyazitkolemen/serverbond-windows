@@ -1,4 +1,5 @@
 #![cfg(windows)]
+mod support;
 
 use anyhow::Result;
 use serverbond_core::Manager;
@@ -21,19 +22,10 @@ fn mysql_php_web_and_backups_survive_restart_and_repair() -> Result<()> {
     settings.web.https_port = listeners[3].local_addr()?.port();
     drop(listeners);
     manager.save_settings(settings)?;
-    // Optional verified download cache speeds up local runs, never shares database data.
-    if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
-        for item in fs::read_dir(cache)? {
-            let item = item?;
-            if item.file_type()?.is_file() {
-                fs::copy(
-                    item.path(),
-                    manager.home.join("cache").join(item.file_name()),
-                )?;
-            }
-        }
-    }
+    // Share package archives only; every test still gets its own MySQL data.
+    support::restore_package_cache(home.path())?;
     manager.install("all")?;
+    support::save_package_cache(home.path())?;
     let path = manager.home.join("www/laravel-shape");
     fs::create_dir_all(path.join("public"))?;
     fs::write(path.join(".env"), "APP_KEY=preserve-this-value")?;

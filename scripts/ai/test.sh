@@ -10,6 +10,7 @@ export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:/usr/local/cargo/bin:${PATH}"
 
 npm run build
 npm run test:ui
+node --test scripts/ai/select-release-tests.test.mjs
 cargo fmt --all -- --check
 cargo test -p serverbond-core --locked
 cargo clippy -p serverbond-core --all-targets --locked -- -D warnings

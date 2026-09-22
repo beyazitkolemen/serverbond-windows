@@ -1,5 +1,6 @@
 //! Real password rotation in an isolated MySQL instance, never the user's server.
 #![cfg(windows)]
+mod support;
 use serverbond_core::Manager;
 
 #[test]
@@ -12,18 +13,9 @@ fn mysql_rotation_stages_secrets_and_preserves_query_and_backup_behavior() {
     settings.mysql_port = listener.local_addr().unwrap().port();
     drop(listener);
     manager.save_settings(settings).unwrap();
-    if let Some(cache) = std::env::var_os("SERVERBOND_TEST_CACHE") {
-        for entry in std::fs::read_dir(cache).unwrap().flatten() {
-            if entry.file_type().unwrap().is_file() {
-                std::fs::copy(
-                    entry.path(),
-                    home.path().join("cache").join(entry.file_name()),
-                )
-                .unwrap();
-            }
-        }
-    }
+    support::restore_package_cache(home.path()).unwrap();
     manager.install("mysql").unwrap();
+    support::save_package_cache(home.path()).unwrap();
     manager.start("mysql").unwrap();
     manager.create_database("rotation-check").unwrap();
     manager.create_named_database("app_db").unwrap();

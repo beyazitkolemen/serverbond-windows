@@ -11,7 +11,7 @@ Gerçek MySQL veya PostgreSQL kurup başlatan testler dakikalar sürer. Birim te
 
 Yalnızca o servisin kaynağı, testi veya paket sabiti değiştiyse:
 
-- MySQL: `src/cloud/mysql.rs`, `tests/mysql_credentials.rs`, `tests/environment.rs`, `tests/preferences_runtime.rs` ve `catalog.json` içindeki `mysql` paketi
+- MySQL: `src/database_inventory.rs`, `src/cloud/database_inventory.rs`, `src/cloud/mysql.rs`, `src/services.rs`, `tests/mysql_credentials.rs`, `tests/environment.rs`, `tests/preferences_runtime.rs` ve `catalog.json` içindeki `mysql` paketi
 - PostgreSQL: `src/postgres.rs`, `src/cloud/postgres.rs` ve `tools.json` içindeki `postgres` paketi
 
 Başka bir alanda (GitHub, Cloudflare, arayüz, proje kurulumu) yapılan işte bu testler çalıştırılmaz ve yayın işine zorunlu adım olarak eklenmez.
@@ -32,4 +32,4 @@ cargo test -p serverbond-core --lib postgres::credential_tests -- --ignored --no
 
 `cargo test -p serverbond-core --tests -- --ignored` bu iki aileyi de içerir. Alan değişmeden bu komutun tamamını çalıştırma. Linux’ta bu testler zaten çalışmaz.
 
-Yayın işi, önceki etiket ile yeni etiket arasındaki dosya farkına bakarak aynı kararı verir. Elle tetiklenen tam servis turu yalnızca `workflow_dispatch` ile istenir.
+Yayın işi, önceki etiket ile yeni etiket arasındaki dosya ve paket farkını `scripts/ai/select-release-tests.mjs` ile inceler. Yalnızca etkilenen gerçek ortam testlerini çalıştırır; MySQL dosyasındaki dar bir değişiklik tüm PHP, Caddy ve diğer indirme testlerini başlatmaz. Tam servis turu gerektiğinde testleri Windows ortamında açıkça çalıştırın.

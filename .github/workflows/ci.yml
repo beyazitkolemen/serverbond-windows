@@ -26,6 +26,8 @@ jobs:
         run: npm run build
       - name: Focused UI regressions
         run: npm run test:ui
+      - name: Release service test selection
+        run: node --test scripts/ai/select-release-tests.test.mjs
       - name: Rust formatting
         run: cargo fmt --all -- --check
       - name: Core and desktop tests
