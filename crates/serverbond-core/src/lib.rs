@@ -5,6 +5,7 @@
 
 pub mod api;
 pub mod cloud;
+mod database_inventory;
 mod domain;
 mod envfile;
 pub mod github;

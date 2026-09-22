@@ -43,6 +43,9 @@ pub(super) const NAMES: &[&str] = &[
     "mysql.connection",
     "mysql.credentials",
     "mysql.password",
+    "databases.show",
+    "databases.create",
+    "databases.user",
     "database.show",
     "database.create",
     "database.backup",
@@ -251,6 +254,12 @@ pub(super) enum Operation {
     MysqlCredentials(super::mysql::Confirm),
     #[serde(rename = "mysql.password")]
     MysqlPassword(super::mysql::Password),
+    #[serde(rename = "databases.show")]
+    DatabasesShow(Empty),
+    #[serde(rename = "databases.create")]
+    DatabasesCreate(super::database_inventory::Create),
+    #[serde(rename = "databases.user")]
+    DatabasesUser(super::database_inventory::User),
     #[serde(rename = "database.show")]
     DatabaseShow(Remove),
     #[serde(rename = "database.create")]
@@ -405,6 +414,11 @@ impl Operation {
             Self::MysqlConnection(_) => return super::mysql::connection(manager),
             Self::MysqlCredentials(input) => return super::mysql::credentials(manager, input),
             Self::MysqlPassword(input) => return super::mysql::password(manager, input),
+            Self::DatabasesShow(_) => return super::database_inventory::show(manager),
+            Self::DatabasesCreate(input) => {
+                return super::database_inventory::create(manager, input)
+            }
+            Self::DatabasesUser(input) => return super::database_inventory::user(manager, input),
             Self::DatabaseShow(input) => {
                 return super::database::execute(manager, &input.id, "show")
             }

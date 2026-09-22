@@ -26,6 +26,30 @@ fn mysql_rotation_stages_secrets_and_preserves_query_and_backup_behavior() {
     manager.install("mysql").unwrap();
     manager.start("mysql").unwrap();
     manager.create_database("rotation-check").unwrap();
+    manager.create_named_database("app_db").unwrap();
+    assert!(manager.create_named_database("app_db").is_err());
+    let user_password = "AppUser-123!";
+    manager
+        .create_database_user("app_user", user_password, &["app_db".into()], true, true)
+        .unwrap();
+    let inventory = manager.database_inventory().unwrap();
+    assert!(inventory["databases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|db| db["name"] == "app_db"));
+    assert!(inventory["users"].as_array().unwrap().iter().any(|user| {
+        user["name"] == "app_user"
+            && user["databases"] == serde_json::json!(["app_db"])
+            && user["readOnly"] == true
+    }));
+    let grants = manager
+        .mysql_query("SHOW GRANTS FOR 'app_user'@'127.0.0.1'")
+        .unwrap();
+    assert!(grants.contains("GRANT SELECT ON `app\\_db`.*"));
+    assert!(manager
+        .create_database_user("app_user", user_password, &["app_db".into()], false, true)
+        .is_err());
     manager.mysql_query("CREATE TABLE rotation_check.probe (value VARCHAR(60)); INSERT INTO rotation_check.probe VALUES ('İstanbul')").unwrap();
     let previous = manager.credentials().unwrap();
     let next = format!("Rotated-{}", uuid::Uuid::new_v4().simple());
@@ -63,6 +87,11 @@ fn mysql_rotation_stages_secrets_and_preserves_query_and_backup_behavior() {
         !std::fs::read_to_string(home.path().join("logs/serverbond.log"))
             .unwrap()
             .contains(&next)
+    );
+    assert!(
+        !std::fs::read_to_string(home.path().join("logs/serverbond.log"))
+            .unwrap()
+            .contains(user_password)
     );
     manager.stop("mysql").unwrap();
 }

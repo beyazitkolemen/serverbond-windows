@@ -15,6 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 mod database;
+mod database_inventory;
 mod desktop;
 mod environment;
 mod github;
