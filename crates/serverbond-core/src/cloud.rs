@@ -106,6 +106,7 @@ struct Runtime {
     connection: CloudConnection,
     socket_endpoint: Option<String>,
     state_dirty: bool,
+    state_complete: bool,
     state_fingerprints: BTreeMap<String, String>,
     last_state_scan: Option<Instant>,
 }
@@ -462,7 +463,6 @@ impl Manager {
         c: &Credentials,
         force: &[StateSyncItem],
     ) -> Result<()> {
-        let current = state::sections(self);
         let previous = {
             self.cloud
                 .inner
@@ -471,7 +471,10 @@ impl Manager {
                 .state_fingerprints
                 .clone()
         };
-        let (mut changed, removed) = state::diff(&current, &previous);
+        let snapshot = state::sections(self, &previous);
+        let current = &snapshot.sections;
+        let fingerprints = snapshot.fingerprints(&previous);
+        let (mut changed, removed) = state::diff(current, &previous, &snapshot.protected);
         if !force.is_empty() {
             for item in force {
                 let key = state::fingerprint_key(&item.section, &item.target_id);
@@ -487,8 +490,9 @@ impl Manager {
         if changed.is_empty() && removed.is_empty() {
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             runtime.state_dirty = false;
+            runtime.state_complete = snapshot.protected.is_empty();
             runtime.last_state_scan = Some(Instant::now());
-            runtime.state_fingerprints = state::fingerprint_map(&current);
+            runtime.state_fingerprints = fingerprints;
             return Ok(());
         }
         for body in state::bodies(&changed, &removed)? {
@@ -510,8 +514,9 @@ impl Manager {
             return Ok(());
         }
         runtime.state_dirty = false;
+        runtime.state_complete = snapshot.protected.is_empty();
         runtime.last_state_scan = Some(Instant::now());
-        runtime.state_fingerprints = state::fingerprint_map(&current);
+        runtime.state_fingerprints = fingerprints;
         Ok(())
     }
     fn cloud_tick(self: &Arc<Self>, claim: bool) -> Result<()> {
@@ -571,7 +576,7 @@ impl Manager {
             }
             return Ok(());
         }
-        let (progress, connection, state_map) = {
+        let (progress, connection, state_map, state_complete) = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             (
                 runtime
@@ -584,13 +589,14 @@ impl Manager {
                     .iter()
                     .map(|(key, value)| (key.clone(), Value::String(value.clone())))
                     .collect::<serde_json::Map<String, Value>>(),
+                runtime.state_complete,
             )
         };
         let (status, reply) = post(
             &http,
             &c,
             if claim { "poll" } else { "heartbeat" },
-            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>(),"state":state_map}),
+            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>(),"state":state_map,"state_complete":state_complete}),
         )?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -1180,6 +1186,7 @@ mod windows_cloud_tests {
             .iter()
             .any(|section| section["section"] == "php"));
         assert!(!m.cloud.inner.lock().unwrap().state_dirty);
+        assert!(m.cloud.inner.lock().unwrap().state_complete);
         assert!(!m.cloud.inner.lock().unwrap().state_fingerprints.is_empty());
         let sync = exchange_tick(
             &m,
@@ -1192,6 +1199,7 @@ mod windows_cloud_tests {
         )
         .unwrap();
         assert_eq!(sync.len(), 2);
+        assert_eq!(sync[0]["state_complete"], true);
         assert_eq!(sync[1]["sections"][0]["section"], "php");
         assert_eq!(
             sync[1]["sections"][0]["fingerprint"],

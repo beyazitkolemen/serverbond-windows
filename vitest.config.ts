@@ -4,6 +4,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    pool: "threads",
     include: ["tests/ui/**/*.test.tsx"],
     setupFiles: ["tests/ui/setup.ts"],
   },

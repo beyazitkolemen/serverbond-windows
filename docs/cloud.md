@@ -46,6 +46,8 @@ Eşleştirmeden önce Windows anahtarı DPAPI ile yazar. Kodun geçerlilik süre
 
 Cihaz kendi private-devices.UUID kanalını dinler. Pusher protokol v7, bağlantı/abonelik olayları, ping/pong ve yeniden bağlanma desteklenir. command.ready komut sorgusunu tetikler; connection.revoked bağlantıyı kapatır. Sadece bildirimler bu kanala gider, anahtar veya servis sırları gönderilmez.
 
+Durum bölümleri Cloud SQL'deki şifreli `device_states` kayıtlarına HTTPS ile yazılır. Heartbeat parmak izlerini ve `state_complete` bilgisini taşır. Tam tarama bitmeden Cloud eksik görünen SQL kayıtlarını silmez; geçici yerel okuma hatasında önceki parmak izi korunur. Tarama tamamlanınca kaldırılan bölümler açık `removed` listesiyle veya tam heartbeat envanteriyle temizlenir. Cloud'u bu sözleşmeyi kabul eden sürüme Windows 1.3.13'ten önce güncelleyin.
+
 Tarayıcı Laravel oturumu ve CSRF ile /broadcasting/auth üzerinden private-customers.ID kanalına bağlanır. device.changed olayı ilgili panel bölümünü yeniler. Cihaz anahtarı müşteri kanalına erişemez; kullanıcı oturumu cihaz kanalını yetkilendiremez. Reverb client-* olayları kabul edilmez.
 
 ## İşlem kuralları
