@@ -46,7 +46,8 @@ fn mysql_rotation_stages_secrets_and_preserves_query_and_backup_behavior() {
     let grants = manager
         .mysql_query("SHOW GRANTS FOR 'app_user'@'127.0.0.1'")
         .unwrap();
-    assert!(grants.contains("GRANT SELECT ON `app\\_db`.*"));
+    // mysql_query uses --batch, which doubles the backslash in the display.
+    assert!(grants.contains("GRANT SELECT ON `app\\\\_db`.*"));
     assert!(manager
         .create_database_user("app_user", user_password, &["app_db".into()], false, true)
         .is_err());

@@ -728,8 +728,19 @@ impl Manager {
     }
 
     pub fn mysql_query(&self, sql: &str) -> Result<String> {
+        self.mysql_query_with_output(sql, false)
+    }
+
+    pub(crate) fn mysql_query_raw(&self, sql: &str) -> Result<String> {
+        self.mysql_query_with_output(sql, true)
+    }
+
+    fn mysql_query_with_output(&self, sql: &str, raw: bool) -> Result<String> {
         let (mut cmd, _credentials) = self.mysql_command("mysql.exe")?;
         cmd.args(["--batch", "--skip-column-names"]);
+        if raw {
+            cmd.arg("--raw");
+        }
         // SQL may contain credentials. Keep it out of process command lines.
         let mut input = tempfile::tempfile()?;
         input.write_all(sql.as_bytes())?;

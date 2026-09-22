@@ -112,7 +112,9 @@ impl Manager {
         let schemas = self.mysql_query(
             "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA ORDER BY SCHEMA_NAME",
         )?;
-        let grants = self.mysql_query("SELECT GRANTEE, TABLE_SCHEMA, PRIVILEGE_TYPE, IS_GRANTABLE FROM information_schema.SCHEMA_PRIVILEGES ORDER BY GRANTEE, TABLE_SCHEMA, PRIVILEGE_TYPE")?;
+        // The normal mysql --batch mode doubles backslashes, obscuring the
+        // literal \_ sequence stored for an underscore in a GRANT scope.
+        let grants = self.mysql_query_raw("SELECT GRANTEE, TABLE_SCHEMA, PRIVILEGE_TYPE, IS_GRANTABLE FROM information_schema.SCHEMA_PRIVILEGES ORDER BY GRANTEE, TABLE_SCHEMA, PRIVILEGE_TYPE")?;
         inventory_from_queries(&schemas, &grants)
     }
 
