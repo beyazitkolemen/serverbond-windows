@@ -39,9 +39,10 @@ pub mod updates;
 mod windows_resilience;
 
 pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
-pub use envfile::ProjectEnv;
+pub use envfile::{env_revision, ProjectEnv};
+pub use jobs::jobs_revision;
 pub use product::NAME;
-pub use release::{ProjectGitStatus, ReleaseRecord};
+pub use release::{release_revision, ProjectGitStatus, ReleaseRecord};
 pub use repository::DataDir;
 
 use anyhow::{bail, Context, Result};
@@ -650,6 +651,14 @@ impl Manager {
     }
 
     pub fn save_api_settings(&self, api: crate::preferences::ApiSettings) -> Result<()> {
+        self.save_api_settings_checked(api, None)
+    }
+
+    pub fn save_api_settings_checked(
+        &self,
+        api: crate::preferences::ApiSettings,
+        expected: Option<&crate::preferences::ApiSettings>,
+    ) -> Result<()> {
         let _guard = self.gate()?;
         let mut settings = self
             .config
@@ -657,6 +666,12 @@ impl Manager {
             .unwrap_or_else(|e| e.into_inner())
             .settings
             .clone();
+        if let Some(expected) = expected {
+            anyhow::ensure!(
+                serde_json::to_value(&settings.api)? == serde_json::to_value(expected)?,
+                "API ayarları değişti. Güncel ayarları alıp tekrar deneyin."
+            );
+        }
         settings.api = api;
         self.save_settings_inner(settings)
     }

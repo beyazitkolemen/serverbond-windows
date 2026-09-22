@@ -54,7 +54,7 @@ impl std::fmt::Display for SettingsConflict {
 }
 impl std::error::Error for SettingsConflict {}
 
-pub(crate) fn settings_revision(settings: &Settings) -> Result<String> {
+pub fn settings_revision(settings: &Settings) -> Result<String> {
     Ok(format!(
         "{:x}",
         Sha256::digest(serde_json::to_vec(settings)?)

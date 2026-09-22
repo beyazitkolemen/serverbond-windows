@@ -15,6 +15,8 @@ pub struct Registration {
     approved_key: String,
     run: Option<RegValue>,
     approved: Option<RegValue>,
+    legacy_run: Option<RegValue>,
+    legacy_approved: Option<RegValue>,
 }
 
 fn read_named(path: &str, name: &str) -> Result<Option<RegValue>> {
@@ -25,13 +27,6 @@ fn read_named(path: &str, name: &str) -> Result<Option<RegValue>> {
         Ok(value) => Ok(Some(value)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(error).context("Windows başlangıç ayarı okunamadı."),
-    }
-}
-
-fn read(path: &str) -> Result<Option<RegValue>> {
-    match read_named(path, NAME)? {
-        Some(value) => Ok(Some(value)),
-        None => read_named(path, LEGACY_NAME),
     }
 }
 
@@ -59,23 +54,29 @@ impl Registration {
         Ok(Self {
             run_key: run_key.into(),
             approved_key: approved_key.into(),
-            run: read(run_key)?,
-            approved: read(approved_key)?,
+            run: read_named(run_key, NAME)?,
+            approved: read_named(approved_key, NAME)?,
+            legacy_run: read_named(run_key, LEGACY_NAME)?,
+            legacy_approved: read_named(approved_key, LEGACY_NAME)?,
         })
     }
     pub fn enabled(&self) -> bool {
-        self.run.is_some()
-            && !self
-                .approved
-                .as_ref()
-                .is_some_and(|v| matches!(v.bytes.first(), Some(3 | 7)))
+        let enabled = |run: &Option<RegValue>, approved: &Option<RegValue>| {
+            run.is_some()
+                && !approved
+                    .as_ref()
+                    .is_some_and(|v| matches!(v.bytes.first(), Some(3 | 7)))
+        };
+        enabled(&self.run, &self.approved) || enabled(&self.legacy_run, &self.legacy_approved)
     }
     pub fn needs_change(&self, enabled: bool, command: &str) -> bool {
         if !enabled {
-            return self.run.is_some();
+            return self.run.is_some() || self.legacy_run.is_some();
         }
         use winreg::types::FromRegValue;
-        !self.enabled()
+        self.legacy_run.is_some()
+            || self.legacy_approved.is_some()
+            || !self.enabled()
             || self
                 .run
                 .as_ref()
@@ -84,10 +85,17 @@ impl Registration {
                 != Some(command)
     }
     pub fn restore(&self) -> Result<()> {
-        // Attempt both even if one key is inaccessible.
+        // Restore both names exactly, including a partially completed migration.
+        // Attempt every value even if one key is inaccessible.
         let run = write(&self.run_key, self.run.as_ref());
         let approved = write(&self.approved_key, self.approved.as_ref());
-        run.and(approved)
+        let legacy_run = write_named(&self.run_key, LEGACY_NAME, self.legacy_run.as_ref());
+        let legacy_approved = write_named(
+            &self.approved_key,
+            LEGACY_NAME,
+            self.legacy_approved.as_ref(),
+        );
+        run.and(approved).and(legacy_run).and(legacy_approved)
     }
     pub fn apply(&self, enabled: bool, command: &str) -> Result<()> {
         let result = (|| {
@@ -110,8 +118,8 @@ impl Registration {
                 write(&self.run_key, None)?;
                 write(&self.approved_key, None)?;
             }
-            let _ = write_named(&self.run_key, LEGACY_NAME, None);
-            let _ = write_named(&self.approved_key, LEGACY_NAME, None);
+            write_named(&self.run_key, LEGACY_NAME, None)?;
+            write_named(&self.approved_key, LEGACY_NAME, None)?;
             Ok(())
         })();
         if result.is_err() {
@@ -204,6 +212,34 @@ mod tests {
             read_named(&run, NAME).unwrap().unwrap().bytes,
             command.to_reg_value().bytes
         );
+        // A later desktop.json persist failure must put back only the old
+        // name, not create a second startup command alongside it.
+        legacy.restore().unwrap();
+        assert!(read_named(&run, NAME).unwrap().is_none());
+        assert!(read_named(&approved, NAME).unwrap().is_none());
+        assert_eq!(
+            read_named(&run, LEGACY_NAME).unwrap().unwrap().bytes,
+            "old executable".to_reg_value().bytes
+        );
+        let restored_legacy = Registration::read_at(&run, &approved).unwrap();
+        assert!(restored_legacy.needs_change(false, &command));
+        restored_legacy.apply(false, &command).unwrap();
+        assert!(read_named(&run, LEGACY_NAME).unwrap().is_none());
+        assert!(!Registration::read_at(&run, &approved).unwrap().enabled());
+
+        // A disabled obsolete entry must not disable the new entry merely
+        // because its approval value exists under the old name.
+        write_named(&run, NAME, Some(&command.to_reg_value())).unwrap();
+        write_named(
+            &approved,
+            LEGACY_NAME,
+            Some(&RegValue {
+                vtype: REG_BINARY,
+                bytes: vec![3; 12],
+            }),
+        )
+        .unwrap();
+        assert!(Registration::read_at(&run, &approved).unwrap().enabled());
         old.restore().unwrap();
         RegKey::predef(HKEY_CURRENT_USER)
             .delete_subkey_all(&name)

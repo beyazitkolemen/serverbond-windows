@@ -117,14 +117,15 @@ export default function Services({
   github: GithubState;
   phpmyadmin?: PackageStatus;
 }) {
-  const { values, setValues, dirty, reset } = useDraft(settings);
+  const { values, setValues, dirty, baseline, conflicted, reset } =
+    useDraft(settings);
   const [service, setService] = useState<ServiceId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(false);
   const tabsId = useId();
   const locked = busy || running;
-  const canSave = dirty && !busy && !running;
+  const canSave = dirty && !conflicted && !busy && !running;
   const change = <K extends keyof Values>(key: K, value: Values[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
   const selected = catalog.find((item) => item.id === service);
@@ -617,9 +618,10 @@ export default function Services({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (!canSave) return;
                   void run(
                     "Hizmet ayarları doğrulanıyor ve kaydediliyor…",
-                    () => settingsService.save(values),
+                    () => settingsService.save(values, baseline),
                   );
                 }}
               >
@@ -649,7 +651,11 @@ export default function Services({
                   onReset={reset}
                   label="Ayarları kaydet"
                   blocked={
-                    running ? "Kaydetmek için sunucuyu durdurun." : undefined
+                    conflicted
+                      ? "Ayarlar başka bir işlemde değişti. Vazgeç ile güncel ayarları alın."
+                      : running
+                        ? "Kaydetmek için sunucuyu durdurun."
+                        : undefined
                   }
                 />
               </form>

@@ -1,4 +1,7 @@
-import { useUnsavedChanges } from "../hooks/useNavigationGuard";
+import {
+  useUnsavedChanges,
+  useNavigationGuard,
+} from "../hooks/useNavigationGuard";
 import { useEffect, useState } from "react";
 import { call } from "../api";
 import type { Project, ProjectEnv as EnvFile, Run } from "../types";
@@ -12,6 +15,8 @@ export default function ProjectEnv({
   busy: boolean;
   run: Run;
 }) {
+  const navigate = useNavigationGuard();
+  const [reload, setReload] = useState(0);
   const [file, setFile] = useState<EnvFile | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +36,7 @@ export default function ProjectEnv({
     return () => {
       active = false;
     };
-  }, [project.id]);
+  }, [project.id, reload]);
   const dirty = file !== null && draft !== file.content;
   useUnsavedChanges(dirty, `${project.name} · Ortam dosyası`);
   return (
@@ -75,6 +80,19 @@ export default function ProjectEnv({
         />
       </label>
       <div className="settings-actions">
+        <button
+          type="button"
+          className="button secondary"
+          disabled={busy}
+          onClick={() =>
+            navigate(
+              () => setReload((value) => value + 1),
+              [`${project.name} · Ortam dosyası`],
+            )
+          }
+        >
+          Dosyayı yeniden yükle
+        </button>
         {file?.example ? (
           <button
             type="button"
@@ -99,15 +117,12 @@ export default function ProjectEnv({
           disabled={busy || !file || !dirty}
           onClick={() =>
             void run(".env kaydediliyor…", async () => {
-              await call("save_project_env", {
+              const saved = await call<EnvFile>("save_project_env", {
                 id: project.id,
                 content: draft,
+                expected: file,
               });
-              setFile({
-                exists: true,
-                content: draft,
-                example: file?.example ?? null,
-              });
+              setFile(saved);
               return ".env kaydedildi. Açık PHP ve iş süreçlerini yeniden başlatın.";
             })
           }

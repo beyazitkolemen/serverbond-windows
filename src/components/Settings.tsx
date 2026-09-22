@@ -118,7 +118,7 @@ export default function Settings({
   onUpdatesOpened: () => void;
 }) {
   const navigate = useNavigationGuard();
-  const { values, setValues, dirty, reset } = useDraft(
+  const { values, setValues, dirty, baseline, conflicted, reset } = useDraft(
     settings,
     "Sunucu ayarları",
   );
@@ -142,7 +142,7 @@ export default function Settings({
     JSON.stringify(runtimeSlice(values)) !==
     JSON.stringify(runtimeSlice(settings));
   const locked = busy || running;
-  const canSave = dirty && !busy && (!running || !runtimeDirty);
+  const canSave = dirty && !conflicted && !busy && (!running || !runtimeDirty);
   const php = (version && values.phpVersions[version]) || values.php;
   const setPhp = (patch: Partial<PhpSettings>) =>
     setValues((v) =>
@@ -243,6 +243,12 @@ export default function Settings({
               : "Kaydettikten sonra servisleri ve açık terminalleri yeniden başlatın."}
           </p>
         )}
+        {conflicted && (
+          <p className="field-error" role="alert">
+            Ayarlar başka bir işlemde değişti. Taslağınız korunuyor; Vazgeç ile
+            güncel ayarları alabilirsiniz.
+          </p>
+        )}
         {note && (
           <p role="status" className="settings-feedback">
             {note}
@@ -256,7 +262,7 @@ export default function Settings({
             e.preventDefault();
             if (!canSave) return;
             void run("Ayarlar doğrulanıyor ve kaydediliyor…", () =>
-              call("save_settings", { settings: values }),
+              call("save_settings", { settings: values, expected: baseline }),
             );
           }}
         >

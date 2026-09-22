@@ -51,7 +51,7 @@ export function useProjectJobs(project: Project) {
     workers: (project.workers ?? []).map(normalizeWorker),
     schedule: project.schedule ?? { enabled: false, autoStart: false },
   };
-  const { values, setValues, dirty, reset } = useDraft(
+  const { values, setValues, dirty, baseline, conflicted, reset } = useDraft(
     source,
     `${project.name} · Kuyruk ve zamanlayıcı`,
   );
@@ -84,6 +84,8 @@ export function useProjectJobs(project: Project) {
   const locked = (title?: string) =>
     dirty ? "Önce kuyruk ve zamanlayıcı ayarlarını kaydedin" : title;
   return {
+    baseline,
+    conflicted,
     workers,
     setWorkers,
     schedule,
@@ -110,7 +112,11 @@ export function JobsSaveBar({
   return (
     <>
       <span className="muted" role="status">
-        {jobs.dirty ? "Kaydedilmemiş değişiklikler" : "Ayarlar güncel"}
+        {jobs.conflicted
+          ? "Cloud veya başka bir işlem ayarları değiştirdi. Taslağınız korunuyor; Vazgeç ile güncel ayarları alın."
+          : jobs.dirty
+            ? "Kaydedilmemiş değişiklikler"
+            : "Ayarlar güncel"}
       </span>
       {jobs.dirty && (
         <button
@@ -128,7 +134,7 @@ export function JobsSaveBar({
       <button
         type="submit"
         className="button primary small"
-        disabled={busy || !jobs.dirty}
+        disabled={busy || !jobs.dirty || jobs.conflicted}
       >
         Ayarları kaydet
       </button>
@@ -153,12 +159,13 @@ export function ScheduleSection({
       className="project-jobs-panel"
       onSubmit={(event) => {
         event.preventDefault();
-        if (busy || !jobs.dirty) return;
+        if (busy || !jobs.dirty || jobs.conflicted) return;
         void run("Kuyruk ve zamanlayıcı ayarları kaydediliyor…", () =>
           call("save_project_jobs", {
             id: project.id,
             workers: jobs.workers,
             schedule: jobs.schedule,
+            expected: jobs.baseline,
           }),
         );
       }}
@@ -303,12 +310,13 @@ export function QueueSection({
       className="project-jobs-panel"
       onSubmit={(event) => {
         event.preventDefault();
-        if (busy || !jobs.dirty) return;
+        if (busy || !jobs.dirty || jobs.conflicted) return;
         void run("Kuyruk ve zamanlayıcı ayarları kaydediliyor…", () =>
           call("save_project_jobs", {
             id: project.id,
             workers: jobs.workers,
             schedule: jobs.schedule,
+            expected: jobs.baseline,
           }),
         );
       }}

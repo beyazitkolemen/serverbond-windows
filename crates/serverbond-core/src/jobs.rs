@@ -18,7 +18,7 @@ use std::{
 };
 
 pub const MAX_WORKERS: usize = 8;
-pub(crate) fn jobs_revision(workers: &[QueueWorker], schedule: &ProjectSchedule) -> Result<String> {
+pub fn jobs_revision(workers: &[QueueWorker], schedule: &ProjectSchedule) -> Result<String> {
     use sha2::{Digest, Sha256};
     Ok(format!(
         "{:x}",
@@ -334,7 +334,7 @@ impl Manager {
         self.save_project_jobs_checked(id, workers, schedule, None)
     }
 
-    pub(crate) fn save_project_jobs_checked(
+    pub fn save_project_jobs_checked(
         &self,
         id: &str,
         workers: Vec<QueueWorker>,

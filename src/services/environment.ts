@@ -31,12 +31,14 @@ export const packagesService = {
 };
 
 export const settingsService = {
-  save: (settings: Settings) => call("save_settings", { settings }),
+  save: (settings: Settings, expected: Settings) =>
+    call("save_settings", { settings, expected }),
 };
 
 export const apiService = {
   status: () => call<ApiStatus>("api_status"),
-  save: (settings: ApiSettings) => call("api_save", { settings }),
+  save: (settings: ApiSettings, expected: ApiSettings) =>
+    call("api_save", { settings, expected }),
   documentation: () => call<ApiDocumentation>("api_documentation"),
   createToken: () => call<string>("api_token", { action: "create" }),
   forgetToken: () => call<string>("api_token", { action: "forget" }),

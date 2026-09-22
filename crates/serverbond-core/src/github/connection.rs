@@ -62,7 +62,7 @@ impl GithubHttp {
         {
             bail!("GitHub istek sınırına ulaşıldı. Bir süre sonra yeniden deneyin.");
         }
-        if !status.is_success() && !(oauth && status.as_u16() == 400) {
+        if !(status.is_success() || oauth && status.as_u16() == 400) {
             match status.as_u16() {
                 401 => bail!("GitHub oturumu geçersiz veya süresi dolmuş. Yeniden bağlanın."),
                 403 => bail!("GitHub erişimi reddedildi. Depo yetkilerini ve organizasyon SSO onayını kontrol edin."),
@@ -524,7 +524,7 @@ impl Manager {
             .pending
             .lock()
             .unwrap_or_else(|e| e.into_inner());
-        if !slot.as_ref().is_some_and(|p| p.public.flow_id == flow_id) {
+        if slot.as_ref().is_none_or(|p| p.public.flow_id != flow_id) {
             return Ok(poll_state("cancelled", 0, None));
         }
         let _credentials = self

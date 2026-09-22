@@ -24,7 +24,7 @@ const MAX_OUTPUT_CHARS: usize = 200_000;
 const MAX_EXTRA_ARTISAN: usize = 12;
 const GIT_MISSING: &str = "git PATH üzerinde bulunamadı. Git for Windows kurun ve PATH'e ekleyin.";
 
-pub(crate) fn release_revision(release: &ProjectRelease) -> Result<String> {
+pub fn release_revision(release: &ProjectRelease) -> Result<String> {
     use sha2::{Digest, Sha256};
     Ok(format!(
         "{:x}",
@@ -307,7 +307,7 @@ impl Manager {
         self.save_project_release_checked(id, release, None)
     }
 
-    pub(crate) fn save_project_release_checked(
+    pub fn save_project_release_checked(
         &self,
         id: &str,
         release: ProjectRelease,
@@ -404,7 +404,7 @@ impl Manager {
         self.deploy_project_checked(id, None)
     }
 
-    pub(crate) fn deploy_project_checked(
+    pub fn deploy_project_checked(
         &self,
         id: &str,
         expected: Option<&str>,

@@ -30,7 +30,14 @@ export default function ReleasePane({
   run: Run;
 }) {
   const source = normalize(project.release);
-  const { values, setValues, reset } = useDraft(
+  const {
+    values,
+    setValues,
+    baseline,
+    conflicted,
+    dirty: draftDirty,
+    reset,
+  } = useDraft(
     { release: source, extra: source.extraArtisan.join("\n") },
     `${project.name} · Sürüm tarifi`,
   );
@@ -73,7 +80,11 @@ export default function ReleasePane({
       release: { ...current.release, [key]: value },
     }));
   const saveRecipe = async () => {
-    await call("save_project_release", { id: project.id, release: draft });
+    await call("save_project_release", {
+      id: project.id,
+      release: draft,
+      expected: baseline.release,
+    });
     setValues({ release: draft, extra: draft.extraArtisan.join("\n") });
   };
   const refreshHistory = () =>
@@ -102,7 +113,7 @@ export default function ReleasePane({
               : "Henüz sürüm çalıştırılmadı"}
         </StatusBadge>
         <div className="release-actions">
-          {dirty && (
+          {draftDirty && (
             <button
               type="button"
               className="button secondary small"
@@ -115,7 +126,7 @@ export default function ReleasePane({
           <button
             type="button"
             className="button secondary small"
-            disabled={busy || !dirty}
+            disabled={busy || !draftDirty || conflicted}
             onClick={() => void run("Sürüm tarifi kaydediliyor…", saveRecipe)}
           >
             Kaydet
@@ -123,7 +134,7 @@ export default function ReleasePane({
           <button
             type="button"
             className="button primary small"
-            disabled={busy}
+            disabled={busy || conflicted}
             onClick={() =>
               void run("Yerel sürüm çalışıyor…", async () => {
                 if (dirty) {
@@ -131,6 +142,7 @@ export default function ReleasePane({
                 }
                 const record = await call<ReleaseRecord>("deploy_project", {
                   id: project.id,
+                  expected: draft,
                 }).catch(async (error: unknown) => {
                   await refreshHistory().catch(() =>
                     setHistoryError("Sürüm geçmişi okunamadı."),
@@ -150,6 +162,12 @@ export default function ReleasePane({
           </button>
         </div>
       </div>
+      {conflicted && (
+        <p className="field-error" role="alert">
+          Sürüm tarifi başka bir işlemde değişti. Taslağınız korunuyor; Vazgeç
+          ile güncel tarifi alın.
+        </p>
+      )}
       {historyError && (
         <p className="field-error" role="alert">
           {historyError}

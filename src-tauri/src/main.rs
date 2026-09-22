@@ -182,10 +182,17 @@ async fn remove_project(state: tauri::State<'_, State>, id: String) -> Result<()
     blocking(state.clone(), move || state.remove_project(&id)).await
 }
 #[tauri::command]
-async fn save_settings(state: tauri::State<'_, State>, settings: Settings) -> Result<(), String> {
+async fn save_settings(
+    state: tauri::State<'_, State>,
+    settings: Settings,
+    expected: Settings,
+) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || {
-        state.save_settings(settings)?;
+        state.save_settings_checked(
+            settings,
+            &serverbond_core::preferences::settings_revision(&expected)?,
+        )?;
         // Preferences are already persisted; a listener problem is reported
         // without undoing the save.
         if let Err(error) = state.ensure_api() {
@@ -213,10 +220,11 @@ fn api_documentation() -> serde_json::Value {
 async fn api_save(
     state: tauri::State<'_, State>,
     settings: serverbond_core::preferences::ApiSettings,
+    expected: serverbond_core::preferences::ApiSettings,
 ) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || {
-        state.save_api_settings(settings)?;
+        state.save_api_settings_checked(settings, Some(&expected))?;
         state.ensure_api()
     })
     .await
@@ -340,16 +348,24 @@ async fn settings_validate_import(json: String) -> Result<Settings, String> {
     Ok(settings)
 }
 
+#[derive(serde::Deserialize)]
+struct JobsBaseline {
+    workers: Vec<QueueWorker>,
+    schedule: ProjectSchedule,
+}
+
 #[tauri::command]
 async fn save_project_jobs(
     state: tauri::State<'_, State>,
     id: String,
     workers: Vec<QueueWorker>,
     schedule: ProjectSchedule,
+    expected: JobsBaseline,
 ) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || {
-        state.save_project_jobs(&id, workers, schedule)
+        let revision = serverbond_core::jobs_revision(&expected.workers, &expected.schedule)?;
+        state.save_project_jobs_checked(&id, workers, schedule, Some(&revision))
     })
     .await
 }
@@ -471,10 +487,15 @@ async fn save_project_release(
     state: tauri::State<'_, State>,
     id: String,
     release: ProjectRelease,
+    expected: ProjectRelease,
 ) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || {
-        state.save_project_release(&id, release)
+        state.save_project_release_checked(
+            &id,
+            release,
+            Some(&serverbond_core::release_revision(&expected)?),
+        )
     })
     .await
 }
@@ -482,9 +503,13 @@ async fn save_project_release(
 async fn deploy_project(
     state: tauri::State<'_, State>,
     id: String,
+    expected: ProjectRelease,
 ) -> Result<ReleaseRecord, String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || state.deploy_project(&id)).await
+    blocking(state.clone(), move || {
+        state.deploy_project_checked(&id, Some(&serverbond_core::release_revision(&expected)?))
+    })
+    .await
 }
 #[tauri::command]
 async fn list_project_releases(
@@ -507,9 +532,17 @@ async fn save_project_env(
     state: tauri::State<'_, State>,
     id: String,
     content: String,
-) -> Result<(), String> {
+    expected: ProjectEnv,
+) -> Result<ProjectEnv, String> {
     let state = state.inner().clone();
-    blocking(state.clone(), move || state.save_project_env(&id, content)).await
+    blocking(state.clone(), move || {
+        state.save_project_env_checked(
+            &id,
+            content,
+            Some(&serverbond_core::env_revision(&expected)),
+        )
+    })
+    .await
 }
 #[tauri::command]
 async fn project_git_status(

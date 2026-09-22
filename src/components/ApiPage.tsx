@@ -16,7 +16,8 @@ export default function ApiPage({
   busy: boolean;
   run: Run;
 }) {
-  const { values, setValues, dirty, reset } = useDraft(settings);
+  const { values, setValues, dirty, baseline, conflicted, reset } =
+    useDraft(settings);
   const [section, setSection] = useState<"connection" | "reference">(
     "connection",
   );
@@ -52,8 +53,9 @@ export default function ApiPage({
           <form
             onSubmit={(event) => {
               event.preventDefault();
+              if (busy || !dirty || conflicted) return;
               void run("API ayarları kaydediliyor…", () =>
-                apiService.save(values),
+                apiService.save(values, baseline),
               );
             }}
           >
@@ -70,7 +72,12 @@ export default function ApiPage({
               <SaveBar
                 dirty={dirty}
                 busy={busy}
-                canSave={dirty && !busy}
+                canSave={dirty && !busy && !conflicted}
+                blocked={
+                  conflicted
+                    ? "API ayarları başka bir işlemde değişti. Vazgeç ile güncel ayarları alın."
+                    : undefined
+                }
                 onReset={reset}
                 label="API ayarlarını kaydet"
               />

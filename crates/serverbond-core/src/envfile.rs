@@ -4,7 +4,7 @@
 
 use crate::{storage, Manager};
 use anyhow::{bail, Context, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub const ENV_LIMIT: u64 = 256 * 1024;
@@ -18,7 +18,7 @@ impl std::fmt::Display for EnvConflict {
 }
 impl std::error::Error for EnvConflict {}
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectEnv {
     pub exists: bool,
@@ -26,7 +26,7 @@ pub struct ProjectEnv {
     pub example: Option<String>,
 }
 
-pub(crate) fn env_revision(env: &ProjectEnv) -> String {
+pub fn env_revision(env: &ProjectEnv) -> String {
     use sha2::{Digest, Sha256};
     let mut digest = Sha256::new();
     digest.update([u8::from(env.exists)]);
@@ -112,7 +112,7 @@ impl Manager {
         self.save_project_env_checked(id, content, None).map(|_| ())
     }
 
-    pub(crate) fn save_project_env_checked(
+    pub fn save_project_env_checked(
         &self,
         id: &str,
         content: String,
