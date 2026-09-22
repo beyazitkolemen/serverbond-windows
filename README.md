@@ -17,7 +17,7 @@ Yeni kurulumların varsayılan konumu `C:\ServerBond`, proje çalışma alanı `
 
 Windows x64 ve internet bağlantısı gerekir. Kurulum WebView2 gereksinimini yönetir; PHP/MySQL için Microsoft Visual C++ Runtime gerekir. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
 
-Son yayımlanan sürüm **v1.3.15**'tir. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.15.md) · [Güncellemeler](docs/updates.md).
+Son yayımlanan sürüm **v1.3.16**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.16.md) · [Güncellemeler](docs/updates.md).
 
 ## Neler yapabilirsiniz?
 

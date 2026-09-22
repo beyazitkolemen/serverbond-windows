@@ -1,0 +1,3 @@
+[[profile.default.overrides]]
+filter = 'test(timeout_releases_descendant_file_handles_before_managed_child_is_dropped)'
+threads-required = 'num-test-threads'
