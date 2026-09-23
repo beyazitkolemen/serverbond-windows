@@ -1274,9 +1274,14 @@ mod windows_cloud_tests {
         .unwrap();
         assert_eq!(sync.len(), 2);
         assert_eq!(sync[0]["state_complete"], true);
-        assert_eq!(sync[1]["sections"][0]["section"], "php");
+        let php = sync[1]["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|section| section["section"] == "php")
+            .expect("forced PHP state missing");
         assert_eq!(
-            sync[1]["sections"][0]["fingerprint"],
+            php["fingerprint"],
             m.cloud.inner.lock().unwrap().state_fingerprints["php"]
         );
         assert!(m.cloud.inner.lock().unwrap().last_state_report.is_none());

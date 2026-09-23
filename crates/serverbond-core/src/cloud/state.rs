@@ -49,7 +49,7 @@ pub(super) fn fingerprint(data: &Value) -> Result<String> {
 fn byte_limit(section: &str) -> usize {
     if section == "env" {
         768 * 1024
-    } else if section == "projects" {
+    } else if matches!(section, "projects" | "databases") {
         700 * 1024
     } else {
         256 * 1024
@@ -123,8 +123,25 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
             "php",
             super::operations::php_inventory_from_snapshot(inventory),
         );
+        capture_value(
+            &mut snapshot,
+            "mysql",
+            json!({"host":"127.0.0.1","port":inventory.settings.mysql_port,"username":"root"}),
+        );
+        capture_value(
+            &mut snapshot,
+            "postgres",
+            json!({"host":"127.0.0.1","port":inventory.settings.postgres.port,"username":"postgres"}),
+        );
     } else {
-        snapshot.protected.insert("php".into());
+        snapshot
+            .protected
+            .extend(["php".into(), "mysql".into(), "postgres".into()]);
+    }
+    // A stopped MySQL server makes the inventory unavailable. Remove a stale
+    // inventory instead of blocking cleanup of unrelated project sections.
+    if let Ok(data) = read(manager, "databases.show", json!({})) {
+        let _ = insert(&mut snapshot.sections, "databases", "", data);
     }
     capture(
         &mut snapshot,
@@ -342,13 +359,22 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let manager = Manager::new(home.path().into()).unwrap();
         let snapshot = sections(&manager, &BTreeMap::new());
-        let map = snapshot.sections;
-        for key in ["projects", "php", "settings", "tunnel", "diagnostics"] {
+        let map = &snapshot.sections;
+        for key in [
+            "projects",
+            "php",
+            "mysql",
+            "postgres",
+            "settings",
+            "tunnel",
+            "diagnostics",
+        ] {
             assert!(map.contains_key(key), "missing {key}");
             assert_eq!(map[key].section, key);
             assert!(map[key].target_id.is_empty());
             assert_eq!(map[key].fingerprint.len(), 64);
         }
+        assert!(!snapshot.protected.contains("databases"));
         assert!(!map.contains_key("desktop"));
         assert_eq!(map["projects"].data["offset"], 0);
         assert!(map["php"].data.get("versions").is_some());
@@ -356,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    fn shared_snapshot_matches_php_and_tunnel_command_outputs() {
+    fn shared_snapshot_matches_php_connection_and_tunnel_command_outputs() {
         let home = tempfile::tempdir().unwrap();
         let manager = Manager::new(home.path().into()).unwrap();
         let snapshot = sections(&manager, &BTreeMap::new());
@@ -365,8 +391,24 @@ mod tests {
             .execute(&manager)
             .unwrap();
         let tunnel = super::super::tunnel::show(&manager).unwrap();
+        let mysql = super::super::mysql::connection(&manager).unwrap();
+        let postgres = super::super::postgres::connection(&manager).unwrap();
         assert_eq!(snapshot.sections["php"].data, php);
         assert_eq!(snapshot.sections["tunnel"].data, tunnel);
+        assert_eq!(snapshot.sections["mysql"].data, mysql);
+        assert_eq!(snapshot.sections["postgres"].data, postgres);
+        assert_eq!(
+            snapshot.sections["mysql"].data.as_object().unwrap().len(),
+            3
+        );
+        assert_eq!(
+            snapshot.sections["postgres"]
+                .data
+                .as_object()
+                .unwrap()
+                .len(),
+            3
+        );
     }
 
     #[test]
@@ -421,6 +463,18 @@ mod tests {
     }
 
     #[test]
+    fn unavailable_mysql_inventory_does_not_block_other_state_cleanup() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let previous = BTreeMap::from([("databases".into(), "a".repeat(64))]);
+        let snapshot = sections(&manager, &previous);
+        assert!(!snapshot.sections.contains_key("databases"));
+        assert!(!snapshot.protected.contains("databases"));
+        let (_, removed) = diff(&snapshot.sections, &previous, &snapshot.protected);
+        assert_eq!(removed, vec![("databases".into(), String::new())]);
+    }
+
+    #[test]
     fn large_project_inventory_obeys_cloud_state_endpoint_limits() {
         let sections = (0..95)
             .map(|_| Section {
@@ -454,5 +508,29 @@ mod tests {
             assert!(body["removed"].as_array().unwrap().len() <= 40);
             assert!(serde_json::to_vec(body).unwrap().len() <= BODY_LIMIT);
         }
+    }
+
+    #[test]
+    fn full_database_inventory_fits_the_state_section_limit() {
+        let names = (0..100)
+            .map(|index| format!("db_{index:02}{}", "a".repeat(59)))
+            .collect::<Vec<_>>();
+        let data = json!({
+            "databases": names.iter().map(|name| json!({"name":name})).collect::<Vec<_>>(),
+            "users": (0..100).map(|index| json!({
+                "name":format!("user_{index:02}{}", "a".repeat(25)),
+                "databases":names.clone(),
+                "readOnly":true
+            })).collect::<Vec<_>>()
+        });
+        assert!(serde_json::to_vec(&data).unwrap().len() > 256 * 1024);
+        let mut sections = BTreeMap::new();
+        assert!(insert(&mut sections, "databases", "", data));
+        assert!(
+            serde_json::to_vec(&section_item(&sections["databases"]))
+                .unwrap()
+                .len()
+                < BODY_LIMIT
+        );
     }
 }
