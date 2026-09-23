@@ -103,13 +103,29 @@ fn capture(
     }
 }
 
+fn capture_value(snapshot: &mut Snapshot, section: &str, data: Value) {
+    if !insert(&mut snapshot.sections, section, "", data) {
+        snapshot.protected.insert(section.into());
+    }
+}
+
 /// Build every Cloud panel section that this agent can report.
 pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -> Snapshot {
     let mut snapshot = Snapshot {
         sections: BTreeMap::new(),
         protected: BTreeSet::new(),
     };
-    capture(&mut snapshot, manager, "php", "", "php.list", json!({}));
+    // One process/filesystem snapshot serves PHP, tunnel and project inventory.
+    let inventory = manager.snapshot();
+    if let Ok(inventory) = &inventory {
+        capture_value(
+            &mut snapshot,
+            "php",
+            super::operations::php_inventory_from_snapshot(inventory),
+        );
+    } else {
+        snapshot.protected.insert("php".into());
+    }
     capture(
         &mut snapshot,
         manager,
@@ -118,14 +134,15 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
         "settings.show",
         json!({}),
     );
-    capture(
-        &mut snapshot,
-        manager,
-        "tunnel",
-        "",
-        "tunnel.show",
-        json!({}),
-    );
+    if let Ok(inventory) = &inventory {
+        capture_value(
+            &mut snapshot,
+            "tunnel",
+            super::tunnel::output(&inventory.tunnel),
+        );
+    } else {
+        snapshot.protected.insert("tunnel".into());
+    }
     capture(
         &mut snapshot,
         manager,
@@ -144,7 +161,7 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
             json!({}),
         );
     }
-    match manager.snapshot() {
+    match inventory {
         Ok(inventory) => {
             let projects = super::operations::project_inventory(&inventory.projects, 0, 1000);
             if !insert(&mut snapshot.sections, "projects", "", projects) {
@@ -336,6 +353,20 @@ mod tests {
         assert_eq!(map["projects"].data["offset"], 0);
         assert!(map["php"].data.get("versions").is_some());
         assert!(map["settings"].data.get("settings").is_some());
+    }
+
+    #[test]
+    fn shared_snapshot_matches_php_and_tunnel_command_outputs() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let snapshot = sections(&manager, &BTreeMap::new());
+        let php = super::super::operations::Operation::parse("php.list", &json!({}))
+            .unwrap()
+            .execute(&manager)
+            .unwrap();
+        let tunnel = super::super::tunnel::show(&manager).unwrap();
+        assert_eq!(snapshot.sections["php"].data, php);
+        assert_eq!(snapshot.sections["tunnel"].data, tunnel);
     }
 
     #[test]

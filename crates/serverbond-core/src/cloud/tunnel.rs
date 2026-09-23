@@ -19,9 +19,11 @@ pub(super) struct AutoStart {
 
 pub(super) fn show(manager: &Manager) -> Result<Value> {
     let state = manager.snapshot()?.tunnel;
-    Ok(
-        json!({"version":state.version,"installed":state.installed,"repairable":state.repairable,"running":state.running,"tokenSaved":state.token_saved,"autoStart":state.auto_start,"hasIssue":state.issue.is_some()}),
-    )
+    Ok(output(&state))
+}
+
+pub(super) fn output(state: &crate::tunnel::TunnelState) -> Value {
+    json!({"version":state.version,"installed":state.installed,"repairable":state.repairable,"running":state.running,"tokenSaved":state.token_saved,"autoStart":state.auto_start,"hasIssue":state.issue.is_some()})
 }
 
 pub(super) fn token(manager: &Manager, input: Token, apply: bool) -> Result<Value> {

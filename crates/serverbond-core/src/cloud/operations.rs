@@ -593,14 +593,18 @@ fn project_details(manager: &Manager, id: &str) -> Result<Value> {
 
 fn php_inventory(manager: &Manager) -> Result<Value> {
     let snapshot = manager.snapshot()?;
+    Ok(php_inventory_from_snapshot(&snapshot))
+}
+
+pub(super) fn php_inventory_from_snapshot(snapshot: &crate::model::Snapshot) -> Value {
     let selected = snapshot
         .packages
         .iter()
         .find(|p| p.package.id == "php")
-        .map(|p| p.package.version.clone())
+        .map(|p| p.package.version.as_str())
         .unwrap_or_default();
-    let versions: Vec<Value> = snapshot.php_versions.into_iter().map(|p| json!({"version":p.package.version,"installed":p.installed,"running":p.running,"repairable":p.repairable})).collect();
-    Ok(json!({"selected":selected,"anyRunning":snapshot.any_running,"versions":versions}))
+    let versions: Vec<Value> = snapshot.php_versions.iter().map(|p| json!({"version":p.package.version,"installed":p.installed,"running":p.running,"repairable":p.repairable})).collect();
+    json!({"selected":selected,"anyRunning":snapshot.any_running,"versions":versions})
 }
 
 fn project_page(manager: &Manager, offset: usize) -> Result<Value> {
