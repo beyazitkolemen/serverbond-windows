@@ -8,8 +8,9 @@ description: ServerBond test matrisi ve asistanların hangi komutu nerede çalı
 | Komut | Ortam | Kapsam |
 | --- | --- | --- |
 | `npm run test:ai` | Linux Cloud Agent | Vite/tsc, `serverbond-core`, rustfmt, clippy |
-| `npm run test:core` | Her yer | `cargo test -p serverbond-core` |
-| `npm run test:rust:parallel` | Windows/Linux, Nextest 0.9.146 | Workspace testleri, en fazla sekiz eşzamanlı test |
+| `npm run test:core` | Her yer | Nextest ile paralel `serverbond-core` testleri |
+| `npm run test:core:serial` | Her yer | Seri çekirdek testi karşılaştırması |
+| `npm run test:rust:parallel` | Windows/Linux, Nextest 0.9.146 | Workspace testleri, kullanılabilir işlemci sayısına göre en fazla sekiz eşzamanlı test |
 | `npm run check` | Windows | Arayüz + tüm workspace clippy |
 | `npm run desktop:build:unsigned` | Windows CI | İmzasız NSIS/EXE |
 | `.github/workflows/release.yml` | sürümle eşleşen tag `v*` | Gerçek servis testlerinden sonra EXE/NSIS ve SHA-256; anahtar varsa imzalı güncelleme paketi |

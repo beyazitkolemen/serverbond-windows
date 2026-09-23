@@ -1,7 +1,7 @@
 {
   "name": "serverbond",
   "private": true,
-  "version": "1.3.25",
+  "version": "1.3.26",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
@@ -11,8 +11,9 @@
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:build:unsigned": "tauri build --config .github/tauri-unsigned.json",
-    "test:core": "cargo test -p serverbond-core",
-    "test:rust:parallel": "cargo nextest run --workspace --locked -j 8 --status-level fail --final-status-level fail",
+    "test:core": "node scripts/ai/test-rust.mjs core",
+    "test:core:serial": "cargo test -p serverbond-core --locked -- --test-threads=1",
+    "test:rust:parallel": "node scripts/ai/test-rust.mjs workspace",
     "test:mcp": "cargo build -p serverbond-core --bin serverbond && node scripts/ai/test-mcp.mjs",
     "test:ai": "bash scripts/ai/test.sh",
     "test:integration": "cargo run -p serverbond-core --bin serverbond -- smoke",

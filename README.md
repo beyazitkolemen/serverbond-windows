@@ -54,7 +54,7 @@ npm run desktop
 | `npm run dev`                    | Salt okunur tarayıcı önizlemesi     |
 | `npm run check`                  | Arayüz derlemesi, rustfmt ve Clippy |
 | `npm run test:core`              | Rust çekirdek testleri              |
-| `npm run test:rust:parallel`     | Nextest ile sekiz eşzamanlı Rust testi |
+| `npm run test:rust:parallel`     | Nextest ile işlemci sayısına göre en fazla sekiz eşzamanlı Rust testi |
 | `npm run desktop:build:unsigned` | Windows EXE ve kurulum paketi       |
 
 Paralel Rust komutu için [Nextest 0.9.146](https://nexte.st/docs/installation/pre-built-binaries/) gerekir. CI bu sürümü kendisi kurar; gerçek servis ve paket testleri ayrı koşulur.
