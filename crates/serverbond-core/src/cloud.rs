@@ -500,6 +500,9 @@ impl Manager {
         match status {
             200 => Ok(ResultDelivery::Accepted),
             401 => Ok(ResultDelivery::Revoked),
+            // The command is already terminal on Cloud (for example, a stale
+            // delivered command became uncertain). Retrying cannot change it.
+            409 => Ok(ResultDelivery::Rejected),
             413 | 422 => {
                 // The operation already ran. A rejected output must not leave its
                 // command delivered forever or cause execution to be retried.
@@ -687,9 +690,13 @@ impl Manager {
                 if matches!(delivery, ResultDelivery::Revoked) {
                     runtime.disabled = true;
                     runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
-                    bail!("Cloud erişimi iptal edildi.");
                 } else {
                     runtime.error = Some("Cloud işlem çıktısını reddetti; sonuç belirsiz.".into());
+                }
+                drop(runtime);
+                self.clear_pending_update(&c)?;
+                if matches!(delivery, ResultDelivery::Revoked) {
+                    bail!("Cloud erişimi iptal edildi.");
                 }
                 return Ok(());
             }
@@ -1695,6 +1702,68 @@ mod windows_cloud_tests {
         )
         .unwrap();
         assert_eq!(replay[1], json!({"status":"uncertain"}));
+        assert!(!installed.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn terminal_result_conflict_drops_deferred_update_and_resumes_polling() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        secrets::save(
+            &m.cloud_output_path(&c, &id).unwrap(),
+            &json!({"data":{"accepted":true}}).to_string(),
+        )
+        .unwrap();
+        m.save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        storage::atomic_write(
+            &m.pending_update_path(&c).unwrap(),
+            serde_json::to_vec(&PendingUpdate {
+                command_id: id.clone(),
+                version: "99.0.0".into(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let flag = installed.clone();
+        m.cloud.inner.lock().unwrap().after_ack = Some((
+            id.clone(),
+            Box::new(move || {
+                flag.store(true, Ordering::Release);
+                Ok(())
+            }),
+        ));
+
+        exchange(&m, &mut c, vec![(409, json!({}))]).unwrap();
+        assert!(!installed.load(Ordering::Acquire));
+        assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+        assert!(m.pending_update(&c).unwrap().is_none());
+
+        // A recovered marker after process restart follows a separate path.
+        storage::atomic_write(
+            &m.pending_update_path(&c).unwrap(),
+            serde_json::to_vec(&PendingUpdate {
+                command_id: id,
+                version: "99.0.0".into(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        exchange(&m, &mut c, vec![(409, json!({}))]).unwrap();
+        assert!(m.pending_update(&c).unwrap().is_none());
+        let requests = exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
+        assert_eq!(requests.len(), 1);
         assert!(!installed.load(Ordering::Acquire));
     }
     #[test]
