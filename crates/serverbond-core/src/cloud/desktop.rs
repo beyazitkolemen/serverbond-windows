@@ -229,8 +229,8 @@ mod tests {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Install {
-    version: String,
-    confirm: bool,
+    pub(super) version: String,
+    pub(super) confirm: bool,
 }
 pub(super) fn update_check(manager: &Manager) -> Result<Value> {
     let value = call(manager, "update-check", json!({}))?;

@@ -93,6 +93,11 @@ impl CloudState {
 }
 
 type AfterAck = (String, Box<dyn FnOnce() -> Result<()> + Send>);
+#[derive(Serialize, Deserialize)]
+struct PendingUpdate {
+    command_id: String,
+    version: String,
+}
 enum ResultDelivery {
     Accepted,
     Rejected,
@@ -461,6 +466,27 @@ impl Manager {
             .home
             .join(format!("config/cloud-output-{device}-{command}.dpapi")))
     }
+    fn pending_update_path(&self, c: &Credentials) -> Result<std::path::PathBuf> {
+        let device =
+            uuid::Uuid::parse_str(c.device_id.as_deref().context("Cihaz eşleştirilmedi.")?)?;
+        Ok(self.home.join(format!("config/cloud-update-{device}.json")))
+    }
+    fn pending_update(&self, c: &Credentials) -> Result<Option<PendingUpdate>> {
+        let path = self.pending_update_path(c)?;
+        if !path.try_exists()? {
+            return Ok(None);
+        }
+        Ok(Some(serde_json::from_slice(&storage::read_limited(
+            &path, 4096,
+        )?)?))
+    }
+    fn clear_pending_update(&self, c: &Credentials) -> Result<()> {
+        let path = self.pending_update_path(c)?;
+        if path.try_exists()? {
+            std::fs::remove_file(path)?;
+        }
+        Ok(())
+    }
     fn cloud_submit_result(
         &self,
         http: &Client,
@@ -642,6 +668,9 @@ impl Manager {
             .after_ack
             .as_ref()
             .map(|(id, _)| id.clone());
+        if pending.is_none() && self.resume_pending_update(&http, &c)? {
+            return Ok(());
+        }
         if let Some(id) = pending {
             let output: Value =
                 serde_json::from_str(&secrets::read(&self.cloud_output_path(&c, &id)?)?)?;
@@ -672,6 +701,7 @@ impl Manager {
                 if let Some((_, work)) = runtime.after_ack.take() {
                     drop(runtime);
                     work()?;
+                    self.clear_pending_update(&c)?;
                 }
             }
             return Ok(());
@@ -807,6 +837,7 @@ impl Manager {
                 let (_, work) = runtime.after_ack.take().unwrap();
                 drop(runtime);
                 work()?;
+                self.clear_pending_update(&c)?;
             }
             return Ok(());
         }
@@ -888,6 +919,22 @@ impl Manager {
                     );
                     secrets::save(&m.cloud_output_path(&c, &command.id)?, &encoded)?;
                 }
+                if command.operation.as_deref() == Some("desktop.update-install")
+                    && result
+                        .as_ref()
+                        .is_ok_and(|reply| reply.after_response.is_some())
+                {
+                    let version = command.parameters["version"]
+                        .as_str()
+                        .context("Güncelleme sürümü eksik.")?;
+                    storage::atomic_write(
+                        &m.pending_update_path(&c)?,
+                        serde_json::to_vec(&PendingUpdate {
+                            command_id: command.id.clone(),
+                            version: version.to_string(),
+                        })?,
+                    )?;
+                }
                 let mut journal = m.journal(&c)?;
                 journal.insert(
                     command.id.clone(),
@@ -923,6 +970,70 @@ impl Manager {
             runtime.state_dirty = true;
         });
         Ok(())
+    }
+    fn resume_pending_update(&self, http: &Client, c: &Credentials) -> Result<bool> {
+        let Some(pending) = self.pending_update(c)? else {
+            return Ok(false);
+        };
+        uuid::Uuid::parse_str(&pending.command_id)?;
+        let target = semver::Version::parse(&pending.version)?;
+        if semver::Version::parse(env!("CARGO_PKG_VERSION"))? >= target {
+            self.clear_pending_update(c)?;
+            return Ok(false);
+        }
+        if self
+            .journal(c)?
+            .get(&pending.command_id)
+            .map(String::as_str)
+            != Some("succeeded")
+        {
+            self.clear_pending_update(c)?;
+            return Ok(false);
+        }
+        let output: Value = serde_json::from_str(&secrets::read(
+            &self.cloud_output_path(c, &pending.command_id)?,
+        )?)?;
+        let delivery = self.cloud_submit_result(
+            http,
+            c,
+            &pending.command_id,
+            &json!({"status":"succeeded","output":output}),
+        )?;
+        if !matches!(delivery, ResultDelivery::Accepted) {
+            self.clear_pending_update(c)?;
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if matches!(delivery, ResultDelivery::Revoked) {
+                runtime.disabled = true;
+                runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+            } else {
+                runtime.error =
+                    Some("Cloud güncelleme sonucunu reddetti; kurulum başlatılmadı.".into());
+            }
+            return Ok(true);
+        }
+        let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if runtime.disabled
+            || self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+        {
+            return Ok(true);
+        }
+        drop(runtime);
+        let reply = desktop::install(
+            self,
+            desktop::Install {
+                version: pending.version,
+                confirm: true,
+            },
+        )?;
+        let work = reply
+            .after_response
+            .context("Güncelleme kurulumu hazırlanamadı.")?;
+        work()?;
+        self.clear_pending_update(c)?;
+        Ok(true)
     }
 }
 
@@ -1150,6 +1261,140 @@ impl Manager {
 #[cfg(all(test, windows))]
 mod windows_cloud_tests {
     use super::*;
+    use crate::api::{DesktopApi, DesktopReply};
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct UpdateHost(Arc<AtomicBool>);
+    impl DesktopApi for UpdateHost {
+        fn call(&self, operation: &str, _: Value) -> Result<DesktopReply> {
+            match operation {
+                "update-check" => Ok(DesktopReply::immediate(json!({
+                    "currentVersion": env!("CARGO_PKG_VERSION"),
+                    "version": "99.0.0",
+                    "available": true,
+                    "installMode": "automatic"
+                }))),
+                "update-install" => {
+                    let installed = self.0.clone();
+                    Ok(DesktopReply {
+                        data: json!({"accepted":true,"version":"99.0.0","signatureVerified":true}),
+                        after_response: Some(Box::new(move || {
+                            installed.store(true, Ordering::Release);
+                            Ok(())
+                        })),
+                    })
+                }
+                _ => anyhow::bail!("Unexpected desktop operation"),
+            }
+        }
+    }
+
+    #[test]
+    fn prepared_update_survives_restart_and_installs_after_replayed_ack() {
+        let home = tempfile::tempdir().unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        m.attach_desktop_api(Arc::new(UpdateHost(installed.clone())));
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let command = json!({"id":id,"service":"projects","action":"execute","operation":"desktop.update-install","parameters":{"version":"99.0.0","confirm":true},"expires_at":"2099-01-01T00:00:00Z"});
+        exchange(&m, &mut c, vec![(200, json!({"command":command}))]).unwrap();
+        let start = Instant::now();
+        while m.journal(&c).unwrap().get(&id).map(String::as_str) != Some("succeeded") {
+            assert!(
+                start.elapsed() < Duration::from_secs(10),
+                "update was not prepared"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(m.pending_update(&c).unwrap().is_some());
+        assert!(!installed.load(Ordering::Acquire));
+        drop(m);
+
+        let restarted = Arc::new(Manager::new(home.path().into()).unwrap());
+        restarted.attach_desktop_api(Arc::new(UpdateHost(installed.clone())));
+        let requests = exchange(&restarted, &mut c, vec![(200, json!({"ok":true}))]).unwrap();
+        assert_eq!(requests[0]["status"], "succeeded");
+        assert_eq!(requests[0]["output"]["data"]["version"], "99.0.0");
+        assert!(installed.load(Ordering::Acquire));
+        assert!(restarted.pending_update(&c).unwrap().is_none());
+    }
+
+    #[test]
+    fn rejected_replayed_update_never_installs() {
+        let home = tempfile::tempdir().unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        m.attach_desktop_api(Arc::new(UpdateHost(installed.clone())));
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let output = json!({"data":{"accepted":true,"version":"99.0.0","signatureVerified":true}});
+        secrets::save(&m.cloud_output_path(&c, &id).unwrap(), &output.to_string()).unwrap();
+        m.save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        storage::atomic_write(
+            &m.pending_update_path(&c).unwrap(),
+            serde_json::to_vec(&PendingUpdate {
+                command_id: id.clone(),
+                version: "99.0.0".into(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let requests = exchange(
+            &m,
+            &mut c,
+            vec![(422, json!({})), (200, json!({"ok":true}))],
+        )
+        .unwrap();
+        assert_eq!(requests[0]["status"], "succeeded");
+        assert_eq!(requests[1]["status"], "uncertain");
+        assert!(!installed.load(Ordering::Acquire));
+        assert!(m.pending_update(&c).unwrap().is_none());
+    }
+
+    #[test]
+    fn already_installed_update_clears_recovery_marker_without_reinstalling() {
+        let home = tempfile::tempdir().unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        m.attach_desktop_api(Arc::new(UpdateHost(installed.clone())));
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        storage::atomic_write(
+            &m.pending_update_path(&c).unwrap(),
+            serde_json::to_vec(&PendingUpdate {
+                command_id: uuid::Uuid::new_v4().to_string(),
+                version: "1.0.0".into(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let requests = exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
+        assert_eq!(requests.len(), 1);
+        assert!(!installed.load(Ordering::Acquire));
+        assert!(m.pending_update(&c).unwrap().is_none());
+    }
     #[test]
     fn heartbeat_hint_polls_and_replays_saved_result_without_reexecution() {
         let home = tempfile::tempdir().unwrap();
