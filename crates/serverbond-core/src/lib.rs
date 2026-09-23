@@ -361,7 +361,7 @@ impl Manager {
         planned
     }
 
-    pub fn snapshot(&self) -> Result<Snapshot> {
+    fn live_process_ids(&self) -> HashMap<String, u32> {
         // Restart is a mutation too. Defer both reaping and planned restart
         // while an operation owns the gate, so Stop cannot race a new worker.
         // Keep exited handles until the next idle poll to preserve restart intent.
@@ -371,20 +371,23 @@ impl Manager {
                 self.respawn_planned_workers(&planned);
             }
         }
+        // Copy only live PIDs, then release the process lock before disk checks
+        // and DPAPI reads. Exited/deferred workers must not appear as running.
+        self.processes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter_mut()
+            .filter_map(|(id, child)| child.alive().then(|| (id.clone(), child.child.id())))
+            .collect()
+    }
+
+    pub fn snapshot(&self) -> Result<Snapshot> {
+        let processes = self.live_process_ids();
         let config = self
             .config
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
-        // Copy only live PIDs, then release the process lock before disk checks
-        // and DPAPI reads. Exited/deferred workers must not appear as running.
-        let processes: HashMap<String, u32> = self
-            .processes
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .iter_mut()
-            .filter_map(|(id, child)| child.alive().then(|| (id.clone(), child.child.id())))
-            .collect();
         let packages = selected_catalog(&config.php_version)?
             .into_iter()
             .map(|package| {

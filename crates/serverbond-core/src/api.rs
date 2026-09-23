@@ -929,11 +929,19 @@ fn service_actions(id: &str) -> &'static [&'static str] {
 }
 
 pub(crate) fn service_inventory(manager: &Manager) -> Result<Vec<Value>> {
-    let snapshot = manager.snapshot()?;
+    // Heartbeats need service health, not the full project/PHP inventory.
+    let processes = manager.live_process_ids();
+    let config = manager
+        .config
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
     let mut items = vec![
-        json!({"id":"all","name":"Sunucu","actions":service_actions("all"),"state":{"running":snapshot.any_running,"busy":snapshot.busy}}),
+        json!({"id":"all","name":"Sunucu","actions":service_actions("all"),"state":{"running":!processes.is_empty(),"busy":manager.is_busy()}}),
     ];
-    for package in snapshot.packages {
+    for package in crate::model::selected_catalog(&config.php_version)? {
+        let process = processes.get(&package.id).copied();
+        let package = manager.package_status(package, process);
         let id = package.package.id.clone();
         items.push(json!({"id":id,"name":package.package.name,"actions":service_actions(&id),"state":package}));
     }
@@ -941,16 +949,32 @@ pub(crate) fn service_inventory(manager: &Manager) -> Result<Vec<Value>> {
         (
             "tunnel",
             "Cloudflared",
-            serde_json::to_value(snapshot.tunnel)?,
+            serde_json::to_value(
+                manager.tunnel_state_with(&processes, config.settings.tunnel.auto_start),
+            )?,
         ),
-        ("mail", "Mailpit", serde_json::to_value(snapshot.mail)?),
+        (
+            "mail",
+            "Mailpit",
+            serde_json::to_value(manager.mail_state_with(&processes, &config.settings.mail))?,
+        ),
         (
             "postgres",
             "PostgreSQL",
-            serde_json::to_value(snapshot.postgres)?,
+            serde_json::to_value(
+                manager.postgres_state_with(&processes, &config.settings.postgres),
+            )?,
         ),
-        ("redis", "Redis", serde_json::to_value(snapshot.redis)?),
-        ("node", "Node.js", serde_json::to_value(snapshot.node)?),
+        (
+            "redis",
+            "Redis",
+            serde_json::to_value(manager.redis_state_with(&processes, &config.settings.redis))?,
+        ),
+        (
+            "node",
+            "Node.js",
+            serde_json::to_value(manager.node_state())?,
+        ),
     ] {
         items.push(json!({"id":id,"name":name,"actions":service_actions(id),"state":state}));
     }
@@ -1107,6 +1131,33 @@ pub fn wait_ready(port: u16, timeout: Duration) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn service_inventory_matches_the_full_snapshot_contract() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let snapshot = manager.snapshot().unwrap();
+        let services = service_inventory(&manager).unwrap();
+        assert_eq!(services[0]["state"]["running"], snapshot.any_running);
+        assert_eq!(services[0]["state"]["busy"], snapshot.busy);
+        for package in &snapshot.packages {
+            let item = services
+                .iter()
+                .find(|item| item["id"] == package.package.id)
+                .unwrap();
+            assert_eq!(item["state"], serde_json::to_value(package).unwrap());
+        }
+        for (id, state) in [
+            ("tunnel", serde_json::to_value(snapshot.tunnel).unwrap()),
+            ("mail", serde_json::to_value(snapshot.mail).unwrap()),
+            ("postgres", serde_json::to_value(snapshot.postgres).unwrap()),
+            ("redis", serde_json::to_value(snapshot.redis).unwrap()),
+            ("node", serde_json::to_value(snapshot.node).unwrap()),
+        ] {
+            let item = services.iter().find(|item| item["id"] == id).unwrap();
+            assert_eq!(item["state"], state, "{id}");
+        }
+    }
 
     #[test]
     fn token_hashes_compare_in_constant_time_by_length_and_content() {
