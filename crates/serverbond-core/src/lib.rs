@@ -694,23 +694,40 @@ impl Manager {
             bail!("Portları ve sunucu ayarlarını değiştirmeden önce sunucuyu durdurun.");
         }
         if !running {
-            for port in [settings.web_port, settings.mysql_port, settings.php_port] {
-                services::port_free(port)?;
+            for (selected, previous) in [
+                (settings.web_port, current.web_port),
+                (settings.mysql_port, current.mysql_port),
+                (settings.php_port, current.php_port),
+            ] {
+                if selected != previous {
+                    services::port_free(selected)?;
+                }
             }
-            if settings.web.https {
+            if settings.web.https
+                && (!current.web.https || settings.web.https_port != current.web.https_port)
+            {
                 services::port_free(settings.web.https_port)?;
             }
             // The mail catcher only binds when it is started, so a busy port is worth
             // reporting here only when the environment will start it on its own.
             if settings.mail.auto_start {
-                for port in [settings.mail.smtp_port, settings.mail.web_port] {
-                    services::port_free(port)?;
+                for (selected, previous) in [
+                    (settings.mail.smtp_port, current.mail.smtp_port),
+                    (settings.mail.web_port, current.mail.web_port),
+                ] {
+                    if !current.mail.auto_start || selected != previous {
+                        services::port_free(selected)?;
+                    }
                 }
             }
-            if settings.postgres.auto_start {
+            if settings.postgres.auto_start
+                && (!current.postgres.auto_start || settings.postgres.port != current.postgres.port)
+            {
                 services::port_free(settings.postgres.port)?;
             }
-            if settings.redis.auto_start {
+            if settings.redis.auto_start
+                && (!current.redis.auto_start || settings.redis.port != current.redis.port)
+            {
                 services::port_free(settings.redis.port)?;
             }
         }
@@ -812,4 +829,32 @@ fn portable_path(path: &Path) -> String {
     path.to_string_lossy()
         .trim_start_matches("\\\\?\\")
         .replace('\\', "/")
+}
+
+#[cfg(all(test, windows))]
+mod settings_port_tests {
+    use super::*;
+    use std::net::{Ipv4Addr, TcpListener};
+
+    #[test]
+    fn api_settings_save_ignores_occupied_unchanged_web_port() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let listener = loop {
+            let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let reserved = manager.config.lock().unwrap().settings.reserved_ports();
+            if !reserved.contains(&port) {
+                break listener;
+            }
+        };
+        manager.config.lock().unwrap().settings.web_port = listener.local_addr().unwrap().port();
+        let mut api = manager.config.lock().unwrap().settings.api.clone();
+        api.mcp_enabled = !api.mcp_enabled;
+        manager.save_api_settings(api.clone()).unwrap();
+        assert_eq!(
+            manager.config.lock().unwrap().settings.api.mcp_enabled,
+            api.mcp_enabled
+        );
+    }
 }

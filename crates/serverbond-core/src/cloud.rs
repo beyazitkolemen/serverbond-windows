@@ -109,6 +109,8 @@ struct Runtime {
     state_complete: bool,
     state_fingerprints: BTreeMap<String, String>,
     last_state_scan: Option<Instant>,
+    state_retry_after: Option<Instant>,
+    state_retry_delay_secs: u64,
 }
 #[derive(Clone, Copy, Default, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -344,6 +346,8 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Connecting;
         runtime.socket_endpoint = None;
+        runtime.state_retry_after = None;
+        runtime.state_retry_delay_secs = 0;
         self.cloud.wake();
         Ok(())
     }
@@ -365,6 +369,8 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Disconnected;
         runtime.socket_endpoint = None;
+        runtime.state_retry_after = None;
+        runtime.state_retry_delay_secs = 0;
         self.cloud.wake();
         Ok(())
     }
@@ -458,6 +464,39 @@ impl Manager {
         self.cloud.wake();
     }
     fn cloud_push_state(
+        self: &Arc<Self>,
+        http: &Client,
+        c: &Credentials,
+        force: &[StateSyncItem],
+    ) -> Result<()> {
+        if self
+            .cloud
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .state_retry_after
+            .is_some_and(|at| Instant::now() < at)
+        {
+            return Ok(());
+        }
+        let result = self.cloud_push_state_now(http, c, force);
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if result.is_err() {
+            runtime.state_retry_delay_secs = if runtime.state_retry_delay_secs == 0 {
+                15
+            } else {
+                runtime.state_retry_delay_secs.saturating_mul(2).min(300)
+            };
+            runtime.state_retry_after =
+                Some(Instant::now() + Duration::from_secs(runtime.state_retry_delay_secs));
+        } else {
+            runtime.state_retry_after = None;
+            runtime.state_retry_delay_secs = 0;
+        }
+        result
+    }
+
+    fn cloud_push_state_now(
         self: &Arc<Self>,
         http: &Client,
         c: &Credentials,
@@ -1205,6 +1244,62 @@ mod windows_cloud_tests {
             sync[1]["sections"][0]["fingerprint"],
             m.cloud.inner.lock().unwrap().state_fingerprints["php"]
         );
+    }
+
+    #[test]
+    fn failed_state_sync_backs_off_and_retries_without_losing_changes() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        m.save_cloud_credentials(&c).unwrap();
+        m.mark_state_dirty();
+        let handler = std::thread::spawn(move || {
+            let mut requests = 0;
+            for status in [500, 500, 200] {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing state request");
+                requests += 1;
+                request
+                    .respond(tiny_http::Response::from_string("{}").with_status_code(status))
+                    .unwrap();
+            }
+            requests
+        });
+        let http = client().unwrap();
+        assert!(m.cloud_push_state(&http, &c, &[]).is_err());
+        {
+            let runtime = m.cloud.inner.lock().unwrap();
+            assert!(runtime.state_dirty);
+            assert_eq!(runtime.state_retry_delay_secs, 15);
+            assert!(runtime.state_retry_after.unwrap() > Instant::now());
+        }
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        assert!(m.cloud.inner.lock().unwrap().state_dirty);
+        m.cloud.inner.lock().unwrap().state_retry_after = None;
+        assert!(m.cloud_push_state(&http, &c, &[]).is_err());
+        {
+            let runtime = m.cloud.inner.lock().unwrap();
+            assert!(runtime.state_dirty);
+            assert_eq!(runtime.state_retry_delay_secs, 30);
+            assert!(runtime.state_retry_after.unwrap() > Instant::now());
+        }
+        m.cloud.inner.lock().unwrap().state_retry_after = None;
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        assert_eq!(handler.join().unwrap(), 3);
+        let runtime = m.cloud.inner.lock().unwrap();
+        assert!(!runtime.state_dirty);
+        assert!(runtime.state_retry_after.is_none());
+        assert_eq!(runtime.state_retry_delay_secs, 0);
     }
     fn exchange(
         m: &Arc<Manager>,
