@@ -25,8 +25,15 @@ pub(super) struct Snapshot {
 impl Snapshot {
     pub fn fingerprints(&self, previous: &BTreeMap<String, String>) -> BTreeMap<String, String> {
         let mut fingerprints = fingerprint_map(&self.sections);
+        let previous_by_identity: BTreeMap<_, _> = previous
+            .iter()
+            .map(|(key, value)| (canonical_key(key), value))
+            .collect();
         for key in &self.protected {
-            if let Some(value) = previous.get(key) {
+            if let Some(value) = previous
+                .get(key)
+                .or_else(|| previous_by_identity.get(&canonical_key(key)).copied())
+            {
                 fingerprints.insert(key.clone(), value.clone());
             }
         }
@@ -40,6 +47,17 @@ pub(super) fn fingerprint_key(section: &str, target_id: &str) -> String {
     } else {
         format!("{section}:{target_id}")
     }
+}
+
+fn canonical_key(key: &str) -> String {
+    if let Some((section, target)) = key.split_once(':') {
+        if matches!(section, "project" | "jobs" | "database" | "env") {
+            if let Ok(id) = uuid::Uuid::parse_str(target) {
+                return fingerprint_key(section, &id.to_string());
+            }
+        }
+    }
+    key.to_string()
 }
 
 pub(super) fn fingerprint(data: &Value) -> Result<String> {
@@ -247,15 +265,27 @@ pub(super) fn diff(
     previous: &BTreeMap<String, String>,
     protected: &BTreeSet<String>,
 ) -> (Vec<Section>, Vec<(String, String)>) {
+    let previous_by_identity: BTreeMap<_, _> = previous
+        .iter()
+        .map(|(key, value)| (canonical_key(key), value))
+        .collect();
+    let retained: BTreeSet<_> = current
+        .keys()
+        .chain(protected.iter())
+        .map(|key| canonical_key(key))
+        .collect();
     let mut changed = Vec::new();
     for (key, section) in current {
-        if previous.get(key).map(String::as_str) != Some(section.fingerprint.as_str()) {
+        let previous_fingerprint = previous
+            .get(key)
+            .or_else(|| previous_by_identity.get(&canonical_key(key)).copied());
+        if previous_fingerprint.map(String::as_str) != Some(section.fingerprint.as_str()) {
             changed.push(section.clone());
         }
     }
     let mut removed = Vec::new();
     for key in previous.keys() {
-        if !current.contains_key(key) && !protected.contains(key) {
+        if !retained.contains(&canonical_key(key)) {
             if let Some((section, target)) = parse_key(key) {
                 removed.push((section, target));
             }
@@ -436,6 +466,45 @@ mod tests {
         let (unchanged, missing) = diff(&current, &fingerprint_map(&current), &BTreeSet::new());
         assert!(unchanged.is_empty());
         assert!(missing.is_empty());
+    }
+
+    #[test]
+    fn uuid_case_change_does_not_remove_current_or_protected_state() {
+        let id = uuid::Uuid::new_v4().to_string();
+        let old_key = fingerprint_key("project", &id.to_uppercase());
+        let new_key = fingerprint_key("project", &id);
+        let previous = BTreeMap::from([(old_key.clone(), "a".repeat(64))]);
+        let current = BTreeMap::from([(
+            new_key.clone(),
+            Section {
+                section: "project".into(),
+                target_id: id.clone(),
+                fingerprint: "b".repeat(64),
+                data: json!({"projectId": id}),
+            },
+        )]);
+
+        let (changed, removed) = diff(&current, &previous, &BTreeSet::new());
+        assert_eq!(changed.len(), 1);
+        assert!(removed.is_empty());
+
+        let mut unchanged = current.clone();
+        unchanged.get_mut(&new_key).unwrap().fingerprint = "a".repeat(64);
+        let (changed, removed) = diff(&unchanged, &previous, &BTreeSet::new());
+        assert!(changed.is_empty());
+        assert!(removed.is_empty());
+
+        let protected = BTreeSet::from([new_key.clone()]);
+        let snapshot = Snapshot {
+            sections: BTreeMap::new(),
+            protected,
+        };
+        let (_, removed) = diff(&snapshot.sections, &previous, &snapshot.protected);
+        assert!(removed.is_empty());
+        assert_eq!(
+            snapshot.fingerprints(&previous).get(&new_key),
+            previous.get(&old_key)
+        );
     }
 
     #[test]
