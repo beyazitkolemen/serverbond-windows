@@ -111,6 +111,7 @@ struct Runtime {
     last_state_scan: Option<Instant>,
     state_retry_after: Option<Instant>,
     state_retry_delay_secs: u64,
+    last_state_report: Option<Instant>,
 }
 #[derive(Clone, Copy, Default, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -348,6 +349,7 @@ impl Manager {
         runtime.socket_endpoint = None;
         runtime.state_retry_after = None;
         runtime.state_retry_delay_secs = 0;
+        runtime.last_state_report = None;
         self.cloud.wake();
         Ok(())
     }
@@ -371,6 +373,7 @@ impl Manager {
         runtime.socket_endpoint = None;
         runtime.state_retry_after = None;
         runtime.state_retry_delay_secs = 0;
+        runtime.last_state_report = None;
         self.cloud.wake();
         Ok(())
     }
@@ -615,28 +618,38 @@ impl Manager {
             }
             return Ok(());
         }
-        let (progress, connection, state_map, state_complete) = {
+        let (progress, connection, state_report) = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let reconcile = !claim
+                && runtime
+                    .last_state_report
+                    .map(|at| at.elapsed() >= Duration::from_secs(60))
+                    .unwrap_or(true);
             (
                 runtime
                     .active
                     .as_ref()
                     .map(|id| json!({"commandId":id,"stages":runtime.progress})),
                 json!({"state":runtime.connection,"lastSocketMessage":runtime.last_socket_message}),
-                runtime
-                    .state_fingerprints
-                    .iter()
-                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-                    .collect::<serde_json::Map<String, Value>>(),
-                runtime.state_complete,
+                reconcile.then(|| {
+                    (
+                        runtime
+                            .state_fingerprints
+                            .iter()
+                            .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                            .collect::<serde_json::Map<String, Value>>(),
+                        runtime.state_complete,
+                    )
+                }),
             )
         };
-        let (status, reply) = post(
-            &http,
-            &c,
-            if claim { "poll" } else { "heartbeat" },
-            &json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>(),"state":state_map,"state_complete":state_complete}),
-        )?;
+        let reported_state = state_report.is_some();
+        let mut report = json!({"version":env!("CARGO_PKG_VERSION"),"services":services,"progress":progress,"connection":connection,"operations":operations::NAMES.iter().copied().filter(|name| !name.starts_with("desktop.") || self.desktop_api().is_some()).collect::<Vec<_>>()});
+        if let Some((state_map, state_complete)) = state_report {
+            report["state"] = Value::Object(state_map);
+            report["state_complete"] = Value::Bool(state_complete);
+        }
+        let (status, reply) = post(&http, &c, if claim { "poll" } else { "heartbeat" }, &report)?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
             .cloud_credentials()?
@@ -652,6 +665,9 @@ impl Manager {
         }
         anyhow::ensure!(status == 200, "Cloud isteği başarısız.");
         runtime.last_contact = Some(chrono::Utc::now().to_rfc3339());
+        if reported_state {
+            runtime.last_state_report = Some(Instant::now());
+        }
         runtime.error = None;
         let p: Poll = serde_json::from_value(reply)?;
         let state_sync = p.state_sync;
@@ -1244,6 +1260,46 @@ mod windows_cloud_tests {
             sync[1]["sections"][0]["fingerprint"],
             m.cloud.inner.lock().unwrap().state_fingerprints["php"]
         );
+    }
+
+    #[test]
+    fn poll_omits_state_and_heartbeat_reconciles_once_per_minute() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        {
+            let mut runtime = m.cloud.inner.lock().unwrap();
+            runtime
+                .state_fingerprints
+                .insert("php".into(), "a".repeat(64));
+            runtime.state_complete = true;
+        }
+        let reply = vec![(200, json!({"command":null}))];
+        assert!(exchange_tick(&m, &mut c, vec![(500, json!({}))], false).is_err());
+        assert!(m.cloud.inner.lock().unwrap().last_state_report.is_none());
+        let first = exchange_tick(&m, &mut c, reply.clone(), false).unwrap();
+        assert_eq!(first[0]["state"]["php"], "a".repeat(64));
+        assert_eq!(first[0]["state_complete"], true);
+
+        let poll = exchange_tick(&m, &mut c, reply.clone(), true).unwrap();
+        assert!(poll[0].get("state").is_none());
+        assert!(poll[0].get("state_complete").is_none());
+        let second = exchange_tick(&m, &mut c, reply.clone(), false).unwrap();
+        assert!(second[0].get("state").is_none());
+        assert!(second[0].get("state_complete").is_none());
+
+        m.cloud.inner.lock().unwrap().last_state_report =
+            Some(Instant::now() - Duration::from_secs(61));
+        let later = exchange_tick(&m, &mut c, reply, false).unwrap();
+        assert_eq!(later[0]["state"]["php"], "a".repeat(64));
+        assert_eq!(later[0]["state_complete"], true);
     }
 
     #[test]
