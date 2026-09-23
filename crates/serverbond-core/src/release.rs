@@ -482,7 +482,8 @@ impl Manager {
                 _ => "configure",
             });
             chunks.push(format!("--- {} ---", step.name));
-            match self.run_release_step_with_token(&project, &step, deadline, access_token) {
+            match self.run_release_step_with_token(&project, &step, deadline, access_token, source)
+            {
                 Ok(output) => {
                     if !output.is_empty() {
                         // Cap per step: a chatty composer run must not hold
@@ -591,14 +592,27 @@ impl Manager {
         step: &ReleaseStep,
         deadline: Instant,
         access_token: Option<&str>,
+        source: Option<(&str, &str)>,
     ) -> Result<String> {
         let timeout = remaining(deadline)?;
         match step.name.as_str() {
             "git" => {
                 let branch = project.release.branch.as_str();
                 if branch.is_empty() {
+                    let args = if let Some((_, expected_branch)) = source {
+                        let remote = self.git_remote(project)?;
+                        vec![
+                            "pull".into(),
+                            "--ff-only".into(),
+                            "--no-edit".into(),
+                            remote,
+                            expected_branch.into(),
+                        ]
+                    } else {
+                        step.args.clone()
+                    };
                     return run_command(
-                        git_command_with_token(self, project, &step.args, access_token)?,
+                        git_command_with_token(self, project, &args, access_token)?,
                         timeout,
                     );
                 }
@@ -897,6 +911,95 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Git çekme"));
+    }
+
+    #[test]
+    fn automatic_deploy_with_empty_recipe_branch_ignores_unrelated_upstream() {
+        let home = tempfile::tempdir().unwrap();
+        let git = git_program().unwrap();
+        let run = |dir: &std::path::Path, args: &[&str]| {
+            let output = Command::new(&git)
+                .args(args)
+                .current_dir(dir)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "git {args:?}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        };
+        let origin = home.path().join("origin.git");
+        let other = home.path().join("other.git");
+        let project_path = home.path().join("project");
+        for remote in [&origin, &other] {
+            run(
+                home.path(),
+                &["init", "--bare", "-b", "main", remote.to_str().unwrap()],
+            );
+        }
+        run(
+            home.path(),
+            &["init", "-b", "main", project_path.to_str().unwrap()],
+        );
+        run(&project_path, &["config", "user.email", "test@example.com"]);
+        run(&project_path, &["config", "user.name", "Test"]);
+        std::fs::write(project_path.join("source.txt"), "base").unwrap();
+        run(&project_path, &["add", "source.txt"]);
+        run(&project_path, &["commit", "-m", "base"]);
+        run(
+            &project_path,
+            &["remote", "add", "origin", origin.to_str().unwrap()],
+        );
+        run(
+            &project_path,
+            &["remote", "add", "other", other.to_str().unwrap()],
+        );
+        run(&project_path, &["push", "origin", "main"]);
+        run(&project_path, &["push", "-u", "other", "main"]);
+
+        for (remote, content) in [(&origin, "origin"), (&other, "other")] {
+            let work = home.path().join(format!("{content}-work"));
+            run(
+                home.path(),
+                &["clone", remote.to_str().unwrap(), work.to_str().unwrap()],
+            );
+            run(&work, &["config", "user.email", "test@example.com"]);
+            run(&work, &["config", "user.name", "Test"]);
+            std::fs::write(work.join("source.txt"), content).unwrap();
+            run(&work, &["add", "source.txt"]);
+            run(&work, &["commit", "-m", content]);
+            run(&work, &["push", "origin", "main"]);
+        }
+
+        let manager = Manager::new(home.path().into()).unwrap();
+        let project = Project {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "project".into(),
+            path: project_path.clone(),
+            host: "project.localhost".into(),
+            php_version: String::new(),
+            workers: Vec::new(),
+            schedule: Default::default(),
+            release: ProjectRelease::default(),
+        };
+        let step = ReleaseStep {
+            name: "git".into(),
+            args: vec!["pull".into(), "--ff-only".into(), "--no-edit".into()],
+        };
+        manager
+            .run_release_step_with_token(
+                &project,
+                &step,
+                Instant::now() + Duration::from_secs(30),
+                None,
+                Some(("acme/app", "main")),
+            )
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(project_path.join("source.txt")).unwrap(),
+            "origin"
+        );
     }
 
     #[test]
