@@ -141,7 +141,7 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
     // A stopped MySQL server makes the inventory unavailable. Remove a stale
     // inventory instead of blocking cleanup of unrelated project sections.
     if let Ok(data) = read(manager, "databases.show", json!({})) {
-        let _ = insert(&mut snapshot.sections, "databases", "", data);
+        capture_value(&mut snapshot, "databases", data);
     }
     capture(
         &mut snapshot,
@@ -472,6 +472,24 @@ mod tests {
         assert!(!snapshot.protected.contains("databases"));
         let (_, removed) = diff(&snapshot.sections, &previous, &snapshot.protected);
         assert_eq!(removed, vec![("databases".into(), String::new())]);
+    }
+
+    #[test]
+    fn oversized_mysql_inventory_keeps_the_previous_cloud_section() {
+        let previous = BTreeMap::from([("databases".into(), "a".repeat(64))]);
+        let mut snapshot = Snapshot {
+            sections: BTreeMap::new(),
+            protected: BTreeSet::new(),
+        };
+        let oversized = json!({"databases": [], "users": [{"name": "large", "databases": ["x".repeat(700 * 1024)]}]});
+        assert!(serde_json::to_vec(&oversized).unwrap().len() > byte_limit("databases"));
+
+        capture_value(&mut snapshot, "databases", oversized);
+
+        let (_, removed) = diff(&snapshot.sections, &previous, &snapshot.protected);
+        assert!(removed.is_empty());
+        assert!(!snapshot.sections.contains_key("databases"));
+        assert_eq!(snapshot.fingerprints(&previous), previous);
     }
 
     #[test]
