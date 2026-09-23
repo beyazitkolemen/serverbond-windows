@@ -152,6 +152,10 @@ pub(super) struct Deploy {
     confirm: bool,
     #[serde(default)]
     access_token: Option<String>,
+    #[serde(default)]
+    expected_repository: Option<String>,
+    #[serde(default)]
+    expected_branch: Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -514,10 +518,19 @@ impl Operation {
             Self::Deploy(input) => {
                 uuid::Uuid::parse_str(&input.id)?;
                 ensure!(input.confirm, "Dağıtım onayı gerekli.");
-                let record = manager.deploy_project_checked_with_token(
+                let source = match (
+                    input.expected_repository.as_deref(),
+                    input.expected_branch.as_deref(),
+                ) {
+                    (Some(repository), Some(branch)) => Some((repository, branch)),
+                    (None, None) => None,
+                    _ => anyhow::bail!("Otomatik dağıtım deposu ve dalı birlikte gerekli."),
+                };
+                let record = manager.deploy_project_checked_with_token_bound(
                     &input.id,
                     Some(&input.expected_revision),
                     input.access_token.as_deref(),
+                    source,
                 )?;
                 return Ok(json!({"projectId":input.id, "deployment":release_summary(record)}));
             }
@@ -910,6 +923,11 @@ mod tests {
         let unconfirmed =
             json!({"id":project.id,"expectedRevision":saved["revision"],"confirm":false});
         assert!(Operation::parse("projects.deploy", &unconfirmed)
+            .unwrap()
+            .execute(&manager)
+            .is_err());
+        let incomplete_source = json!({"id":project.id,"expectedRevision":saved["revision"],"confirm":true,"expectedRepository":"acme/app"});
+        assert!(Operation::parse("projects.deploy", &incomplete_source)
             .unwrap()
             .execute(&manager)
             .is_err());

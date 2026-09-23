@@ -429,6 +429,16 @@ impl Manager {
         expected: Option<&str>,
         access_token: Option<&str>,
     ) -> Result<ReleaseRecord> {
+        self.deploy_project_checked_with_token_bound(id, expected, access_token, None)
+    }
+
+    pub fn deploy_project_checked_with_token_bound(
+        &self,
+        id: &str,
+        expected: Option<&str>,
+        access_token: Option<&str>,
+        source: Option<(&str, &str)>,
+    ) -> Result<ReleaseRecord> {
         let _guard = self.gate()?;
         let project = self.project(id)?;
         if let Some(expected) = expected {
@@ -436,6 +446,9 @@ impl Manager {
                 release_revision(&project.release)? == expected,
                 "Sürüm tarifi değişti. Dağıtımı başlatmadan güncel bilgileri alın."
             );
+        }
+        if let Some((repository, branch)) = source {
+            self.validate_auto_deploy_source(&project, repository, branch)?;
         }
         let steps = release_steps(&project.release)?;
         if project.release.git_pull {
@@ -525,6 +538,51 @@ impl Manager {
             bail!("{message}");
         }
         Ok(record)
+    }
+
+    fn validate_auto_deploy_source(
+        &self,
+        project: &Project,
+        repository: &str,
+        branch: &str,
+    ) -> Result<()> {
+        anyhow::ensure!(
+            project.release.git_pull,
+            "Otomatik dağıtım için Git çekme adımı açık olmalı."
+        );
+        validate_git_branch(branch)?;
+        anyhow::ensure!(!branch.is_empty(), "İzlenen dal boş olamaz.");
+        let actual_branch = if project.release.branch.is_empty() {
+            self.git_output(project, &["branch".into(), "--show-current".into()])?
+        } else {
+            project.release.branch.clone()
+        };
+        anyhow::ensure!(
+            actual_branch == branch,
+            "İzlenen dal kayıtlı dağıtım dalıyla eşleşmiyor."
+        );
+
+        let remote = self.git_remote(project)?;
+        let remote_url = self.git_output(project, &["remote".into(), "get-url".into(), remote])?;
+        let url = reqwest::Url::parse(&remote_url)?;
+        anyhow::ensure!(
+            url.scheme() == "https"
+                && url.host_str() == Some("github.com")
+                && url.username().is_empty()
+                && url.password().is_none()
+                && url.query().is_none()
+                && url.fragment().is_none()
+                && url.port().is_none(),
+            "Otomatik dağıtım için GitHub HTTPS deposu gerekli."
+        );
+        crate::github::parse_github_repository(repository)?;
+        let path = url.path().trim_start_matches('/').trim_end_matches('/');
+        let actual = path.strip_suffix(".git").unwrap_or(path);
+        anyhow::ensure!(
+            actual.eq_ignore_ascii_case(repository),
+            "İzlenen depo projenin Git uzak deposuyla eşleşmiyor."
+        );
+        Ok(())
     }
 
     fn run_release_step_with_token(
@@ -764,6 +822,81 @@ mod tests {
         let rest = release_steps(&without_git).unwrap();
         assert_eq!(rest[0].name, "composer");
         assert!(!rest[0].args.contains(&"--no-dev".into()));
+    }
+
+    #[test]
+    fn automatic_deploy_requires_matching_github_remote_branch_and_git_pull() {
+        let home = tempfile::tempdir().unwrap();
+        let path = home.path().join("project");
+        std::fs::create_dir_all(&path).unwrap();
+        let git = git_program().unwrap();
+        assert!(Command::new(&git)
+            .args(["init", "-b", "main"])
+            .current_dir(&path)
+            .output()
+            .unwrap()
+            .status
+            .success());
+        assert!(Command::new(&git)
+            .args(["remote", "add", "origin", "https://github.com/Acme/App.git"])
+            .current_dir(&path)
+            .output()
+            .unwrap()
+            .status
+            .success());
+        let manager = Manager::new(home.path().into()).unwrap();
+        let mut project = Project {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "project".into(),
+            path,
+            host: "project.localhost".into(),
+            php_version: String::new(),
+            workers: Vec::new(),
+            schedule: Default::default(),
+            release: ProjectRelease {
+                branch: "main".into(),
+                ..Default::default()
+            },
+        };
+        manager
+            .validate_auto_deploy_source(&project, "acme/app", "main")
+            .unwrap();
+        assert!(manager
+            .validate_auto_deploy_source(&project, "acme/app", "feature")
+            .unwrap_err()
+            .to_string()
+            .contains("dal"));
+        assert!(manager
+            .validate_auto_deploy_source(&project, "acme/other", "main")
+            .unwrap_err()
+            .to_string()
+            .contains("depo"));
+        assert!(Command::new(&git)
+            .args([
+                "remote",
+                "set-url",
+                "origin",
+                "https://github.com/Acme/App.git.git"
+            ])
+            .current_dir(&project.path)
+            .output()
+            .unwrap()
+            .status
+            .success());
+        manager
+            .validate_auto_deploy_source(&project, "acme/app.git", "main")
+            .unwrap();
+        assert!(manager
+            .validate_auto_deploy_source(&project, "acme/app", "main")
+            .unwrap_err()
+            .to_string()
+            .contains("depo"));
+        project.release.git_pull = false;
+        assert!(manager
+            .validate_auto_deploy_source(&project, "acme/app.git", "main")
+            .unwrap_err()
+            .to_string()
+            .contains("Git çekme"));
     }
 
     #[test]
