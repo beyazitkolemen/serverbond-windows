@@ -6,8 +6,36 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: serverbond-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
+  release_status:
+    runs-on: ubuntu-latest
+    outputs:
+      complete: ${{ steps.check.outputs.complete }}
+    steps:
+      - name: Skip an already published release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if release="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" 2>/dev/null)"; then
+            version="${GITHUB_REF_NAME#v}"
+            if jq -e --arg version "$version" '
+              (.draft == false) and (.prerelease == false)
+              and (([.assets[].name] | index("ServerBond_\($version)_x64.exe")) != null)
+              and (([.assets[].name] | index("ServerBond_\($version)_x64-setup.exe")) != null)
+              and (([.assets[].name] | index("SHA256SUMS.txt")) != null)
+            ' <<<"$release" >/dev/null; then
+              echo "complete=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "complete=false" >> "$GITHUB_OUTPUT"
   windows:
+    needs: release_status
+    if: needs.release_status.outputs.complete != 'true'
     runs-on: windows-2022
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -113,8 +141,17 @@ jobs:
         shell: pwsh
         run: |
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
-            gh release create $env:RELEASE_TAG --verify-tag --draft --title "ServerBond $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md"
-            if ($LASTEXITCODE -ne 0) { throw "Could not create draft release." }
+            $exists = $false
+            try {
+              gh release view $env:RELEASE_TAG --json isDraft > $null 2>&1
+              $exists = $LASTEXITCODE -eq 0
+            } catch {
+              # A missing release is expected when this is the first attempt.
+            }
+            if (-not $exists) {
+              gh release create $env:RELEASE_TAG --verify-tag --draft --title "ServerBond $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md"
+              if ($LASTEXITCODE -ne 0) { throw "Could not create draft release." }
+            }
           }
           gh release upload $env:RELEASE_TAG artifacts/* --clobber
           if ($LASTEXITCODE -ne 0) { throw "Could not upload release assets." }
