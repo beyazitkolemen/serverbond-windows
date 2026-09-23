@@ -93,6 +93,11 @@ impl CloudState {
 }
 
 type AfterAck = (String, Box<dyn FnOnce() -> Result<()> + Send>);
+enum ResultDelivery {
+    Accepted,
+    Rejected,
+    Revoked,
+}
 #[derive(Default)]
 struct Runtime {
     completed: bool,
@@ -456,6 +461,43 @@ impl Manager {
             .home
             .join(format!("config/cloud-output-{device}-{command}.dpapi")))
     }
+    fn cloud_submit_result(
+        &self,
+        http: &Client,
+        c: &Credentials,
+        id: &str,
+        body: &Value,
+    ) -> Result<ResultDelivery> {
+        let path = format!("commands/{id}/result");
+        let (status, _) = post(http, c, &path, body)?;
+        match status {
+            200 => Ok(ResultDelivery::Accepted),
+            401 => Ok(ResultDelivery::Revoked),
+            413 | 422 => {
+                // The operation already ran. A rejected output must not leave its
+                // command delivered forever or cause execution to be retried.
+                let mut journal = self.journal(c)?;
+                journal.insert(id.to_string(), "uncertain".into());
+                self.save_journal(c, &journal)?;
+                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                if runtime
+                    .after_ack
+                    .as_ref()
+                    .is_some_and(|(pending, _)| pending == id)
+                {
+                    runtime.after_ack = None;
+                }
+                drop(runtime);
+                let (fallback, _) = post(http, c, &path, &json!({"status":"uncertain"}))?;
+                match fallback {
+                    200 => Ok(ResultDelivery::Rejected),
+                    401 => Ok(ResultDelivery::Revoked),
+                    _ => bail!("İşlem sonucu Cloud tarafından kabul edilmedi."),
+                }
+            }
+            _ => bail!("İşlem sonucu gönderilemedi."),
+        }
+    }
     pub(crate) fn cloud_stage(&self, stage: &str) {
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if runtime.active.is_some()
@@ -603,22 +645,24 @@ impl Manager {
         if let Some(id) = pending {
             let output: Value =
                 serde_json::from_str(&secrets::read(&self.cloud_output_path(&c, &id)?)?)?;
-            let (status, _) = post(
+            let delivery = self.cloud_submit_result(
                 &http,
                 &c,
-                &format!("commands/{id}/result"),
+                &id,
                 &json!({"status":"succeeded","output":output}),
             )?;
-            if status == 401 {
-                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
-                runtime.disabled = true;
-                runtime.after_ack = None;
-            }
-            anyhow::ensure!(
-                status == 200,
-                "Güncelleme hazırlığı Cloud tarafından onaylanmadı."
-            );
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if !matches!(delivery, ResultDelivery::Accepted) {
+                runtime.after_ack = None;
+                if matches!(delivery, ResultDelivery::Revoked) {
+                    runtime.disabled = true;
+                    runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+                    bail!("Cloud erişimi iptal edildi.");
+                } else {
+                    runtime.error = Some("Cloud işlem çıktısını reddetti; sonuç belirsiz.".into());
+                }
+                return Ok(());
+            }
             if !runtime.disabled
                 && self
                     .cloud_credentials()?
@@ -741,27 +785,28 @@ impl Manager {
             if let Some(output) = output {
                 body["output"] = output;
             }
-            let (status, _) = post(&http, &c, &format!("commands/{}/result", command.id), &body)?;
-            anyhow::ensure!(
-                status == 200 || status == 401,
-                "İşlem sonucu gönderilemedi."
-            );
-            if status == 200 {
-                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
-                if !runtime.disabled
-                    && self
-                        .cloud_credentials()?
-                        .as_ref()
-                        .is_some_and(|current| current.key == c.key)
-                    && runtime
-                        .after_ack
-                        .as_ref()
-                        .is_some_and(|(id, _)| id == &command.id)
-                {
-                    let (_, work) = runtime.after_ack.take().unwrap();
-                    drop(runtime);
-                    work()?;
-                }
+            let delivery = self.cloud_submit_result(&http, &c, &command.id, &body)?;
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if matches!(delivery, ResultDelivery::Revoked) {
+                runtime.disabled = true;
+                runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+                runtime.after_ack = None;
+            } else if matches!(delivery, ResultDelivery::Rejected) {
+                runtime.error = Some("Cloud işlem çıktısını reddetti; sonuç belirsiz.".into());
+                runtime.after_ack = None;
+            } else if !runtime.disabled
+                && self
+                    .cloud_credentials()?
+                    .as_ref()
+                    .is_some_and(|current| current.key == c.key)
+                && runtime
+                    .after_ack
+                    .as_ref()
+                    .is_some_and(|(id, _)| id == &command.id)
+            {
+                let (_, work) = runtime.after_ack.take().unwrap();
+                drop(runtime);
+                work()?;
             }
             return Ok(());
         }
@@ -1216,6 +1261,100 @@ mod windows_cloud_tests {
         assert!(exchange(&m, &mut c, vec![(401, json!({}))]).is_err());
         assert!(!installed.load(Ordering::Acquire));
         assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+    }
+
+    #[test]
+    fn rejected_saved_output_is_reported_uncertain_without_reexecution() {
+        for rejection in [413, 422] {
+            let home = tempfile::tempdir().unwrap();
+            let m = Arc::new(Manager::new(home.path().into()).unwrap());
+            let mut c = Credentials {
+                url: String::new(),
+                key: "b".repeat(64),
+                code_hash: String::new(),
+                device_id: Some(uuid::Uuid::new_v4().to_string()),
+                name: None,
+                account: None,
+            };
+            let id = uuid::Uuid::new_v4().to_string();
+            let command = json!({"id":id,"service":"projects","action":"execute","operation":"projects.list","parameters":{},"expires_at":"2099-01-01T00:00:00Z"});
+            secrets::save(
+                &m.cloud_output_path(&c, &id).unwrap(),
+                &json!({"data":{"projects":[],"total":0,"offset":0}}).to_string(),
+            )
+            .unwrap();
+            m.save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+                .unwrap();
+
+            let requests = exchange(
+                &m,
+                &mut c,
+                vec![
+                    (200, json!({"command":command.clone()})),
+                    (rejection, json!({})),
+                    (200, json!({"ok":true})),
+                ],
+            )
+            .unwrap();
+            assert_eq!(requests[1]["status"], "succeeded");
+            assert_eq!(requests[2], json!({"status":"uncertain"}));
+            assert_eq!(m.journal(&c).unwrap()[&id], "uncertain");
+            assert!(m.cloud.inner.lock().unwrap().active.is_none());
+
+            let replay = exchange(
+                &m,
+                &mut c,
+                vec![(200, json!({"command":command})), (200, json!({"ok":true}))],
+            )
+            .unwrap();
+            assert_eq!(replay[1], json!({"status":"uncertain"}));
+        }
+    }
+
+    #[test]
+    fn rejected_update_ack_never_runs_deferred_installation() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        secrets::save(
+            &m.cloud_output_path(&c, &id).unwrap(),
+            &json!({"data":{"accepted":true}}).to_string(),
+        )
+        .unwrap();
+        m.save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        let installed = Arc::new(AtomicBool::new(false));
+        let flag = installed.clone();
+        m.cloud.inner.lock().unwrap().after_ack = Some((
+            id.clone(),
+            Box::new(move || {
+                flag.store(true, Ordering::Release);
+                Ok(())
+            }),
+        ));
+
+        assert!(exchange(&m, &mut c, vec![(422, json!({})), (500, json!({}))]).is_err());
+        assert_eq!(m.journal(&c).unwrap()[&id], "uncertain");
+        assert!(m.cloud.inner.lock().unwrap().after_ack.is_none());
+        assert!(!installed.load(Ordering::Acquire));
+
+        let command = json!({"id":id,"service":"projects","action":"execute","operation":"desktop.update-install","parameters":{},"expires_at":"2099-01-01T00:00:00Z"});
+        let replay = exchange(
+            &m,
+            &mut c,
+            vec![(200, json!({"command":command})), (200, json!({"ok":true}))],
+        )
+        .unwrap();
+        assert_eq!(replay[1], json!({"status":"uncertain"}));
+        assert!(!installed.load(Ordering::Acquire));
     }
     #[test]
     fn dirty_state_posts_sections_and_replays_forced_sync() {
