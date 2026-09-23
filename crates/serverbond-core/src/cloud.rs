@@ -117,6 +117,7 @@ struct Runtime {
     connection: CloudConnection,
     socket_endpoint: Option<String>,
     state_dirty: bool,
+    state_revision: u64,
     state_complete: bool,
     state_fingerprints: BTreeMap<String, String>,
     last_state_scan: Option<Instant>,
@@ -125,8 +126,13 @@ struct Runtime {
     last_state_report: Option<Instant>,
 }
 impl Runtime {
-    fn reset_state_sync(&mut self) {
+    fn mark_state_dirty(&mut self) {
         self.state_dirty = true;
+        self.state_revision = self.state_revision.wrapping_add(1);
+    }
+
+    fn reset_state_sync(&mut self) {
+        self.mark_state_dirty();
         self.state_complete = false;
         self.state_fingerprints.clear();
         self.last_state_scan = None;
@@ -542,7 +548,7 @@ impl Manager {
             .inner
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .state_dirty = true;
+            .mark_state_dirty();
         self.cloud.wake();
     }
     fn cloud_push_state(
@@ -584,13 +590,9 @@ impl Manager {
         c: &Credentials,
         force: &[StateSyncItem],
     ) -> Result<()> {
-        let previous = {
-            self.cloud
-                .inner
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .state_fingerprints
-                .clone()
+        let (previous, state_revision) = {
+            let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            (runtime.state_fingerprints.clone(), runtime.state_revision)
         };
         let snapshot = state::sections(self, &previous);
         let current = &snapshot.sections;
@@ -617,7 +619,7 @@ impl Manager {
             {
                 return Ok(());
             }
-            runtime.state_dirty = false;
+            runtime.state_dirty = runtime.state_revision != state_revision;
             runtime.state_complete = snapshot.protected.is_empty();
             runtime.last_state_scan = Some(Instant::now());
             runtime.state_fingerprints = fingerprints;
@@ -641,7 +643,7 @@ impl Manager {
         {
             return Ok(());
         }
-        runtime.state_dirty = false;
+        runtime.state_dirty = runtime.state_revision != state_revision;
         runtime.state_complete = snapshot.protected.is_empty();
         runtime.last_state_scan = Some(Instant::now());
         runtime.state_fingerprints = fingerprints;
@@ -904,7 +906,7 @@ impl Manager {
         self.save_journal(&c, &journal)?;
         if state != "running" {
             runtime.completed = true;
-            runtime.state_dirty = true;
+            runtime.mark_state_dirty();
             return Ok(());
         }
         runtime.active = Some(command.id.clone());
@@ -990,7 +992,7 @@ impl Manager {
             }
             runtime.active = None;
             runtime.completed = true;
-            runtime.state_dirty = true;
+            runtime.mark_state_dirty();
         });
         Ok(())
     }
@@ -1900,6 +1902,42 @@ mod windows_cloud_tests {
         )
         .unwrap();
         assert_eq!(next[0]["state_complete"], true);
+    }
+
+    #[test]
+    fn state_change_during_upload_stays_dirty_for_next_scan() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        m.save_cloud_credentials(&c).unwrap();
+        m.mark_state_dirty();
+        let changed = m.clone();
+        let handler = std::thread::spawn(move || {
+            let request = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .expect("missing state request");
+            changed.mark_state_dirty();
+            request
+                .respond(tiny_http::Response::from_string("{\"ok\":true}").with_status_code(200))
+                .unwrap();
+        });
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let http = client().unwrap();
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        handler.join().unwrap();
+        assert!(m.cloud.inner.lock().unwrap().state_dirty);
+
+        m.cloud_push_state(&http, &c, &[]).unwrap();
+        assert!(!m.cloud.inner.lock().unwrap().state_dirty);
     }
 
     #[test]
