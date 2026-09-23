@@ -714,6 +714,19 @@ impl Manager {
             }
             return Ok(());
         }
+        if claim
+            && self
+                .cloud
+                .inner
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .active
+                .is_some()
+        {
+            // A command can become uncertain on Cloud while it is still
+            // running here. Do not claim the next command until it finishes.
+            return Ok(());
+        }
         let (progress, connection, state_report) = {
             let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             let reconcile = !claim
@@ -1529,6 +1542,51 @@ mod windows_cloud_tests {
         assert!(m.cloud.inner.lock().unwrap().active.is_none());
         assert_eq!(
             exchange_tick(&m, &mut c, vec![(200, json!({"command":null}))], false)
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn running_command_does_not_claim_another_command() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let mut c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        m.save_cloud_credentials(&c).unwrap();
+        m.cloud.inner.lock().unwrap().active = Some(uuid::Uuid::new_v4().to_string());
+        let handler = std::thread::spawn(move || {
+            let mut paths = Vec::new();
+            for _ in 0..3 {
+                let Some(request) = server.recv_timeout(Duration::from_millis(500)).unwrap() else {
+                    break;
+                };
+                paths.push(request.url().to_string());
+                request
+                    .respond(tiny_http::Response::from_string(
+                        json!({"command":null,"commands_pending":true}).to_string(),
+                    ))
+                    .unwrap();
+            }
+            paths
+        });
+
+        m.cloud_tick(true).unwrap();
+        m.cloud_tick(false).unwrap();
+        assert_eq!(handler.join().unwrap(), vec!["/api/agent/v1/heartbeat"]);
+
+        m.cloud.inner.lock().unwrap().active = None;
+        assert_eq!(
+            exchange(&m, &mut c, vec![(200, json!({"command":null}))])
                 .unwrap()
                 .len(),
             1
