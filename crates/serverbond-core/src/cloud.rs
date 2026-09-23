@@ -1531,6 +1531,28 @@ mod windows_cloud_tests {
 mod tests {
     use super::*;
     #[test]
+    fn reset_state_sync_discards_previous_device_cache() {
+        let mut runtime = Runtime {
+            state_complete: true,
+            state_fingerprints: BTreeMap::from([("php".into(), "a".repeat(64))]),
+            last_state_scan: Some(Instant::now()),
+            last_state_report: Some(Instant::now()),
+            state_retry_after: Some(Instant::now() + Duration::from_secs(60)),
+            state_retry_delay_secs: 60,
+            ..Runtime::default()
+        };
+
+        runtime.reset_state_sync();
+        assert!(runtime.state_dirty);
+        assert!(!runtime.state_complete);
+        assert!(runtime.state_fingerprints.is_empty());
+        assert!(runtime.last_state_scan.is_none());
+        assert!(runtime.last_state_report.is_none());
+        assert!(runtime.state_retry_after.is_none());
+        assert_eq!(runtime.state_retry_delay_secs, 0);
+    }
+    #[cfg(windows)]
+    #[test]
     fn pairing_and_disconnect_reset_state_for_the_next_cloud_device() {
         std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
         let home = tempfile::tempdir().unwrap();
