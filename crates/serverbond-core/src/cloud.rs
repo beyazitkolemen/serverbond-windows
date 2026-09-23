@@ -671,6 +671,11 @@ impl Manager {
         runtime.error = None;
         let p: Poll = serde_json::from_value(reply)?;
         let state_sync = p.state_sync;
+        if !state_sync.is_empty() {
+            // Cloud only requests a bounded batch at a time. Keep reconciling on
+            // subsequent heartbeats until it reports no missing sections.
+            runtime.last_state_report = None;
+        }
         drop(runtime);
         if !claim && !state_sync.is_empty() {
             self.cloud_push_state(&http, &c, &state_sync)?;
@@ -1260,6 +1265,15 @@ mod windows_cloud_tests {
             sync[1]["sections"][0]["fingerprint"],
             m.cloud.inner.lock().unwrap().state_fingerprints["php"]
         );
+        assert!(m.cloud.inner.lock().unwrap().last_state_report.is_none());
+        let next = exchange_tick(
+            &m,
+            &mut c,
+            vec![(200, json!({"command":null,"state_sync":[]}))],
+            false,
+        )
+        .unwrap();
+        assert_eq!(next[0]["state_complete"], true);
     }
 
     #[test]
