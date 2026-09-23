@@ -128,7 +128,7 @@ function WorkspaceApp() {
     void poll();
     const timer = window.setInterval(
       () => void poll(),
-      pollingActive ? 500 : 1500,
+      pollingActive ? 500 : 5000,
     );
     return () => {
       ++requestNumber.current;

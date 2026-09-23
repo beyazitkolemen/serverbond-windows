@@ -1,5 +1,5 @@
 use crate::{
-    model::{ProjectSchedule, QueueWorker},
+    model::{ProjectSchedule, ProjectStatus, QueueWorker},
     Manager,
 };
 use anyhow::{Context, Result};
@@ -67,14 +67,18 @@ pub(super) fn show(manager: &Manager, id: &str) -> Result<Value> {
         .into_iter()
         .find(|p| p.project.id == id)
         .context("Proje bulunamadı.")?;
+    show_from_status(&state)
+}
+
+pub(super) fn show_from_status(state: &ProjectStatus) -> Result<Value> {
     let revision = crate::jobs::jobs_revision(&state.project.workers, &state.project.schedule)?;
     let states: Vec<Value> = state
         .worker_states
-        .into_iter()
+        .iter()
         .map(|s| json!({"id":s.id,"running":s.running,"hasIssue":s.issue.is_some()}))
         .collect();
     Ok(
-        json!({"projectId":id,"name":state.project.name,"revision":revision,"workers":state.project.workers,"schedule":state.project.schedule,"states":states,"scheduleRunning":state.schedule_running,"scheduleHasIssue":state.schedule_issue.is_some()}),
+        json!({"projectId":state.project.id,"name":state.project.name,"revision":revision,"workers":state.project.workers,"schedule":state.project.schedule,"states":states,"scheduleRunning":state.schedule_running,"scheduleHasIssue":state.schedule_issue.is_some()}),
     )
 }
 pub(super) fn save(manager: &Manager, input: Save) -> Result<Value> {

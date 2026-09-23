@@ -203,7 +203,7 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
                 snapshot.protected.insert("projects".into());
             }
             for project in inventory.projects {
-                let id = project.project.id;
+                let id = project.project.id.clone();
                 capture(
                     &mut snapshot,
                     manager,
@@ -212,14 +212,12 @@ pub(super) fn sections(manager: &Manager, previous: &BTreeMap<String, String>) -
                     "projects.show",
                     json!({"id": id}),
                 );
-                capture(
-                    &mut snapshot,
-                    manager,
-                    "jobs",
-                    &id,
-                    "jobs.show",
-                    json!({"id": id}),
-                );
+                let jobs_key = fingerprint_key("jobs", &id);
+                if !super::jobs::show_from_status(&project)
+                    .is_ok_and(|data| insert(&mut snapshot.sections, "jobs", &id, data))
+                {
+                    snapshot.protected.insert(jobs_key);
+                }
                 capture(
                     &mut snapshot,
                     manager,
@@ -438,6 +436,29 @@ mod tests {
                 .unwrap()
                 .len(),
             3
+        );
+    }
+
+    #[test]
+    fn shared_snapshot_matches_project_job_command_output() {
+        let home = tempfile::tempdir().unwrap();
+        let path = tempfile::tempdir().unwrap();
+        std::fs::create_dir(path.path().join("public")).unwrap();
+        std::fs::write(path.path().join("public/index.php"), "<?php").unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let project = manager
+            .add_project("jobs-test".into(), path.path().into())
+            .unwrap();
+        let snapshot = sections(&manager, &BTreeMap::new());
+        let command =
+            super::super::operations::Operation::parse("jobs.show", &json!({"id": project.id}))
+                .unwrap()
+                .execute(&manager)
+                .unwrap();
+
+        assert_eq!(
+            snapshot.sections[&fingerprint_key("jobs", &project.id)].data,
+            command
         );
     }
 
