@@ -113,6 +113,7 @@ struct Runtime {
     last_contact: Option<String>,
     disabled: bool,
     after_ack: Option<AfterAck>,
+    update_retry_after: Option<Instant>,
     connection: CloudConnection,
     socket_endpoint: Option<String>,
     state_dirty: bool,
@@ -756,7 +757,9 @@ impl Manager {
         if reported_state {
             runtime.last_state_report = Some(Instant::now());
         }
-        runtime.error = None;
+        if self.pending_update(&c)?.is_none() {
+            runtime.error = None;
+        }
         let p: Poll = serde_json::from_value(reply)?;
         let state_sync = p.state_sync;
         if !state_sync.is_empty() {
@@ -972,6 +975,16 @@ impl Manager {
         Ok(())
     }
     fn resume_pending_update(&self, http: &Client, c: &Credentials) -> Result<bool> {
+        if self
+            .cloud
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .update_retry_after
+            .is_some_and(|after| after > Instant::now())
+        {
+            return Ok(false);
+        }
         let Some(pending) = self.pending_update(c)? else {
             return Ok(false);
         };
@@ -1021,18 +1034,29 @@ impl Manager {
             return Ok(true);
         }
         drop(runtime);
-        let reply = desktop::install(
-            self,
-            desktop::Install {
-                version: pending.version,
-                confirm: true,
-            },
-        )?;
-        let work = reply
-            .after_response
-            .context("Güncelleme kurulumu hazırlanamadı.")?;
-        work()?;
+        let attempt = (|| -> Result<()> {
+            let reply = desktop::install(
+                self,
+                desktop::Install {
+                    version: pending.version,
+                    confirm: true,
+                },
+            )?;
+            let work = reply
+                .after_response
+                .context("Güncelleme kurulumu hazırlanamadı.")?;
+            work()
+        })();
+        if let Err(error) = attempt {
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            runtime.update_retry_after = Some(Instant::now() + Duration::from_secs(60));
+            runtime.error = Some(format!("Cloud güncellemesi bekliyor: {error:#}"));
+            return Ok(false);
+        }
         self.clear_pending_update(c)?;
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        runtime.update_retry_after = None;
+        runtime.error = None;
         Ok(true)
     }
 }
@@ -1262,7 +1286,7 @@ impl Manager {
 mod windows_cloud_tests {
     use super::*;
     use crate::api::{DesktopApi, DesktopReply};
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
     struct UpdateHost(Arc<AtomicBool>);
     impl DesktopApi for UpdateHost {
@@ -1286,6 +1310,15 @@ mod windows_cloud_tests {
                 }
                 _ => anyhow::bail!("Unexpected desktop operation"),
             }
+        }
+    }
+
+    struct UnavailableUpdateHost(Arc<AtomicUsize>);
+    impl DesktopApi for UnavailableUpdateHost {
+        fn call(&self, operation: &str, _: Value) -> Result<DesktopReply> {
+            assert_eq!(operation, "update-check");
+            self.0.fetch_add(1, Ordering::AcqRel);
+            anyhow::bail!("GitHub geçici olarak erişilemiyor")
         }
     }
 
@@ -1393,6 +1426,69 @@ mod windows_cloud_tests {
         let requests = exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
         assert_eq!(requests.len(), 1);
         assert!(!installed.load(Ordering::Acquire));
+        assert!(m.pending_update(&c).unwrap().is_none());
+    }
+
+    #[test]
+    fn unavailable_update_does_not_block_cloud_poll_and_retries_after_delay() {
+        let home = tempfile::tempdir().unwrap();
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let installed = Arc::new(AtomicBool::new(false));
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        m.attach_desktop_api(Arc::new(UnavailableUpdateHost(attempts.clone())));
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        let output = json!({"data":{"accepted":true,"version":"99.0.0","signatureVerified":true}});
+        secrets::save(&m.cloud_output_path(&c, &id).unwrap(), &output.to_string()).unwrap();
+        m.save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        storage::atomic_write(
+            &m.pending_update_path(&c).unwrap(),
+            serde_json::to_vec(&PendingUpdate {
+                command_id: id,
+                version: "99.0.0".into(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+
+        let first = exchange(
+            &m,
+            &mut c,
+            vec![(200, json!({"ok":true})), (200, json!({"command":null}))],
+        )
+        .unwrap();
+        assert_eq!(first.len(), 2);
+        assert_eq!(first[0]["status"], "succeeded");
+        assert_eq!(attempts.load(Ordering::Acquire), 1);
+        assert!(m
+            .cloud
+            .inner
+            .lock()
+            .unwrap()
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("GitHub"));
+        assert!(m.pending_update(&c).unwrap().is_some());
+
+        let second = exchange(&m, &mut c, vec![(200, json!({"command":null}))]).unwrap();
+        assert_eq!(second.len(), 1);
+        assert_eq!(attempts.load(Ordering::Acquire), 1);
+
+        m.cloud.inner.lock().unwrap().update_retry_after =
+            Some(Instant::now() - Duration::from_secs(1));
+        m.attach_desktop_api(Arc::new(UpdateHost(installed.clone())));
+        let third = exchange(&m, &mut c, vec![(200, json!({"ok":true}))]).unwrap();
+        assert_eq!(third.len(), 1);
+        assert!(installed.load(Ordering::Acquire));
         assert!(m.pending_update(&c).unwrap().is_none());
     }
     #[test]
