@@ -113,6 +113,17 @@ struct Runtime {
     state_retry_delay_secs: u64,
     last_state_report: Option<Instant>,
 }
+impl Runtime {
+    fn reset_state_sync(&mut self) {
+        self.state_dirty = true;
+        self.state_complete = false;
+        self.state_fingerprints.clear();
+        self.last_state_scan = None;
+        self.last_state_report = None;
+        self.state_retry_after = None;
+        self.state_retry_delay_secs = 0;
+    }
+}
 #[derive(Clone, Copy, Default, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum CloudConnection {
@@ -347,9 +358,7 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Connecting;
         runtime.socket_endpoint = None;
-        runtime.state_retry_after = None;
-        runtime.state_retry_delay_secs = 0;
-        runtime.last_state_report = None;
+        runtime.reset_state_sync();
         self.cloud.wake();
         Ok(())
     }
@@ -371,9 +380,7 @@ impl Manager {
         runtime.after_ack = None;
         runtime.connection = CloudConnection::Disconnected;
         runtime.socket_endpoint = None;
-        runtime.state_retry_after = None;
-        runtime.state_retry_delay_secs = 0;
-        runtime.last_state_report = None;
+        runtime.reset_state_sync();
         self.cloud.wake();
         Ok(())
     }
@@ -531,6 +538,13 @@ impl Manager {
         }
         if changed.is_empty() && removed.is_empty() {
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(());
+            }
             runtime.state_dirty = false;
             runtime.state_complete = snapshot.protected.is_empty();
             runtime.last_state_scan = Some(Instant::now());
@@ -1516,6 +1530,66 @@ mod windows_cloud_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn pairing_and_disconnect_reset_state_for_the_next_cloud_device() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", server.server_addr());
+        let device_id = uuid::Uuid::new_v4().to_string();
+        let handler = std::thread::spawn(move || {
+            for (path, body) in [
+                (
+                    "/api/agent/v1/pair",
+                    json!({"device_id":device_id,"name":"New device","account":"owner@example.test"}),
+                ),
+                ("/api/agent/v1/revoke", json!({"ok":true})),
+            ] {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing Cloud request");
+                assert_eq!(request.url(), path);
+                request
+                    .respond(tiny_http::Response::from_string(body.to_string()))
+                    .unwrap();
+            }
+        });
+        let seed_old_state = || {
+            let mut runtime = manager.cloud.inner.lock().unwrap();
+            runtime.state_dirty = false;
+            runtime.state_complete = true;
+            runtime
+                .state_fingerprints
+                .insert("php".into(), "a".repeat(64));
+            runtime.last_state_scan = Some(Instant::now());
+            runtime.last_state_report = Some(Instant::now());
+            runtime.state_retry_after = Some(Instant::now() + Duration::from_secs(60));
+            runtime.state_retry_delay_secs = 60;
+        };
+        let assert_reset = || {
+            let runtime = manager.cloud.inner.lock().unwrap();
+            assert!(runtime.state_dirty);
+            assert!(!runtime.state_complete);
+            assert!(runtime.state_fingerprints.is_empty());
+            assert!(runtime.last_state_scan.is_none());
+            assert!(runtime.last_state_report.is_none());
+            assert!(runtime.state_retry_after.is_none());
+            assert_eq!(runtime.state_retry_delay_secs, 0);
+        };
+
+        seed_old_state();
+        manager
+            .cloud_pair(&url, "0123456789ABCDEF0123456789ABCDEF")
+            .unwrap();
+        assert_reset();
+        seed_old_state();
+        manager.cloud_disconnect().unwrap();
+        assert_reset();
+        assert!(!manager.cloud_status().unwrap().paired);
+        handler.join().unwrap();
+    }
     #[test]
     fn pairing_codes_accept_copied_formatting_without_accepting_invalid_codes() {
         let code = "0123456789ABCDEF0123456789ABCDEF";
