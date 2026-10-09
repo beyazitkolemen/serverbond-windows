@@ -18,6 +18,7 @@ pub enum ComponentId {
     Postgres,
     Cloudflared,
     Node,
+    Git,
 }
 
 impl ComponentId {
@@ -33,6 +34,7 @@ impl ComponentId {
             Self::Postgres => "postgres",
             Self::Cloudflared => "cloudflared",
             Self::Node => "node",
+            Self::Git => "git",
         }
     }
 }
@@ -58,6 +60,7 @@ impl FromStr for ComponentId {
             "postgres" => Ok(Self::Postgres),
             "cloudflared" => Ok(Self::Cloudflared),
             "node" => Ok(Self::Node),
+            "git" => Ok(Self::Git),
             _ => bail!("Bilinmeyen bileşen: {value}"),
         }
     }
@@ -80,6 +83,7 @@ mod tests {
             ComponentId::Postgres,
             ComponentId::Cloudflared,
             ComponentId::Node,
+            ComponentId::Git,
         ] {
             assert_eq!(id.as_str().parse::<ComponentId>().unwrap(), id);
         }

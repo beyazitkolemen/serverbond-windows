@@ -44,7 +44,8 @@ export default function Requirements({
         </button>
       </div>
       <p className="section-note">
-        Eksikleri tamamladıktan sonra yeniden denetleyin.
+        Eksik çalışma zamanı uygulama içinden yüklenir. Windows yönetici izni
+        isteyebilir.
       </p>
       {!desktop ? (
         <p>Gereksinimler masaüstü uygulamasında denetlenir.</p>
@@ -73,17 +74,21 @@ export default function Requirements({
                     : "İşlem gerekli"}
               </span>
               <p>{check.detail}</p>
-              {check.helpUrl && check.status !== "ok" ? (
+              {check.id === "vc-runtime" && check.status !== "ok" ? (
                 <button
                   className="button secondary small"
                   disabled={busy}
                   onClick={() =>
-                    void run("Microsoft indirme sayfası açılıyor…", () =>
-                      call("open_runtime_download"),
-                    )
+                    void run("Windows çalışma zamanı kuruluyor…", async () => {
+                      try {
+                        await call("install_windows_runtime");
+                      } finally {
+                        await refresh();
+                      }
+                    })
                   }
                 >
-                  Microsoft'tan indir
+                  Otomatik kur
                 </button>
               ) : null}
             </div>

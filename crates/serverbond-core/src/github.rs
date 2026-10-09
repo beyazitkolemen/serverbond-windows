@@ -5,7 +5,7 @@
 use crate::{
     model::{slug_from_folder, validate_slug, Project},
     process::{command, ManagedChild},
-    release::{git_program, validate_git_branch},
+    release::validate_git_branch,
     secrets, storage, Manager,
 };
 use anyhow::{bail, Context, Result};
@@ -383,7 +383,7 @@ impl Manager {
         branch: &str,
         access_token: Option<&str>,
     ) -> Result<()> {
-        let git = git_program()?;
+        let git = self.ensure_git_inner()?;
         let mut cmd = command(git);
         cmd.arg("clone").arg("--no-tags");
         if !branch.is_empty() {

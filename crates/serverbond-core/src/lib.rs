@@ -8,6 +8,7 @@ pub mod cloud;
 mod database_inventory;
 mod domain;
 mod envfile;
+mod git_tools;
 pub mod github;
 pub mod https;
 pub mod install;
@@ -40,6 +41,7 @@ pub mod updates;
 #[cfg(test)]
 #[path = "../tests/windows_resilience/mod.rs"]
 mod windows_resilience;
+mod windows_runtime;
 
 pub use domain::{ComponentId, EnvironmentAction, GithubAction, ToolAction};
 pub use envfile::{env_revision, ProjectEnv};

@@ -677,6 +677,10 @@ fn route(
             manager.open_runtime_download()?;
             ok(json!({ "opened": true }))
         }
+        ["system", "runtime-install"] if post => {
+            manager.install_windows_runtime()?;
+            ok(json!({ "requirements": manager.requirements() }))
+        }
         ["tunnel", "apply"] if post => {
             let input: Token = parse(body)?;
             manager.apply_tunnel(&input.token)?;

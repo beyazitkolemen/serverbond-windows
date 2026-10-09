@@ -553,14 +553,14 @@ Section WebView2
     ReadRegStr $4 HKLM "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
   ${If} $4 == ""
+  ${OrIf} $4 == "0.0.0.0"
     ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
 
   ${If} $4 == ""
+  ${OrIf} $4 == "0.0.0.0"
     ; Webview2 installation
-    ;
-    ; Skip if updating
-    ${If} $UpdateMode <> 1
+    ; Updates also repair a missing runtime before copying application files.
       !if "${INSTALLWEBVIEW2MODE}" == "downloadBootstrapper"
         Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
         DetailPrint "$(webview2Downloading)"
@@ -597,15 +597,21 @@ Section WebView2
       install_webview2:
         DetailPrint "$(installingWebview2)"
         ; $6 holds the path to the webview2 installer
-        ExecWait "$6 ${WEBVIEW2INSTALLERARGS} /install" $1
-        ${If} $1 = 0
+        ClearErrors
+        StrCpy $1 -1
+        ExecWait '"$6" ${WEBVIEW2INSTALLERARGS} /install' $1
+        ${If} ${Errors}
+          DetailPrint "$(webview2InstallError) (unable to start installer)"
+          SetErrorLevel 1603
+          Abort "$(webview2AbortError)"
+        ${ElseIf} $1 = 0
           DetailPrint "$(webview2InstallSuccess)"
         ${Else}
-          DetailPrint "$(webview2InstallError)"
+          DetailPrint "$(webview2InstallError) (exit code $1)"
+          SetErrorLevel 1603
           Abort "$(webview2AbortError)"
         ${EndIf}
       webview2_done:
-    ${EndIf}
   ${Else}
     !if "${MINIMUMWEBVIEW2VERSION}" != ""
       ${VersionCompare} "${MINIMUMWEBVIEW2VERSION}" "$4" $R0

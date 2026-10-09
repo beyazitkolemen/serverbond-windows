@@ -15,7 +15,7 @@ Windows üzerinde Laravel projelerini, PHP sürümlerini ve yerel sunucu hizmetl
 
 Yeni kurulumların varsayılan konumu `C:\ServerBond`, proje çalışma alanı `C:\ServerBond\www` olur. Mevcut kurulumlar ve özel klasör tercihleri korunur.
 
-Windows x64 ve internet bağlantısı gerekir. Kurulum WebView2 gereksinimini yönetir; PHP/MySQL için Microsoft Visual C++ Runtime gerekir. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
+Windows x64 ve internet bağlantısı gerekir. Kurulum paketi ve doğrudan çalıştırılan EXE eksik WebView2'yi hazırlar. Eksik Microsoft Visual C++ x64 çalışma zamanı uygulama açılışında otomatik kurulur; Windows yönetici izni isteyebilir. İzin verilmezse Ayarlar → Kurulum gereksinimleri → Otomatik kur ile tekrar deneyin. Git yoksa uygulama kendi doğrulanmış MinGit kopyasını kullanır; Node.js proje derleme akışında gerektiğinde kurulur. Sistem PATH ayarları değiştirilmez. Windows 10 ve Server 2019/2022 geriye uyumluluk hedefleridir; bu sistemlerde uçtan uca doğrulama henüz tamamlanmadı. [Uyumluluk ayrıntıları](docs/windows-compatibility.md).
 
 Son yayımlanan sürüm **v1.3.39**'dır. Bu sürüm elle kurulur ve imzalı otomatik güncelleme paketi içermez. Ekran görüntüleri v1.3.0 arayüzünün örnek verili, salt okunur önizlemesidir. [Sürüm notları](docs/releases/v1.3.39.md) · [Güncellemeler](docs/updates.md).
 

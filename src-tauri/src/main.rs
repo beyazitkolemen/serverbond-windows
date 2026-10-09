@@ -10,6 +10,8 @@ mod desktop;
 mod startup;
 mod tray;
 mod updates;
+#[cfg(windows)]
+mod webview_bootstrap;
 
 use std::sync::atomic::Ordering;
 use tauri::Manager as _;
@@ -147,6 +149,11 @@ async fn requirements(
 async fn open_runtime_download(state: tauri::State<'_, State>) -> Result<(), String> {
     let state = state.inner().clone();
     blocking(state.clone(), move || state.open_runtime_download()).await
+}
+#[tauri::command]
+async fn install_windows_runtime(state: tauri::State<'_, State>) -> Result<(), String> {
+    let state = state.inner().clone();
+    blocking(state.clone(), move || state.install_windows_runtime()).await
 }
 #[tauri::command]
 async fn service(state: tauri::State<'_, State>, id: String, action: String) -> Result<(), String> {
@@ -883,6 +890,11 @@ fn launch_home() -> anyhow::Result<PathBuf> {
 }
 
 fn main() {
+    #[cfg(windows)]
+    if let Err(error) = launch_home().and_then(|home| webview_bootstrap::ensure(&home)) {
+        show_startup_error(&format!("Windows arayüzü hazırlanamadı: {error:#}"));
+        return;
+    }
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, _| {
             if !args.iter().any(|arg| arg == "--autostart") {
@@ -924,7 +936,18 @@ fn main() {
                     if let Err(error) = manager.contain(|| manager.ensure_permissions()) {
                         manager.log(format!("Windows izinleri uygulanamadı: {error:#}"));
                     }
-                    if start {
+                    let runtime_ready = match manager.contain(|| manager.prepare_windows_runtime())
+                    {
+                        Ok(()) => true,
+                        Err(error) => {
+                            desktop::report(
+                                &app,
+                                format!("Windows çalışma zamanı hazırlanamadı: {error:#}"),
+                            );
+                            false
+                        }
+                    };
+                    if start && runtime_ready {
                         if let Err(error) = manager.contain(|| manager.start("all")) {
                             desktop::report(
                                 &app,
@@ -934,6 +957,9 @@ fn main() {
                     }
                     if let Err(error) = manager.contain(|| manager.prepare_launch_tools()) {
                         manager.log(format!("Açılış araçları hazırlanamadı: {error:#}"));
+                    }
+                    if let Err(error) = manager.contain(|| manager.prepare_git()) {
+                        manager.log(format!("Git hazırlanamadı: {error:#}"));
                     }
                 });
             }
@@ -980,6 +1006,7 @@ fn main() {
             open_project_terminal,
             requirements,
             open_runtime_download,
+            install_windows_runtime,
             service,
             add_project,
             setup_project,

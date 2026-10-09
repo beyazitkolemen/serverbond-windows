@@ -72,7 +72,8 @@ pub fn git_program_from(path: Option<&OsStr>) -> Result<PathBuf> {
     bail!("{GIT_MISSING}");
 }
 
-pub fn git_program() -> Result<PathBuf> {
+#[cfg(test)]
+fn git_program() -> Result<PathBuf> {
     git_program_from(std::env::var_os("PATH").as_deref())
 }
 
@@ -293,7 +294,7 @@ fn git_command_with_token(
     args: &[String],
     access_token: Option<&str>,
 ) -> Result<Command> {
-    let git = git_program()?;
+    let git = manager.git_program()?;
     let mut cmd = command(git);
     cmd.args(args).current_dir(&project.path);
     // Local status/branch operations and unrelated remotes must remain usable
@@ -351,7 +352,7 @@ impl Manager {
 
     pub fn project_git_status(&self, id: &str) -> Result<ProjectGitStatus> {
         let project = self.project(id)?;
-        if git_program().is_err() || !project.path.join(".git").exists() {
+        if self.git_program().is_err() || !project.path.join(".git").exists() {
             return Ok(ProjectGitStatus {
                 present: false,
                 branch: String::new(),
@@ -447,13 +448,13 @@ impl Manager {
                 "Sürüm tarifi değişti. Dağıtımı başlatmadan güncel bilgileri alın."
             );
         }
+        if project.release.git_pull || project.release.composer || project.release.build {
+            self.ensure_git_inner()?;
+        }
         if let Some((repository, branch)) = source {
             self.validate_auto_deploy_source(&project, repository, branch)?;
         }
         let steps = release_steps(&project.release)?;
-        if project.release.git_pull {
-            git_program()?;
-        }
         if project.release.composer {
             self.executable("composer")?;
         }
@@ -706,6 +707,11 @@ impl Manager {
                 cmd.arg(&composer).args(&step.args);
                 let php_dir = self.home.join("bin/php").join(&project.php_version);
                 let mut paths = vec![php_dir];
+                if let Ok(git) = self.git_program() {
+                    if let Some(bin) = git.parent() {
+                        paths.push(bin.to_path_buf());
+                    }
+                }
                 if let Some(existing) = std::env::var_os("PATH") {
                     paths.extend(std::env::split_paths(&existing));
                 }

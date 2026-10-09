@@ -101,6 +101,32 @@ impl Api {
 }
 
 #[test]
+fn runtime_install_requires_authentication_and_is_post_only() {
+    let api = start();
+    // Never run the actual installer on the test host. Authentication must
+    // reject the mutation before routing it to the system operation.
+    let anonymous = api
+        .client
+        .post(api.url("/system/runtime-install"))
+        .send()
+        .unwrap();
+    assert_eq!(anonymous.status().as_u16(), 401);
+    let invalid = api
+        .client
+        .post(api.url("/system/runtime-install"))
+        .bearer_auth("sb_wrong")
+        .send()
+        .unwrap();
+    assert_eq!(invalid.status().as_u16(), 401);
+    assert_eq!(api.get("/system/runtime-install").0, 404);
+    let (status, index) = api.get("");
+    assert_eq!(status, 200);
+    assert!(index["data"].as_array().unwrap().iter().any(|route| {
+        route["path"] == "/api/v1/system/runtime-install" && route["method"] == "POST"
+    }));
+}
+
+#[test]
 fn health_is_public_but_everything_else_needs_the_token() {
     let api = start();
     let health: Value = api

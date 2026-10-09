@@ -113,6 +113,11 @@
   },
   {
     "method": "POST",
+    "path": "/api/v1/system/runtime-install",
+    "description": "Eksik Visual C++ x64 çalışma zamanını doğrula ve kur; Windows yönetici izni isteyebilir"
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/tunnel/apply",
     "description": "Tünel jetonunu kaydet ve başlat {token}"
   },

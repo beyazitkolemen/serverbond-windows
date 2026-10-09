@@ -72,7 +72,7 @@ impl Manager {
         // A temporary file tests the actual account's write permission and is removed on drop.
         let writable = parent.is_dir() && tempfile::NamedTempFile::new_in(parent).is_ok();
         let composer = self.executable("composer").is_ok();
-        let git = crate::release::git_program().is_ok();
+        let git = self.git_program().is_ok();
         let state = self.snapshot()?;
         let web = state
             .packages

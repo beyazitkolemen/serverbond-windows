@@ -58,6 +58,11 @@ impl Manager {
         if let Ok(node) = self.tool_directory(crate::node::ID) {
             path_dirs.push(q(&node));
         }
+        if let Ok(git) = self.git_program() {
+            if let Some(bin) = git.parent() {
+                path_dirs.push(q(bin));
+            }
+        }
         if let Ok(postgres) = self.tool_executable(crate::postgres::ID) {
             if let Some(bin) = postgres.parent() {
                 path_dirs.push(q(bin));

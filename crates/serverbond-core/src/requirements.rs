@@ -82,7 +82,7 @@ fn windows_requirement(version: Option<WindowsVersion>) -> Requirement {
 }
 
 #[cfg(windows)]
-fn vc_runtime() -> bool {
+pub(crate) fn vc_runtime() -> bool {
     use windows_sys::Win32::Foundation::FreeLibrary;
     use windows_sys::Win32::System::LibraryLoader::{LoadLibraryExW, LOAD_LIBRARY_SEARCH_SYSTEM32};
     ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]
@@ -106,7 +106,7 @@ fn vc_runtime() -> bool {
 }
 
 #[cfg(not(windows))]
-fn vc_runtime() -> bool {
+pub(crate) fn vc_runtime() -> bool {
     false
 }
 
@@ -142,7 +142,7 @@ impl Manager {
         ));
         checks.push(windows_requirement(windows_version()));
         let runtime = vc_runtime();
-        checks.push(Requirement::new("vc-runtime", "Visual C++ çalışma zamanı", if runtime { "ok" } else { "error" }, if runtime { "Gerekli x64 çalışma zamanı DLL dosyaları yüklenebiliyor." } else { "Microsoft Visual C++ x64 Redistributable kurulmalı; kurulumdan sonra yeniden denetleyin." }, Some("https://aka.ms/vs/17/release/vc_redist.x64.exe")));
+        checks.push(Requirement::new("vc-runtime", "Visual C++ çalışma zamanı", if runtime { "ok" } else { "error" }, if runtime { "Gerekli x64 çalışma zamanı DLL dosyaları yüklenebiliyor." } else { "Microsoft Visual C++ x64 Redistributable uygulama içinden otomatik kurulabilir. Windows yönetici izni isteyebilir." }, Some("https://aka.ms/vs/17/release/vc_redist.x64.exe")));
         let writable = tempfile::NamedTempFile::new_in(&self.home)
             .map(|mut file| {
                 use std::io::Write;
@@ -226,13 +226,17 @@ impl Manager {
     }
 
     pub(crate) fn check_install_requirements(&self) -> anyhow::Result<()> {
+        self.check_runtime_platform()?;
+        self.ensure_windows_runtime_inner()
+    }
+
+    pub(crate) fn check_runtime_platform(&self) -> anyhow::Result<()> {
         let errors = self
             .requirements()
             .into_iter()
             .filter(|r| {
                 r.status == "error"
-                    && ["platform", "windows-version", "vc-runtime", "storage-write"]
-                        .contains(&r.id.as_str())
+                    && ["platform", "windows-version", "storage-write"].contains(&r.id.as_str())
             })
             .map(|r| format!("{}: {}", r.label, r.detail))
             .collect::<Vec<_>>();

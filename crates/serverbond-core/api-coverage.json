@@ -28,6 +28,7 @@
     "open_project_terminal": ["POST /projects/{id}/terminal"],
     "requirements": ["GET /requirements"],
     "open_runtime_download": ["POST /system/runtime-download"],
+    "install_windows_runtime": ["POST /system/runtime-install"],
     "service": ["POST /services/{id}/start", "POST /services/{id}/stop", "POST /services/{id}/restart"],
     "add_project": ["POST /projects", "POST /projects/create"],
     "setup_preflight": ["POST /projects/setup-check"],

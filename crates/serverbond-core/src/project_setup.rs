@@ -121,9 +121,7 @@ impl Manager {
             checks.push(json!({"id":"composer","ok":self.executable("composer").is_ok(),"installable":true}));
         }
         if matches!(input.source, SetupSource::Git | SetupSource::Github) {
-            checks.push(
-                json!({"id":"git","ok":crate::release::git_program().is_ok(),"installable":false}),
-            );
+            checks.push(json!({"id":"git","ok":self.git_program().is_ok(),"installable":true}));
         }
         if input.build {
             checks.push(json!({"id":"node","ok":self.node_state().installed,"installable":true}));
@@ -183,6 +181,14 @@ impl Manager {
         if input.install_dependencies {
             self.check_install_requirements()?;
             self.cloud_stage("dependencies");
+            if matches!(
+                input.source,
+                SetupSource::Git | SetupSource::Github | SetupSource::Laravel
+            ) || input.composer
+                || input.build
+            {
+                self.ensure_git_inner()?;
+            }
             if crate::install::validate_installation(
                 &self.home.join("bin/php").join(&input.php_version),
                 &php,
@@ -334,6 +340,7 @@ impl Manager {
             "package.json build komutu bulunamadı."
         );
         let node_dir = self.tool_directory(crate::node::ID)?;
+        self.ensure_git_inner()?;
         let deadline = Instant::now() + timeout;
         for args in [vec!["ci", "--no-audit", "--no-fund"], vec!["run", "build"]] {
             let mut cmd = crate::process::command(node_dir.join("node.exe"));
@@ -380,6 +387,11 @@ impl Manager {
         }
         if let Ok(node) = self.tool_directory(crate::node::ID) {
             paths.push(node);
+        }
+        if let Ok(git) = self.git_program() {
+            if let Some(bin) = git.parent() {
+                paths.push(bin.to_path_buf());
+            }
         }
         if let Some(existing) = std::env::var_os("PATH") {
             paths.extend(std::env::split_paths(&existing));
@@ -445,6 +457,32 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("farklı"));
+    }
+
+    #[test]
+    fn git_preflight_reports_automatic_install_without_downloading() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let mut input = request(&manager);
+        input.source = SetupSource::Github;
+        input.location = "owner/repo".into();
+        input.install_dependencies = true;
+        let report = manager.setup_preflight(&input).unwrap();
+        let git = report["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|check| check["id"] == "git")
+            .unwrap();
+        assert_eq!(git["installable"], true);
+        assert!(!home.path().join("bin/git").exists());
+        assert_eq!(
+            std::fs::read_dir(home.path().join("cache"))
+                .unwrap()
+                .count(),
+            0
+        );
+        assert!(manager.snapshot().unwrap().projects.is_empty());
     }
 
     #[test]

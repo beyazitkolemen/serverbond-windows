@@ -125,6 +125,7 @@ Tema `config/appearance.json` dosyasında saklanır. İlk arayüz açılışı m
 | POST | `/permissions/ensure` | Daha önce kaydedilmiş izin tercihini uygular |
 | POST | `/system/open-home` | ServerBond veri klasörünü açar |
 | POST | `/system/runtime-download` | Visual C++ Runtime indirme sayfasını açar |
+| POST | `/system/runtime-install` | Eksik Visual C++ x64 çalışma zamanını SHA-256 ve Microsoft imzasıyla doğrular, kurar ve güncel `requirements` listesini döndürür. Windows yönetici izni isteyebilir; otomatik yeniden başlatma yapmaz. Önceki başarısız denemeyi açıkça yeniden dener. |
 | POST | `/projects/{id}/open` | Projeyi varsayılan tarayıcıda açar |
 | POST | `/projects/{id}/terminal` | Proje terminalini açar |
 | POST | `/services/{id}/open` | `id`: `phpmyadmin` veya `mail` |

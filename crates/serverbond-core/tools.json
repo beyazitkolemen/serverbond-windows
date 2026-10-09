@@ -1,5 +1,13 @@
 [
   {
+    "id": "git", "name": "Git (MinGit)", "version": "2.56.0.2",
+    "description": "Git for Windows · sistem Git yoksa uygulamaya özel kurulur.",
+    "url": "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.2/MinGit-2.56.0.2-64-bit.zip",
+    "sha256": "da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be",
+    "archive": true, "prefix": "", "executable": "cmd/git.exe",
+    "license": "GPL-2.0", "source": "https://github.com/git-for-windows/git/releases/tag/v2.56.0.windows.2"
+  },
+  {
     "id": "cloudflared", "name": "Cloudflared", "version": "2026.9.1",
     "description": "Cloudflare Tunnel istemcisi · yerel projeyi dış adresten açar.",
     "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-windows-amd64.exe",

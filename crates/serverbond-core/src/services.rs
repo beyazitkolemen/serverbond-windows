@@ -274,6 +274,8 @@ impl Manager {
 
     pub fn restart(&self) -> Result<()> {
         let _guard = self.gate()?;
+        #[cfg(windows)]
+        self.ensure_windows_runtime_inner()?;
         self.stop_inner()?;
         self.start_inner("all")?;
         self.mark_state_dirty();
@@ -288,6 +290,8 @@ impl Manager {
     }
 
     fn start_inner(&self, id: &str) -> Result<()> {
+        #[cfg(windows)]
+        self.ensure_windows_runtime_inner()?;
         // Remove and report exited children before taking the rollback baseline.
         self.snapshot()?;
         match id {
