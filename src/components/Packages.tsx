@@ -124,8 +124,8 @@ export default function Packages({
           <thead>
             <tr>
               <th>Bileşen</th>
-              {detailed ? <th>Açıklama</th> : null}
-              <th>Sürüm</th>
+              {detailed ? <th className="package-description">Açıklama</th> : null}
+              <th className="version">Sürüm</th>
               <th>Durum</th>
               <th className="actions-heading">İşlem</th>
             </tr>

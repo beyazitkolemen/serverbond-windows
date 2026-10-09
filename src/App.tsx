@@ -491,58 +491,60 @@ function WorkspaceApp() {
               </button>
             </div>
           ) : null}
-          {page === Page.Overview || page === Page.Packages ? (
-            <Packages
-              packages={state.packages}
-              phpVersions={state.phpVersions}
-              busy={disabled}
-              run={run}
-              detailed={page === Page.Packages}
-              pmaEnabled={state.settings.phpmyadmin.enabled}
-              running={running}
-              onOpen={
-                page === Page.Overview
-                  ? () => setPage(Page.Packages)
-                  : undefined
-              }
-            />
-          ) : null}
-          {page === Page.Overview || page === Page.Projects ? (
-            <Projects
-              projects={state.projects}
-              phpVersions={state.phpVersions}
-              serverError={error}
-              anyRunning={running}
-              clearError={() => setError("")}
-              webRunning={state.packages.some(
-                (p) => p.id === ComponentId.Caddy && p.running,
-              )}
-              phpVersion={
-                state.packages.find((p) => p.id === ComponentId.Php)?.version ??
-                ""
-              }
-              busy={disabled}
-              run={run}
-              webPort={state.settings.webPort}
-              https={state.settings.web.https}
-              httpsPort={state.settings.web.httpsPort}
-              mysqlRunning={state.packages.some(
-                (p) => p.id === ComponentId.Mysql && p.running,
-              )}
-              home={state.settings.projectsDir || `${state.home}/www`}
-              hostPattern={state.settings.web.hostPattern}
-              github={state.github}
-              compact={page === Page.Overview}
-              onOpen={
-                page === Page.Overview
-                  ? () => setPage(Page.Projects)
-                  : undefined
-              }
-            />
-          ) : null}
-          {page === Page.Overview ? (
-            <LogPreview logs={state.logs} onOpen={() => setPage(Page.Logs)} />
-          ) : null}
+          <div className={page === Page.Overview ? "overview-grid" : undefined}>
+            {page === Page.Overview || page === Page.Packages ? (
+              <Packages
+                packages={state.packages}
+                phpVersions={state.phpVersions}
+                busy={disabled}
+                run={run}
+                detailed={page === Page.Packages}
+                pmaEnabled={state.settings.phpmyadmin.enabled}
+                running={running}
+                onOpen={
+                  page === Page.Overview
+                    ? () => setPage(Page.Packages)
+                    : undefined
+                }
+              />
+            ) : null}
+            {page === Page.Overview || page === Page.Projects ? (
+              <Projects
+                projects={state.projects}
+                phpVersions={state.phpVersions}
+                serverError={error}
+                anyRunning={running}
+                clearError={() => setError("")}
+                webRunning={state.packages.some(
+                  (p) => p.id === ComponentId.Caddy && p.running,
+                )}
+                phpVersion={
+                  state.packages.find((p) => p.id === ComponentId.Php)
+                    ?.version ?? ""
+                }
+                busy={disabled}
+                run={run}
+                webPort={state.settings.webPort}
+                https={state.settings.web.https}
+                httpsPort={state.settings.web.httpsPort}
+                mysqlRunning={state.packages.some(
+                  (p) => p.id === ComponentId.Mysql && p.running,
+                )}
+                home={state.settings.projectsDir || `${state.home}/www`}
+                hostPattern={state.settings.web.hostPattern}
+                github={state.github}
+                compact={page === Page.Overview}
+                onOpen={
+                  page === Page.Overview
+                    ? () => setPage(Page.Projects)
+                    : undefined
+                }
+              />
+            ) : null}
+            {page === Page.Overview ? (
+              <LogPreview logs={state.logs} onOpen={() => setPage(Page.Logs)} />
+            ) : null}
+          </div>
           {page === Page.Logs ? <Logs /> : null}
           {page === Page.Services ? (
             <Services

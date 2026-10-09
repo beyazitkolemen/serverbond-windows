@@ -119,7 +119,7 @@ export default function Projects({
         )}
         <div className="heading-actions">
           <button
-            className="button primary small"
+            className="button secondary small"
             disabled={busy}
             onClick={() => {
               clearError();

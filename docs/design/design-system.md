@@ -6,13 +6,13 @@ Türkçe Windows Laravel üretim paneli. React ve mevcut CSS altyapısı korunur
 
 Sade çalışma alanı: nötr yüzeyler, ince ayırıcılar, tek lacivert vurgu. Uygulamalar yan yana kartlar yerine her biri ayrı satırda listelenir. Açık temada kenar çubuğu yumuşak mavi-gridir; koyu temada aynı hiyerarşi nötr koyu yüzeylerle korunur.
 
-- **Renkler:** zemin `--canvas` `#f2f5fa`, yüzey `#ffffff`, kenar çubuğu `#e8eef7`, kenar `--border` `#dce4ef`. Metin `--ink` `#172b46`, ikincil `--muted` `#5b6c81`. Vurgu `--accent` `#234577`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler renkleri tokenlardan alır.
-- **Yazı:** Segoe UI Variable → Segoe UI → system-ui. Sayfa başlığı 32/650 (1150 altında 28), bölüm 18/650, gövde 14, kontroller 13/600. Sürümler ve ölçümler tabular. Ürün satırı yalnızca kenar çubuğundadır; sayfa kaşı tekrarlanmaz.
+- **Renkler:** zemin `--canvas` `#f4f6f9`, yüzey `#ffffff`, kenar çubuğu `#edf1f6`, kenar `--border` `#e0e6ee`. Metin `--ink` `#202b3d`, ikincil `--muted` `#627086`. Vurgu `--accent` `#234577`. Hata `--danger` `#b42318`, uyarı `--warning` `#b54708`. Bileşenler renkleri tokenlardan alır.
+- **Yazı:** Segoe UI Variable → Segoe UI → system-ui. Sayfa başlığı 26/650 (540 altında 22), bölüm 16/650, gövde 14, kontroller 13/600. Sürümler ve ölçümler tabular. Ürün satırı yalnızca kenar çubuğundadır; sayfa kaşı tekrarlanmaz.
 - **Izgara:** 4 piksel. Aralıklar `--space-1`…`--space-9` (4–36). Kenar boşluğu dışı 9, 11, 13, 15, 17, 19, 22, 25 kullanılmaz.
-- **Yerleşim:** kenar çubuğu `--sidebar-w` 224 (850 altında 76, 540 altında 60). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 36 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; marka, gezinme ve alt bilgi aynı dikey hatta durur.
+- **Yerleşim:** kenar çubuğu `--sidebar-w` 208 (850 altında 76, 540 altında 60). İçerik, araç çubuğu ve alt bilgi aynı `--content-max` 1400 + `--page-pad` 24 rayındadır (1150 altında 24, 540 altında 16). Kenar çubuğu yatay dolgusu 16; marka, gezinme ve alt bilgi aynı dikey hatta durur.
 - **Kenar çubuğu grupları:** Çalışma alanı (Genel bakış, Projeler, Günlükler), Sunucu (Bileşenler, Hizmetler), alta sabitlenen Yönetim (Ayarlar). Gruplar kutu yerine boşluk ve küçük başlıklarla ayrılır; seçili satır dolu lacivert yüzey ve açık metinle belirtilir.
-- **Kontrol:** birincil yükseklik `--control-h` 40, sıkışık `--control-h-sm` 32. Simge düğmesi 32, ortam düğmesi 40. Girdi ve seçici aynı yükseklikte hizalanır.
-- **Şekil:** kontroller 8, liste ve panel dış köşeleri 12 piksel. Liste satırları tek yüzey içinde ince çizgilerle ayrılır. `--shadow-sm` kapalıdır; modal gibi yükseltilmiş katmanlarda `--shadow-md` kullanılır.
+- **Kontrol:** birincil yükseklik `--control-h` 36, sıkışık `--control-h-sm` 28. Simge düğmesi 28, ortam düğmesi 36. Girdi ve seçici aynı yükseklikte hizalanır.
+- **Şekil:** kontroller 8, liste ve panel dış köşeleri 12 piksel. Liste satırları tek yüzey içinde ince çizgilerle ayrılır. Liste yüzeylerinde hafif optik gölge kullanılır; `--shadow-sm` varsayılan olarak kapalıdır; modal gibi yükseltilmiş katmanlarda `--shadow-md` kullanılır.
 - **Durum:** çalışan servis hapı yeşil; hata ve uyarı ayrı anlam renkleri. Odak halkası `--accent`. Sekmeler ve PHP seçici de beyaz yüzey kullanır.
 - **Koyu görünüm:** aynı token adları `:root[data-theme="dark"]` altında ikinci bir değer seti alır; bileşenler renk için yalnızca token kullanır (`--console-bg`, `--console-ink`, `--sidebar-edge`, `--on-accent` dahil). Tercih Ayarlar → Görünüm'de; `system` Windows'u izler.
 
@@ -36,7 +36,7 @@ Form taslakları `useDraft` ile tutulur: kullanıcı yazarken anlık görüntü 
 
 ## Sayfalar
 
-- **Genel bakış:** sunucu durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
+- **Genel bakış:** 1200px ve üzerinde iki kolon; solda bileşen tablosu, sağda projeler ve son kayıtlar. Daha dar pencerelerde tek kolon. Sunucu durumu, ölçümler, bileşen/sürüm/durum/işlem tablosu, kompakt proje satırları ve son kayıtlar. Sayfa alt yazısı, ortam açıklaması, bileşen açıklama sütunu ve proje klasör yolları gösterilmez. Hatalar ve işlem sonuçları görünür kalır.
 - **Bileşenler:** PHP sürümü, tam servis tablosu, lisans/PID ve onarım.
 - **Projeler:** solda aramalı proje seçici ve simgeli dikey bölüm menüsü: Özet, Ortam, Zamanlama, Kuyruklar, Sürüm, Günlükler, Veritabanı. Sağda proje başlığı, Aç / Terminal işlemleri ve geniş içerik alanı bulunur. Seçici ad, alan adı ve klasör yolunda arar; arama mevcut projeyi değiştirmez. Escape seçiciyi kapatıp odağı geri verir. 760 piksel altında bölüm menüsü etiketli bir seçiciye dönüşür.
 - **Hizmetler:** her uygulama tam genişlikte bir satır. Üstte Tümü / Etkin filtresi ve arama yer alır. Etkin, çalışan servislerin yanında açık phpMyAdmin erişimini ve bağlı GitHub hesabını da kapsar. Simge/ad, açıklama, durum ve açma oku masaüstünde hizalıdır. 1100 altında açıklama adın altına; 540 altında durum da alta geçer. Satırın tamamı klavyeyle erişilebilir bir düğmedir. Hizmete girince üstte ortak denetim şeridi (durum, Kur / Başlat / Durdur / Aç); port ve jeton **Ayarlar** düğmesindedir. Onarım ayrı karttır.
@@ -68,3 +68,7 @@ Arama Türkçe karakterlerle veya düz klavyeyle aynı sonuçları verir (`Tüne
 - Sınır dışı sayı blur sırasında sessizce değiştirilmez. Hata alanın altında açıklanır; kuyruk/zamanlayıcı formlarında tarayıcının doğrulaması kaydı engeller. Vazgeç yerel sayısal alanları da sıfırlar.
 - Snapshot erişimi kesilirse ayrı, kalıcı bir uyarı son başarılı güncelleme saatini gösterir. İşlem başarısı ile okuma hatası birbirini maskelemez.
 - Başarı yüzeyleri `--success-soft` ve `--success-border` kullanır; lacivert tema başarılı/uyarılı/hatalı durumların anlamını değiştirmez.
+
+## v1.3.39 kompakt görünüm
+
+Araç çubuğu 48px, sayfa başlığı çevresi 20px ve bölüm aralıkları 20px. Açık/koyu yüzeyler nötr slate ailesini kullanır; tek lacivert vurgu korunur. Ayar menüsü 168px, proje menüsü 184px, iç panel dolguları 20px (dar ekranlarda 16px). Geniş genel bakışın sağ panelinde uzun proje adları ve adresleri satıra geçer; işlem düğmeleri alt satırdadır. Odak halkaları, klavye gezinmesi, yerel tablo kaydırması ve reduced-motion desteği korunur.
