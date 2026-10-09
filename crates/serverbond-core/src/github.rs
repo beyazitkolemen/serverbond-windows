@@ -395,6 +395,12 @@ impl Manager {
         } else {
             apply_github_git_auth(&mut cmd, None);
         }
+        // Atomically claim the destination. An earlier UI/preflight existence
+        // check cannot establish ownership against another filesystem writer.
+        // Git accepts an existing empty directory; cleanup below is permitted
+        // only after this request successfully created it.
+        std::fs::create_dir(destination)
+            .context("Git hedef klasörü oluşturulamadı; mevcut dosyalar korundu.")?;
         self.log(format!(
             "Git deposu klonlanıyor: {url}{}",
             if branch.is_empty() {
@@ -407,7 +413,7 @@ impl Manager {
             .and_then(|mut child| child.wait_timeout(Duration::from_secs(600)));
         if let Err(error) = result {
             // A half-written clone would block the next attempt with "folder
-            // exists"; the folder did not exist before this call, so drop it.
+            // exists"; this request exclusively created the folder, so drop it.
             if destination.exists() {
                 let _ = std::fs::remove_dir_all(destination);
             }
@@ -440,6 +446,25 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::{parse_github_repository, validate_git_url, validate_github_token};
+
+    #[test]
+    fn failed_clone_preserves_an_existing_destination_and_its_secrets() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = crate::Manager::new(home.path().into()).unwrap();
+        let destination = home.path().join("existing-project");
+        std::fs::create_dir_all(&destination).unwrap();
+        std::fs::write(destination.join(".env"), "APP_KEY=preserve-me").unwrap();
+        let missing = reqwest::Url::from_directory_path(home.path().join("missing.git"))
+            .unwrap()
+            .to_string();
+        assert!(manager
+            .clone_git_repository_with_token(&missing, &destination, "main", None)
+            .is_err());
+        assert_eq!(
+            std::fs::read_to_string(destination.join(".env")).unwrap(),
+            "APP_KEY=preserve-me"
+        );
+    }
 
     #[test]
     fn git_urls_are_limited_to_https_and_file() {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import { apiService } from "../services";
 import type { ApiSettings as ApiValues, ApiStatus, Run } from "../types";
@@ -27,15 +27,36 @@ export default function ApiSettings({
 }) {
   const [status, setStatus] = useState<ApiStatus | null>(null);
   const [token, setToken] = useState("");
-  const refresh = () =>
-    apiService
-      .status()
-      .then(setStatus)
-      .catch(() => setStatus(null));
+  const statusRevision = useRef(0);
+  const mounted = useRef(false);
+  const reading = useRef(false);
+  const refresh = async (afterMutation = false) => {
+    if (reading.current && !afterMutation) return;
+    reading.current = true;
+    const revision = ++statusRevision.current;
+    try {
+      const next = await apiService.status(
+        afterMutation ? { fresh: true } : undefined,
+      );
+      if (mounted.current && revision === statusRevision.current)
+        setStatus(next);
+    } catch {
+      if (mounted.current && revision === statusRevision.current)
+        setStatus(null);
+    } finally {
+      if (revision === statusRevision.current) reading.current = false;
+    }
+  };
   useEffect(() => {
+    mounted.current = true;
     void refresh();
     const timer = window.setInterval(() => void refresh(), 5000);
-    return () => clearInterval(timer);
+    return () => {
+      mounted.current = false;
+      reading.current = false;
+      ++statusRevision.current;
+      clearInterval(timer);
+    };
   }, []);
   const baseUrl = status?.baseUrl ?? `http://127.0.0.1:${values.port}/api/v1`;
   const example = `curl -H "Authorization: Bearer ${token || "<jeton>"}" ${baseUrl}/status`;
@@ -114,7 +135,7 @@ export default function ApiSettings({
             void run("API jetonu oluşturuluyor…", async () => {
               const created = await apiService.createToken();
               setToken(created);
-              await refresh();
+              await refresh(true);
               return "Yeni jeton oluşturuldu. Yalnızca bu ekranda gösterilir.";
             })
           }
@@ -134,7 +155,7 @@ export default function ApiSettings({
             void run("API jetonu siliniyor…", async () => {
               await apiService.forgetToken();
               setToken("");
-              await refresh();
+              await refresh(true);
               return "Jeton silindi; API istekleri artık kabul edilmez.";
             })
           }

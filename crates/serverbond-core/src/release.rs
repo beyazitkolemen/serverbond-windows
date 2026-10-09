@@ -296,6 +296,19 @@ fn git_command_with_token(
 ) -> Result<Command> {
     let git = manager.git_program()?;
     let mut cmd = command(git);
+    if args.first().is_some_and(|arg| arg == "pull") {
+        // User/global repository settings must not turn a fast-forward-only
+        // deployment into an automatic stash/rebase. A conflicting dirty tree
+        // must fail while retaining HEAD, the index and working files.
+        cmd.args([
+            "-c",
+            "pull.rebase=false",
+            "-c",
+            "rebase.autoStash=false",
+            "-c",
+            "merge.autoStash=false",
+        ]);
+    }
     cmd.args(args).current_dir(&project.path);
     // Local status/branch operations and unrelated remotes must remain usable
     // when a saved GitHub credential has expired or cannot be decrypted.
@@ -1060,5 +1073,97 @@ mod tests {
         assert!(migrate_args()
             .iter()
             .all(|arg| !arg.contains(';') && !arg.contains('|')));
+    }
+
+    #[test]
+    fn deployment_never_autostashes_dirty_work_even_when_repository_enables_it() {
+        let home = tempfile::tempdir().unwrap();
+        let git = git_program().unwrap();
+        let run = |path: &Path, args: &[&str]| {
+            let output = Command::new(&git)
+                .current_dir(path)
+                .args([
+                    "-c",
+                    "commit.gpgSign=false",
+                    "-c",
+                    if cfg!(windows) {
+                        "core.hooksPath=NUL"
+                    } else {
+                        "core.hooksPath=/dev/null"
+                    },
+                ])
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        };
+        let source = home.path().join("source");
+        let destination = home.path().join("destination");
+        run(
+            home.path(),
+            &["init", "-b", "main", source.to_str().unwrap()],
+        );
+        run(&source, &["config", "user.email", "test@example.com"]);
+        run(&source, &["config", "user.name", "Test"]);
+        std::fs::write(source.join("tracked.txt"), "base\n").unwrap();
+        run(&source, &["add", "."]);
+        run(&source, &["commit", "-m", "base"]);
+        run(
+            home.path(),
+            &[
+                "clone",
+                source.to_str().unwrap(),
+                destination.to_str().unwrap(),
+            ],
+        );
+        run(&destination, &["config", "pull.rebase", "true"]);
+        run(&destination, &["config", "rebase.autoStash", "true"]);
+        run(&destination, &["config", "merge.autoStash", "true"]);
+        std::fs::write(destination.join("tracked.txt"), "my uncommitted work\n").unwrap();
+        std::fs::write(destination.join(".env"), "APP_KEY=keep\n").unwrap();
+        std::fs::write(source.join("tracked.txt"), "remote update\n").unwrap();
+        run(&source, &["add", "."]);
+        run(&source, &["commit", "-m", "remote"]);
+        let before = run(&destination, &["rev-parse", "HEAD"]);
+        let manager = Manager::new(home.path().into()).unwrap();
+        let project = Project {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "test".into(),
+            path: destination.clone(),
+            host: "test.localhost".into(),
+            php_version: String::new(),
+            workers: vec![],
+            schedule: Default::default(),
+            release: Default::default(),
+        };
+        let result = manager.run_release_step_with_token(
+            &project,
+            &ReleaseStep {
+                name: "git".into(),
+                args: vec!["pull".into(), "--ff-only".into(), "--no-edit".into()],
+            },
+            Instant::now() + Duration::from_secs(30),
+            None,
+            None,
+        );
+        assert!(
+            result.is_err(),
+            "deployment should refuse conflicting dirty work: {result:?}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(destination.join("tracked.txt")).unwrap(),
+            "my uncommitted work\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(destination.join(".env")).unwrap(),
+            "APP_KEY=keep\n"
+        );
+        assert_eq!(run(&destination, &["rev-parse", "HEAD"]), before);
+        assert!(run(&destination, &["stash", "list"]).is_empty());
     }
 }

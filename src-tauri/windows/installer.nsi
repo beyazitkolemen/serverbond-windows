@@ -557,6 +557,18 @@ Section WebView2
     ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
 
+  ; Missing and outdated runtimes share the embedded bootstrapper. A stale
+  ; EdgeUpdate registry path must not make installation silently skip updates.
+  !if "${MINIMUMWEBVIEW2VERSION}" != ""
+    ${If} $4 != ""
+    ${AndIf} $4 != "0.0.0.0"
+      ${VersionCompare} "${MINIMUMWEBVIEW2VERSION}" "$4" $R0
+      ${If} $R0 = 1
+        StrCpy $4 ""
+      ${EndIf}
+    ${EndIf}
+  !endif
+
   ${If} $4 == ""
   ${OrIf} $4 == "0.0.0.0"
     ; Webview2 installation
@@ -612,34 +624,6 @@ Section WebView2
           Abort "$(webview2AbortError)"
         ${EndIf}
       webview2_done:
-  ${Else}
-    !if "${MINIMUMWEBVIEW2VERSION}" != ""
-      ${VersionCompare} "${MINIMUMWEBVIEW2VERSION}" "$4" $R0
-      ${If} $R0 = 1
-        update_webview:
-          DetailPrint "$(installingWebview2)"
-          ${If} ${RunningX64}
-            ReadRegStr $R1 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate" "path"
-          ${Else}
-            ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\EdgeUpdate" "path"
-          ${EndIf}
-          ${If} $R1 == ""
-            ReadRegStr $R1 HKCU "SOFTWARE\Microsoft\EdgeUpdate" "path"
-          ${EndIf}
-          ${If} $R1 != ""
-            ; Chromium updater docs: https://source.chromium.org/chromium/chromium/src/+/main:docs/updater/user_manual.md
-            ; Modified from "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView\ModifyPath"
-            ExecWait `"$R1" /install appguid=${WEBVIEW2APPGUID}&needsadmin=true` $1
-            ${If} $1 = 0
-              DetailPrint "$(webview2InstallSuccess)"
-            ${Else}
-              MessageBox MB_ICONEXCLAMATION|MB_ABORTRETRYIGNORE "$(webview2InstallError)" IDIGNORE ignore IDRETRY update_webview
-              Quit
-              ignore:
-            ${EndIf}
-          ${EndIf}
-      ${EndIf}
-    !endif
   ${EndIf}
 SectionEnd
 

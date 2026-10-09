@@ -330,6 +330,20 @@ pub fn required_files(package: &Package) -> Vec<&str> {
             "bin/pg_isready.exe",
         ],
         Ok(ComponentId::Redis) => vec!["redis-server.exe", "redis-cli.exe", "msys-2.0.dll"],
+        // cmd/git.exe is a launcher; local commands, HTTPS clones and shell
+        // dependencies need the rest of the pinned MinGit runtime as well.
+        Ok(ComponentId::Git) => vec![
+            "cmd/git.exe",
+            "ucrt64/bin/git.exe",
+            "ucrt64/bin/git-remote-https.exe",
+            "ucrt64/bin/libcurl-4.dll",
+            "ucrt64/bin/libcrypto-3-x64.dll",
+            "ucrt64/bin/libssl-3-x64.dll",
+            "ucrt64/bin/zlib1.dll",
+            "ucrt64/etc/ssl/certs/ca-bundle.crt",
+            "usr/bin/sh.exe",
+            "usr/bin/msys-2.0.dll",
+        ],
         _ => vec![&package.executable],
     }
 }

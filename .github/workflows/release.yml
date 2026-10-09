@@ -120,6 +120,12 @@ jobs:
       - name: Unsigned Windows installer
         if: env.TAURI_SIGNING_PRIVATE_KEY == ''
         run: npm run desktop:build:unsigned
+      - name: Windows installer regressions
+        # Tauri's build installs NSIS; exercise the real template only afterwards.
+        shell: pwsh
+        run: |
+          ./scripts/ai/test-installer-paths.ps1
+          ./scripts/ai/test-webview-prerequisites.ps1
       - name: Versioned checksums
         shell: pwsh
         run: |

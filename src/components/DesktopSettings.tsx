@@ -1,5 +1,5 @@
 import { useUnsavedChanges } from "../hooks/useNavigationGuard";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { call, desktop } from "../api";
 import type { Run } from "../types";
 
@@ -25,21 +25,25 @@ export default function DesktopSettings({
     autostart: boolean;
   } | null>(null);
   const [error, setError] = useState("");
+  const statusRevision = useRef(0);
+  const saving = useRef(false);
   useEffect(() => {
     if (!desktop) return;
     let active = true,
       loading = false;
     const refresh = async () => {
-      if (loading) return;
+      if (loading || saving.current) return;
       loading = true;
+      const revision = ++statusRevision.current;
       try {
         const next = await call<Status>("desktop_status");
-        if (active) {
+        if (active && revision === statusRevision.current) {
           setStatus(next);
           setError("");
         }
       } catch (error) {
-        if (active) setError(String(error));
+        if (active && revision === statusRevision.current)
+          setError(String(error));
       } finally {
         loading = false;
       }
@@ -48,6 +52,7 @@ export default function DesktopSettings({
     const timer = setInterval(() => void refresh(), 3000);
     return () => {
       active = false;
+      ++statusRevision.current;
       clearInterval(timer);
     };
   }, []);
@@ -87,12 +92,22 @@ export default function DesktopSettings({
       className="settings-section"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!current || !dirty || busy) return;
+        if (!current || !dirty || busy || saving.current) return;
+        saving.current = true;
+        const revision = ++statusRevision.current;
         void run("Masaüstü tercihleri kaydediliyor…", async () => {
           await call("desktop_save", current);
-          setStatus(await call<Status>("desktop_status"));
-          setDraft(null);
+          const next = await call<Status>("desktop_status", undefined, {
+            fresh: true,
+          });
+          if (revision === statusRevision.current) {
+            setStatus(next);
+            setError("");
+            setDraft(null);
+          }
           return "Masaüstü tercihleri uygulandı.";
+        }).finally(() => {
+          saving.current = false;
         });
       }}
     >

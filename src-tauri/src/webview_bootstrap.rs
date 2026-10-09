@@ -1,7 +1,13 @@
 //! Prepare WebView2 before Tauri creates its first webview, including portable launches.
 use anyhow::{bail, Context, Result};
 use serverbond_core::{install, model::Package, Manager};
-use std::{os::windows::process::CommandExt, path::Path, process::Command};
+use std::{
+    io::{Read, Seek, SeekFrom},
+    os::windows::process::CommandExt,
+    path::Path,
+    process::{Command, Output, Stdio},
+    time::{Duration, Instant},
+};
 use winreg::{enums::*, RegKey};
 
 const BOOTSTRAPPER_SHA256: &str =
@@ -80,6 +86,63 @@ fn installer_exit(stdout: &[u8]) -> Result<i32> {
         .context("WebView2 kurulum sonucu alınamadı.")
 }
 
+fn needs_repair(home: &Path, package: &Package) -> bool {
+    let health = install::health(home, package);
+    let installer = home
+        .join("bin")
+        .join(&package.id)
+        .join(&package.version)
+        .join(&package.executable);
+    health.repairable
+        && (!health.installed || install::verify_hash(&installer, &package.sha256).is_err())
+}
+
+// Bound the entire PowerShell operation, including signature verification and
+// Start-Process. Avoid a kill-on-close Job Object: the Microsoft installer must
+// be allowed to finish safely even when its reporting wrapper times out.
+fn run_script(mut command: Command, timeout: Duration) -> Result<Output> {
+    let mut stdout = tempfile::tempfile()?;
+    let mut stderr = tempfile::tempfile()?;
+    command
+        .stdin(Stdio::null())
+        .stdout(stdout.try_clone()?)
+        .stderr(stderr.try_clone()?);
+    let mut child = command.spawn()?;
+    let started = Instant::now();
+    let limit = 1024 * 1024;
+    let status = loop {
+        let size = stdout
+            .metadata()?
+            .len()
+            .saturating_add(stderr.metadata()?.len());
+        if size > limit || started.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            bail!("WebView2 hazırlama işlemi zaman veya çıktı sınırını aştı. Microsoft yükleyicisi hâlâ çalışıyor olabilir; bitmesini bekleyip tekrar deneyin.");
+        }
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    };
+    let read = |file: &mut std::fs::File, remaining: u64| -> Result<Vec<u8>> {
+        file.seek(SeekFrom::Start(0))?;
+        let mut bytes = Vec::new();
+        file.take(remaining + 1).read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > remaining {
+            bail!("WebView2 hazırlama çıktısı 1 MB sınırını aştı.");
+        }
+        Ok(bytes)
+    };
+    let stdout = read(&mut stdout, limit)?;
+    let stderr = read(&mut stderr, limit - stdout.len() as u64)?;
+    Ok(Output {
+        status,
+        stdout,
+        stderr,
+    })
+}
+
 /// This runs before Tauri's builder so a missing runtime can be installed
 /// without requiring an already-working webview. No automatic system reboot.
 pub fn ensure(home: &Path) -> Result<()> {
@@ -98,8 +161,7 @@ pub fn ensure(home: &Path) -> Result<()> {
         return Ok(());
     }
     let package = package();
-    let health = install::health(home, &package);
-    if health.repairable && !health.installed {
+    if needs_repair(home, &package) {
         install::repair(home, &package, |_| {})?;
     } else {
         install::install(home, &package, |_| {})?;
@@ -113,15 +175,16 @@ pub fn ensure(home: &Path) -> Result<()> {
     let system_root =
         std::env::var_os("SystemRoot").context("Windows sistem dizini bulunamadı.")?;
     let powershell = Path::new(&system_root).join("System32/WindowsPowerShell/v1.0/powershell.exe");
-    let output = Command::new(powershell)
+    let mut command = Command::new(powershell);
+    command
         .args([
             "-NoProfile",
             "-NonInteractive",
             "-Command",
             &installer_script(&installer),
         ])
-        .creation_flags(0x08000000)
-        .output()
+        .creation_flags(0x08000000);
+    let output = run_script(command, Duration::from_secs(16 * 60))
         .context("WebView2 yükleyicisi başlatılamadı.")?;
     if !output.status.success() {
         bail!(
@@ -202,5 +265,76 @@ mod tests {
         assert!(Manager::open_recovering(home.clone()).is_err());
         drop(manager);
         assert!(Manager::open_recovering(home).is_ok());
+    }
+
+    #[test]
+    fn corrupted_bootstrapper_with_valid_receipt_is_repaired() {
+        let temporary = tempfile::tempdir().unwrap();
+        let package = package();
+        let directory = temporary
+            .path()
+            .join("bin")
+            .join(&package.id)
+            .join(&package.version);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(
+            directory.join("installed.json"),
+            serde_json::to_vec(&package).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(&package.executable),
+            b"modified bootstrapper",
+        )
+        .unwrap();
+        assert!(install::health(temporary.path(), &package).installed);
+        assert!(needs_repair(temporary.path(), &package));
+    }
+
+    #[test]
+    fn outer_script_timeout_covers_work_before_installer_launch() {
+        let shell = Path::new(&std::env::var_os("SystemRoot").unwrap())
+            .join("System32/WindowsPowerShell/v1.0/powershell.exe");
+        let mut command = Command::new(shell);
+        command
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Sleep -Seconds 30",
+            ])
+            .creation_flags(0x08000000);
+        let start = Instant::now();
+        let error = run_script(command, Duration::from_millis(100)).unwrap_err();
+        assert!(error.to_string().contains("bitmesini bekleyip"));
+        assert!(start.elapsed() < Duration::from_secs(10));
+    }
+
+    #[test]
+    fn outer_script_captures_status_and_bounded_output() {
+        let shell = Path::new(&std::env::var_os("SystemRoot").unwrap())
+            .join("System32/WindowsPowerShell/v1.0/powershell.exe");
+        let mut command = Command::new(&shell);
+        command
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Console]::Out.Write('result'); exit 7",
+            ])
+            .creation_flags(0x08000000);
+        let output = run_script(command, Duration::from_secs(30)).unwrap();
+        assert_eq!(output.status.code(), Some(7));
+        assert_eq!(output.stdout, b"result");
+        let mut command = Command::new(shell);
+        command
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Console]::Out.Write(('x' * 1048577))",
+            ])
+            .creation_flags(0x08000000);
+        assert!(run_script(command, Duration::from_secs(30)).is_err());
     }
 }

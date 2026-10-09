@@ -63,6 +63,13 @@ fn may_attempt(ready: bool, previous_attempt: bool, explicit_retry: bool) -> Res
     Ok(true)
 }
 
+fn package_needs_repair(directory: &Path, package: &Package) -> bool {
+    directory.exists()
+        && (crate::install::validate_installation(directory, package).is_err()
+            || crate::install::verify_hash(&directory.join(&package.executable), &package.sha256)
+                .is_err())
+}
+
 impl Manager {
     /// Explicit user retry may show the Windows UAC dialog again.
     pub fn install_windows_runtime(&self) -> Result<()> {
@@ -98,8 +105,7 @@ impl Manager {
         let directory = DataDir::new(&self.home).package(&package.id, &package.version);
         // Rebuild only an incomplete package directory, preserving its repair
         // backup through the existing verified installer.
-        let repair = directory.exists()
-            && crate::install::validate_installation(&directory, &package).is_err();
+        let repair = package_needs_repair(&directory, &package);
         self.install_package(&package, repair)?;
         let installer = directory.join(&package.executable);
         crate::install::verify_hash(&installer, VC_HASH)?;
@@ -182,6 +188,24 @@ mod tests {
             3010
         );
         assert!(installer_exit(b"success").is_err());
+    }
+
+    #[test]
+    fn modified_cached_installer_is_repaired_even_with_valid_receipt() {
+        let temporary = tempfile::tempdir().unwrap();
+        let package = runtime_package();
+        std::fs::write(
+            temporary.path().join("installed.json"),
+            serde_json::to_vec(&package).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            temporary.path().join(&package.executable),
+            b"modified installer",
+        )
+        .unwrap();
+        assert!(crate::install::validate_installation(temporary.path(), &package).is_ok());
+        assert!(package_needs_repair(temporary.path(), &package));
     }
 
     #[cfg(windows)]

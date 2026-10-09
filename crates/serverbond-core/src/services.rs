@@ -584,7 +584,7 @@ impl Manager {
         ids.sort_by_key(|id| {
             if id == "caddy" {
                 0
-            } else if id == "mysql" || id == crate::postgres::ID {
+            } else if id == "mysql" || id == crate::postgres::ID || id == crate::redis::ID {
                 2
             } else {
                 1
@@ -647,6 +647,27 @@ impl Manager {
             .unwrap_or_else(|e| e.into_inner())
             .remove(id);
         if let Some(mut child) = child {
+            if id == crate::redis::ID && child.alive() {
+                // A normal stop must persist recent queue/session writes. Do not
+                // kill a live Redis process if SAVE failed or is still running.
+                let shutdown = self.shutdown_redis().and_then(|_| {
+                    let started = std::time::Instant::now();
+                    while child.alive() {
+                        if started.elapsed() >= Duration::from_secs(15) {
+                            bail!("Redis kapanışı henüz tamamlanmadı.");
+                        }
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                    Ok(())
+                });
+                if let Err(error) = shutdown {
+                    self.processes
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .insert(id.into(), child);
+                    bail!("Redis verileri korunarak durdurulamadı; çalışan süreç sonlandırılmadı. Günlükleri kontrol edip tekrar deneyin: {error:#}");
+                }
+            }
             if id == "mysql" && child.alive() {
                 let shutdown =
                     self.mysql_command("mysqladmin.exe")

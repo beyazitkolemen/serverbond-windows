@@ -29,3 +29,15 @@ test('PostgreSQL and Cloudflared changes select their own tests', () => {
     'cloudflared_launch', 'postgres',
   ])
 })
+
+test('optional service lifecycle and packages select real persistence tests', () => {
+  for (const file of ['src/redis.rs', 'src/mail.rs', 'tests/optional_services.rs']) {
+    assert.deepEqual(selectReleaseTests([`${core}${file}`]), ['optional_services'])
+  }
+  for (const id of ['redis', 'mailpit']) {
+    assert.deepEqual(selectReleaseTests([], new Set([id])), ['optional_services'])
+  }
+  assert.deepEqual(selectReleaseTests([`${core}src/services.rs`]), [
+    'mysql_credentials', 'environment', 'optional_services',
+  ])
+})

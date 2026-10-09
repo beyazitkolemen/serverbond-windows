@@ -50,6 +50,14 @@ mod tests {
         let dir = manager.home.join("bin/git").join(&package.version);
         std::fs::create_dir_all(dir.join("cmd")).unwrap();
         std::fs::write(dir.join("cmd/git.exe"), b"fixture").unwrap();
+        for file in crate::install::required_files(&package)
+            .into_iter()
+            .filter(|file| *file != "cmd/git.exe")
+        {
+            let path = dir.join(file);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"fixture dependency").unwrap();
+        }
         std::fs::write(
             dir.join("installed.json"),
             serde_json::to_vec(&package).unwrap(),
@@ -115,10 +123,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn private_git_rejects_missing_or_empty_runtime_dependencies() {
+        let package = crate::model::tool_package(ID).unwrap();
+        for missing in crate::install::required_files(&package) {
+            let home = tempfile::tempdir().unwrap();
+            let manager = Manager::new(home.path().into()).unwrap();
+            let git = fixture(&manager);
+            let dependency = git.parent().unwrap().parent().unwrap().join(missing);
+            std::fs::write(&dependency, b"").unwrap();
+            assert!(
+                manager.git_program_with_path(None).is_err(),
+                "empty {missing}"
+            );
+            std::fs::remove_file(dependency).unwrap();
+            assert!(
+                manager.git_program_with_path(None).is_err(),
+                "missing {missing}"
+            );
+            assert!(manager.tool_health(ID).repairable);
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     #[ignore = "Downloads and extracts the verified Windows MinGit package"]
     fn repairs_private_git_and_preserves_previous_files() {
+        assert!(crate::requirements::vc_runtime(), "This test requires an existing Visual C++ runtime; it must not install host prerequisites.");
         let home = tempfile::tempdir_in("D:/Temp/F4").unwrap();
         let manager = Manager::new(home.path().into()).unwrap();
         let git = fixture(&manager);

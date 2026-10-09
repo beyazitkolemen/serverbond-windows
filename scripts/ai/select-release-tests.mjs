@@ -13,6 +13,7 @@ const order = [
   'php_matrix',
   'branding_runtime',
   'cloudflared_launch',
+  'optional_services',
   'postgres',
 ]
 
@@ -31,6 +32,7 @@ export function selectReleaseTests(changedFiles, changedPackages = new Set()) {
   if (has('src/services.rs', 'src/cloud/mysql.rs')) {
     add('mysql_credentials', 'environment')
   }
+  if (has('src/mail.rs', 'src/redis.rs', 'src/services.rs')) add('optional_services')
   if (has('src/preferences.rs')) add('preferences_runtime')
   if (has('src/postgres.rs', 'src/cloud/postgres.rs')) add('postgres')
   if (has('src/install.rs')) add(...order)
@@ -50,6 +52,7 @@ export function selectReleaseTests(changedFiles, changedPackages = new Set()) {
   }
   if (changedPackages.has('phpmyadmin')) add('environment')
   if (changedPackages.has('cloudflared')) add('cloudflared_launch')
+  if (changedPackages.has('mailpit') || changedPackages.has('redis')) add('optional_services')
 
   return order.filter((name) => selected.has(name))
 }

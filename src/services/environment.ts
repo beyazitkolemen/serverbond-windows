@@ -1,4 +1,4 @@
-import { call } from "../api";
+import { call, type ReadOptions } from "../api";
 import {
   EnvironmentAction,
   type ComponentId as ComponentName,
@@ -36,7 +36,8 @@ export const settingsService = {
 };
 
 export const apiService = {
-  status: () => call<ApiStatus>("api_status"),
+  status: (options?: ReadOptions) =>
+    call<ApiStatus>("api_status", undefined, options),
   save: (settings: ApiSettings, expected: ApiSettings) =>
     call("api_save", { settings, expected }),
   documentation: () => call<ApiDocumentation>("api_documentation"),

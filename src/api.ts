@@ -173,9 +173,13 @@ const preview: Snapshot = {
 
 const pendingReads = new Map<string, Promise<unknown>>();
 
+/** A post-mutation read must not reuse a snapshot requested before the change. */
+export type ReadOptions = { fresh?: boolean };
+
 export async function call<T = void>(
   command: string,
   args?: Record<string, unknown>,
+  options?: ReadOptions,
 ): Promise<T> {
   if (desktop) {
     // Only read operations time out in the UI. A mutation may still be running
@@ -203,14 +207,16 @@ export async function call<T = void>(
       return invoke<T>(command, args);
     }
     const key = JSON.stringify([command, args]);
-    let pending = pendingReads.get(key);
+    let pending = options?.fresh ? undefined : pendingReads.get(key);
     if (!pending) {
       pending = invoke<T>(command, args);
       pendingReads.set(key, pending);
-      void pending.then(
-        () => pendingReads.delete(key),
-        () => pendingReads.delete(key),
-      );
+      const forget = () => {
+        // A timed-out request may settle after its replacement has started.
+        // Only the request currently held in this slot can remove itself.
+        if (pendingReads.get(key) === pending) pendingReads.delete(key);
+      };
+      void pending.then(forget, forget);
     }
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {

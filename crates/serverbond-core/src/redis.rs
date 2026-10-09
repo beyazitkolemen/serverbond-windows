@@ -2,10 +2,16 @@
 //! persistence in `data/redis` and a no-eviction memory policy so queued
 //! jobs are never dropped silently.
 
-use crate::{model::tool_package, preferences::RedisSettings, process::command, Manager};
-use anyhow::{Context, Result};
+use crate::{
+    model::tool_package,
+    preferences::RedisSettings,
+    process::{command, ManagedChild},
+    Manager,
+};
+use anyhow::{ensure, Context, Result};
 use serde::Serialize;
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub const ID: &str = crate::domain::ComponentId::Redis.as_str();
 
@@ -63,6 +69,38 @@ impl Manager {
     pub fn stop_redis(&self) -> Result<()> {
         let _guard = self.cleanup_gate()?;
         self.stop_service(ID)
+    }
+
+    pub(crate) fn shutdown_redis(&self) -> Result<()> {
+        let executable = self.tool_executable(ID)?;
+        let directory = executable
+            .parent()
+            .context("Redis kurulum klasörü bulunamadı.")?;
+        let port = self
+            .config
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .settings
+            .redis
+            .port;
+        let mut command = command(directory.join("redis-cli.exe"));
+        command.current_dir(directory).args([
+            "-e",
+            "-h",
+            "127.0.0.1",
+            "-p",
+            &port.to_string(),
+            "SHUTDOWN",
+            "SAVE",
+        ]);
+        let output = ManagedChild::output(command, Duration::from_secs(30))?;
+        ensure!(
+            output.status.success(),
+            "Redis normal kapatma başarısız: {} {}",
+            String::from_utf8_lossy(&output.stdout).trim(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+        Ok(())
     }
 
     pub(crate) fn start_redis_inner(&self) -> Result<()> {

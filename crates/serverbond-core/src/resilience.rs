@@ -62,9 +62,21 @@ impl Manager {
 
     pub fn shutdown(&self) -> Result<()> {
         let _guard = self.cleanup_gate()?;
-        self.shutting_down.store(true, Ordering::Release);
-        self.stop_api();
-        self.stop_inner()
+        let was_shutting_down = self.shutting_down.swap(true, Ordering::AcqRel);
+        match self.stop_inner() {
+            Ok(()) => {
+                self.stop_api();
+                Ok(())
+            }
+            Err(error) => {
+                // A failed persistent-service stop keeps the desktop open.
+                // Restore normal operations so the user can fix the problem;
+                // retain the API listener instead of shutting it down early.
+                self.shutting_down
+                    .store(was_shutting_down, Ordering::Release);
+                Err(error)
+            }
+        }
     }
 
     pub fn is_busy(&self) -> bool {
@@ -146,6 +158,62 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_shutdown_preserves_process_api_and_normal_mutations() {
+        use crate::process::{command, ManagedChild};
+        use std::{
+            net::{Ipv4Addr, TcpListener, TcpStream},
+            sync::Arc,
+        };
+        let directory = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(directory.path().into()).unwrap());
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+        {
+            let mut config = manager.config.lock().unwrap();
+            config.settings.api.enabled = true;
+            config.settings.api.port = port;
+        }
+        manager.ensure_api().unwrap();
+        let mut sleeper = command(crate::terminal::powershell_path());
+        sleeper.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Start-Sleep -Seconds 60",
+        ]);
+        let child =
+            ManagedChild::spawn(sleeper, &directory.path().join("logs/synthetic-redis.log"))
+                .unwrap();
+        manager
+            .processes
+            .lock()
+            .unwrap()
+            .insert(crate::redis::ID.into(), child);
+        // Missing Redis binaries make the stop fail before any Redis command is
+        // launched. The only process here is a harmless, test-owned sleeper.
+        let error = manager.shutdown().unwrap_err();
+        assert!(error.to_string().contains("çalışan süreç sonlandırılmadı"));
+        assert!(manager
+            .processes
+            .lock()
+            .unwrap()
+            .get_mut(crate::redis::ID)
+            .unwrap()
+            .alive());
+        assert!(manager.api_status().listening);
+        assert!(TcpStream::connect((Ipv4Addr::LOCALHOST, port)).is_ok());
+        assert!(manager.gate().is_ok());
+        assert!(manager.create_api_token().is_ok());
+        // Remove/terminate only the synthetic child, then a retry can finish.
+        manager.processes.lock().unwrap().remove(crate::redis::ID);
+        manager.shutdown().unwrap();
+        assert!(!manager.api_status().listening);
+        assert!(manager.gate().is_err());
+    }
     #[test]
     fn shutdown_blocks_new_mutations_but_busy_shutdown_does_not_latch() {
         let dir = tempfile::tempdir().unwrap();

@@ -39,3 +39,9 @@ Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ek
 ## Windows kurulum yolu testi
 
 `./scripts/ai/test-installer-paths.ps1`, NSIS şablonundaki gerçek başlangıç fonksiyonlarını geçici bir test EXE’sinde çalıştırır. Yeni kurulumda `C:\ServerBond`, güncellemede kayıtlı yol ve `/D=` ile özel klasör seçimi doğrulanır. Uygulamayı kurmaz veya çalışan servislere dokunmaz; geçici test dosyaları ve test kayıt anahtarı temizlenir. NSIS konumu gerekirse `-NsisDir` ile verilir.
+
+`./scripts/ai/test-webview-prerequisites.ps1`, gerçek NSIS WebView2 bölümünü taklit edilmiş kayıt ve bootstrapper işlevleriyle sınar. Eksik/eski/güncel çalışma zamanı, sessiz kurulum ve hata senaryolarını kapsar; bilgisayara WebView2 kurmaz.
+
+## Redis ve Mailpit veri koruma testleri
+
+`cargo test -p serverbond-core --test optional_services -- --ignored --test-threads=1`, Windows üzerinde gerçek Redis ve Mailpit indirip ayrı geçici veri dizinlerinde başlatır. Redis'in son yazılarının durdurma/başlatma, onarım ve yeniden açılışta korunmasını; disk kaydı başarısızsa sürecin açık kalmasını doğrular. Mailpit testi gerçek SMTP mesajını gönderir ve onarım sonrası aynı mesajı API üzerinden okur. `SERVERBOND_TEST_CACHE` doğrulanmış paket arşivlerini paylaşabilir; servis verileri paylaşılmaz.
