@@ -628,7 +628,12 @@ Section WebView2
 SectionEnd
 
 Section Install
+  ClearErrors
   SetOutPath $INSTDIR
+  ${If} ${Errors}
+    SetErrorLevel 5
+    Abort "The installation folder could not be created. Check folder permissions and try again."
+  ${EndIf}
 
   !ifmacrodef NSIS_HOOK_PREINSTALL
     !insertmacro NSIS_HOOK_PREINSTALL
@@ -637,7 +642,12 @@ Section Install
   !insertmacro CheckIfAppIsRunning "${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
 
   ; Copy main executable
+  ClearErrors
   File "${MAINBINARYSRCPATH}"
+  ${If} ${Errors}
+    SetErrorLevel 5
+    Abort "The application executable could not be written. Close the application and check folder permissions before trying again."
+  ${EndIf}
 
   ; Copy resources
   {{#each resources_dirs}}
@@ -668,7 +678,12 @@ Section Install
   {{/each}}
 
   ; Create uninstaller
+  ClearErrors
   WriteUninstaller "$INSTDIR\uninstall.exe"
+  ${If} ${Errors}
+    SetErrorLevel 5
+    Abort "The uninstaller could not be written. Close any running installer and check folder permissions before trying again."
+  ${EndIf}
 
   ; Save $INSTDIR in registry for future installations
   WriteRegStr SHCTX "${MANUPRODUCTKEY}" "" $INSTDIR
@@ -775,7 +790,12 @@ Section Uninstall
 
   ; Delete the app directory and its content from disk
   ; Copy main executable
+  ClearErrors
   Delete "$INSTDIR\${MAINBINARYNAME}.exe"
+  ${If} ${Errors}
+    SetErrorLevel 5
+    Abort "The application executable could not be removed. Close the application and check folder permissions before trying again."
+  ${EndIf}
 
   ; Delete resources
   {{#each resources}}

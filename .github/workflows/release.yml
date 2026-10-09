@@ -126,6 +126,7 @@ jobs:
         run: |
           ./scripts/ai/test-installer-paths.ps1
           ./scripts/ai/test-webview-prerequisites.ps1
+          ./scripts/ai/test-installer-lifecycle.ps1 -ArtifactsRoot $env:RUNNER_TEMP
       - name: Versioned checksums
         shell: pwsh
         run: |

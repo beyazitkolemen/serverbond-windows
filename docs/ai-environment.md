@@ -42,6 +42,10 @@ Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ek
 
 `./scripts/ai/test-webview-prerequisites.ps1`, gerçek NSIS WebView2 bölümünü taklit edilmiş kayıt ve bootstrapper işlevleriyle sınar. Eksik/eski/güncel çalışma zamanı, sessiz kurulum ve hata senaryolarını kapsar; bilgisayara WebView2 kurmaz.
 
+`./scripts/ai/test-installer-lifecycle.ps1`, güncel Tauri derlemesinin tam NSIS kurucu/kaldırıcı kaynağını benzersiz test kimliğiyle paketleyip gerçekten çalıştırır. Üretim EXE dosyasının kopyalanan SHA-256 özeti, varsayılan ve Türkçe/boşluklu yollar, kısayollar, kayıtlı konuma güncelleme, kilitli EXE hatası ve kaldırma/yeniden kurulum sırasında test `.env`, yapılandırma ve veritabanı dosyalarının korunması denetlenir. Çalışan uygulama kontrolü yalnız testin oluşturduğu zararsız süreçle sınanır. Mevcut ServerBond kayıtları, dosyaları, kısayolları ve çalışma zamanı kayıtlarının önce/sonra aynı kaldığı doğrulanır.
+
+Bu testten önce `npm run desktop:build:unsigned` çalıştırılmalıdır; eski üretilmiş NSIS kaynakları reddedilir. Test mevcut WebView2 gerektirir ve gerçek ServerBond'u başlatmaz. Eksik çalışma zamanı kurulumu, yönetici izni, temiz Windows, MSI geçişi ve arayüzde uygulama verilerini silme seçeneği ayrı izole misafir testleridir. Sonuçlar/loglar D: geçici test klasöründe kalır; CI `-ArtifactsRoot $env:RUNNER_TEMP` kullanır.
+
 ## Redis ve Mailpit veri koruma testleri
 
 `cargo test -p serverbond-core --test optional_services -- --ignored --test-threads=1`, Windows üzerinde gerçek Redis ve Mailpit indirip ayrı geçici veri dizinlerinde başlatır. Redis'in son yazılarının durdurma/başlatma, onarım ve yeniden açılışta korunmasını; disk kaydı başarısızsa sürecin açık kalmasını doğrular. Mailpit testi gerçek SMTP mesajını gönderir ve onarım sonrası aynı mesajı API üzerinden okur. `SERVERBOND_TEST_CACHE` doğrulanmış paket arşivlerini paylaşabilir; servis verileri paylaşılmaz.
