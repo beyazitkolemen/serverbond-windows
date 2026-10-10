@@ -126,6 +126,14 @@ struct Runtime {
     last_state_report: Option<Instant>,
 }
 impl Runtime {
+    fn state_scan_due(&self) -> bool {
+        self.state_dirty
+            || self
+                .last_state_scan
+                .map(|at| at.elapsed() >= Duration::from_secs(60))
+                .unwrap_or(true)
+    }
+
     fn mark_state_dirty(&mut self) {
         self.state_dirty = true;
         self.state_revision = self.state_revision.wrapping_add(1);
@@ -434,8 +442,14 @@ impl Manager {
                         }
                         drop(runtime);
                         // Keep command delivery and diagnostics available over HTTPS while Reverb recovers.
-                        let _ = m.cloud_tick(false);
-                        delay = (delay * 2).min(15);
+                        let http_healthy = m.cloud_tick(false).is_ok();
+                        // HTTPS remains the state transport even when the
+                        // socket wake-up channel is unavailable.
+                        let _ = m.cloud_sync_state_fallback();
+                        // A healthy HTTPS transport can keep commands moving
+                        // while only the socket is down. Retain backoff when
+                        // the HTTP endpoint also fails.
+                        delay = if http_healthy { 5 } else { (delay * 2).min(15) };
                     }
                 }
                 drop(m);
@@ -591,6 +605,24 @@ impl Manager {
             runtime.state_retry_delay_secs = 0;
         }
         result
+    }
+
+    fn cloud_sync_state_fallback(self: &Arc<Self>) -> Result<()> {
+        let c = {
+            let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if runtime.disabled || !runtime.state_scan_due() {
+                return Ok(());
+            }
+            let Some(c) = self.cloud_credentials()? else {
+                return Ok(());
+            };
+            if c.device_id.is_none() {
+                return Ok(());
+            }
+            base_url(&c.url, allow_http())?;
+            c
+        };
+        self.cloud_push_state(&client()?, &c, &[])
     }
 
     fn cloud_push_state_now(
@@ -888,7 +920,14 @@ impl Manager {
             } else if matches!(delivery, ResultDelivery::Rejected) {
                 runtime.error = Some("Cloud işlem çıktısını reddetti; sonuç belirsiz.".into());
                 runtime.after_ack = None;
-            } else if !runtime.disabled
+            } else {
+                // A ready event for the next command may have arrived while
+                // this command was active. Poll again on the next socket loop
+                // instead of waiting up to ten seconds for the heartbeat.
+                runtime.completed = true;
+            }
+            if matches!(delivery, ResultDelivery::Accepted)
+                && !runtime.disabled
                 && self
                     .cloud_credentials()?
                     .as_ref()
@@ -1032,6 +1071,10 @@ impl Manager {
             runtime.active = None;
             runtime.completed = true;
             runtime.mark_state_dirty();
+            drop(runtime);
+            // In fallback mode the connector is parked between reconnects.
+            // Deliver the persisted result immediately after work completes.
+            m.cloud.wake();
         });
         Ok(())
     }
@@ -1257,11 +1300,7 @@ impl Manager {
             }
             let should_scan = {
                 let runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
-                runtime.state_dirty
-                    || runtime
-                        .last_state_scan
-                        .map(|at| at.elapsed() >= Duration::from_secs(60))
-                        .unwrap_or(true)
+                runtime.state_scan_due()
             };
             if subscribed && should_scan {
                 let _ = self.cloud_push_state(&http, &c, &[]);
@@ -1623,6 +1662,70 @@ mod windows_cloud_tests {
     }
 
     #[test]
+    fn finished_command_wakes_parked_connector_after_persisting_result() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        *manager.cloud.connector.lock().unwrap() = Some(std::thread::current());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let id = uuid::Uuid::new_v4().to_string();
+        exchange(&manager, &mut c, vec![
+            (200, json!({"command":{"id":id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}})),
+        ]).unwrap();
+        let started = Instant::now();
+        std::thread::park_timeout(Duration::from_secs(5));
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "command completion did not wake the connector"
+        );
+        let runtime = manager.cloud.inner.lock().unwrap();
+        assert!(runtime.active.is_none());
+        assert!(runtime.completed);
+        assert!(runtime.state_dirty);
+        assert_eq!(manager.journal(&c).unwrap()[&id], "succeeded");
+    }
+
+    #[test]
+    fn accepted_result_schedules_next_poll_after_a_ready_event_was_missed() {
+        let home = tempfile::tempdir().unwrap();
+        let m = Arc::new(Manager::new(home.path().into()).unwrap());
+        let mut c = Credentials {
+            url: String::new(),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let first = uuid::Uuid::new_v4().to_string();
+        m.save_journal(&c, &BTreeMap::from([(first.clone(), "succeeded".into())]))
+            .unwrap();
+        exchange(&m, &mut c, vec![
+            (200, json!({"command":{"id":first,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}})),
+            (200, json!({"ok":true})),
+        ]).unwrap();
+        assert!(std::mem::take(&mut m.cloud.inner.lock().unwrap().completed));
+
+        let next = uuid::Uuid::new_v4().to_string();
+        exchange(&m, &mut c, vec![
+            (200, json!({"command":{"id":next,"service":"redis","action":"stop","expires_at":"2000-01-01T00:00:00Z"}})),
+        ]).unwrap();
+        assert_eq!(m.journal(&c).unwrap()[&next], "expired");
+        assert!(std::mem::take(&mut m.cloud.inner.lock().unwrap().completed));
+        exchange(&m, &mut c, vec![
+            (200, json!({"command":{"id":next,"service":"redis","action":"stop","expires_at":"2000-01-01T00:00:00Z"}})),
+            (409, json!({})),
+        ]).unwrap();
+        assert!(!m.cloud.inner.lock().unwrap().completed);
+    }
+
+    #[test]
     fn running_command_does_not_claim_another_command() {
         let home = tempfile::tempdir().unwrap();
         let m = Arc::new(Manager::new(home.path().into()).unwrap());
@@ -1974,6 +2077,55 @@ mod windows_cloud_tests {
         )
         .unwrap();
         assert_eq!(next[0]["state_complete"], true);
+    }
+
+    #[test]
+    fn https_fallback_pushes_initial_state_and_observes_clean_scan_and_revocation() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        manager.save_cloud_credentials(&c).unwrap();
+        manager.cloud.inner.lock().unwrap().connection = CloudConnection::Retrying;
+        let handler = std::thread::spawn(move || {
+            let mut request = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(request.url(), "/api/agent/v1/state");
+            let mut text = String::new();
+            request.as_reader().read_to_string(&mut text).unwrap();
+            let body: Value = serde_json::from_str(&text).unwrap();
+            assert!(!body["sections"].as_array().unwrap().is_empty());
+            request
+                .respond(tiny_http::Response::from_string("{}"))
+                .unwrap();
+            assert!(server
+                .recv_timeout(Duration::from_millis(500))
+                .unwrap()
+                .is_none());
+        });
+        manager.cloud_sync_state_fallback().unwrap();
+        assert!(manager
+            .cloud
+            .inner
+            .lock()
+            .unwrap()
+            .last_state_scan
+            .is_some());
+        manager.cloud_sync_state_fallback().unwrap();
+        manager.cloud.inner.lock().unwrap().disabled = true;
+        manager.mark_state_dirty();
+        manager.cloud_sync_state_fallback().unwrap();
+        handler.join().unwrap();
     }
 
     #[test]
