@@ -151,7 +151,7 @@ fn live_reverb_device_roundtrip() {
                     {
                         600
                     } else {
-                        150
+                        240
                     }
                 ),
             "Cloud roundtrip timed out: {:?}",

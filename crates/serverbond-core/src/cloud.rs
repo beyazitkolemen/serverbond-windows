@@ -76,11 +76,15 @@ fn service_report(inventory: Vec<Value>) -> Vec<Value> {
 #[derive(Default)]
 pub(crate) struct CloudState {
     started: AtomicBool,
+    wake_requested: AtomicBool,
     connector: Mutex<Option<std::thread::Thread>>,
     inner: Mutex<Runtime>,
 }
 impl CloudState {
     fn wake(&self) {
+        // Blocking HTTP also uses this thread's park token. Keep our wake-up
+        // request separately so an intervening HTTP wait cannot consume it.
+        self.wake_requested.store(true, Ordering::Release);
         if let Some(connector) = self
             .connector
             .lock()
@@ -88,6 +92,14 @@ impl CloudState {
             .as_ref()
         {
             connector.unpark();
+        }
+    }
+
+    fn retry_delay(&self, delay: Duration) -> Duration {
+        if self.wake_requested.swap(false, Ordering::AcqRel) {
+            Duration::ZERO
+        } else {
+            delay
         }
     }
 }
@@ -422,7 +434,7 @@ impl Manager {
                 if m.shutting_down.load(Ordering::Acquire) {
                     break;
                 }
-                match m.cloud_socket_session() {
+                match m.cloud_flush_completed_then_connect() {
                     Ok(()) => {
                         m.cloud
                             .inner
@@ -452,8 +464,11 @@ impl Manager {
                         delay = if http_healthy { 5 } else { (delay * 2).min(15) };
                     }
                 }
+                let wait = m.cloud.retry_delay(Duration::from_secs(delay));
                 drop(m);
-                std::thread::park_timeout(Duration::from_secs(delay));
+                // No blocking I/O occurs between consuming the durable wake
+                // and parking, so a new unpark token remains effective here.
+                std::thread::park_timeout(wait);
             }
         });
         *self
@@ -1181,6 +1196,23 @@ struct SocketSettings {
     channel: String,
 }
 impl Manager {
+    fn cloud_flush_completed_then_connect(self: &Arc<Self>) -> Result<()> {
+        let completed = {
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if runtime.disabled || runtime.active.is_some() {
+                false
+            } else {
+                std::mem::take(&mut runtime.completed)
+            }
+        };
+        if completed {
+            // Result delivery uses HTTPS and must not wait for another failed
+            // socket connection after a command finishes during an outage.
+            self.cloud_tick(true)?;
+        }
+        self.cloud_socket_session()
+    }
+
     fn cloud_socket_session(self: &Arc<Self>) -> Result<()> {
         use std::net::{TcpStream, ToSocketAddrs};
         use std::time::Instant;
@@ -1659,6 +1691,173 @@ mod windows_cloud_tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn durable_wake_survives_blocking_http_and_is_consumed_only_once() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        *manager.cloud.connector.lock().unwrap() = Some(std::thread::current());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        let changed = manager.clone();
+        let handler = std::thread::spawn(move || {
+            let request = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            changed.cloud.wake();
+            // reqwest parks again while this HTTP response is still pending.
+            std::thread::sleep(Duration::from_millis(100));
+            request
+                .respond(tiny_http::Response::from_string("{}"))
+                .unwrap();
+        });
+        post(&client().unwrap(), &c, "heartbeat", &json!({})).unwrap();
+        handler.join().unwrap();
+        // Explicitly drain any park token left by HTTP's own response waker.
+        std::thread::park_timeout(Duration::ZERO);
+        let started = Instant::now();
+        std::thread::park_timeout(manager.cloud.retry_delay(Duration::from_secs(5)));
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert_eq!(
+            manager.cloud.retry_delay(Duration::from_secs(15)),
+            Duration::from_secs(15)
+        );
+    }
+
+    #[test]
+    fn failed_completion_delivery_preserves_replay_and_does_not_repeat_durable_wake() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let mut c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        manager.save_cloud_credentials(&c).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        manager
+            .save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        let command = json!({"command":{"id":id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}});
+        manager.cloud.inner.lock().unwrap().completed = true;
+        manager.cloud.wake();
+        let first_command = command.clone();
+        let failed_id = id.clone();
+        let handler = std::thread::spawn(move || {
+            let poll = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(poll.url(), "/api/agent/v1/poll");
+            poll.respond(tiny_http::Response::from_string(first_command.to_string()))
+                .unwrap();
+            let result = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                result.url(),
+                format!("/api/agent/v1/commands/{failed_id}/result")
+            );
+            result.respond(tiny_http::Response::empty(503)).unwrap();
+            assert!(server
+                .recv_timeout(Duration::from_millis(500))
+                .unwrap()
+                .is_none());
+        });
+        assert!(manager.cloud_flush_completed_then_connect().is_err());
+        handler.join().unwrap();
+        assert!(!manager.cloud.inner.lock().unwrap().completed);
+        assert_eq!(manager.journal(&c).unwrap()[&id], "succeeded");
+        assert!(manager.cloud.inner.lock().unwrap().active.is_none());
+        assert_eq!(
+            manager.cloud.retry_delay(Duration::from_secs(15)),
+            Duration::ZERO
+        );
+        assert_eq!(
+            manager.cloud.retry_delay(Duration::from_secs(15)),
+            Duration::from_secs(15)
+        );
+        let requests = exchange_tick(
+            &manager,
+            &mut c,
+            vec![
+                (200, json!({"command":null,"commands_pending":true})),
+                (200, command),
+                (200, json!({})),
+            ],
+            false,
+        )
+        .unwrap();
+        assert_eq!(requests[2]["status"], "succeeded");
+        assert!(manager.cloud.inner.lock().unwrap().active.is_none());
+    }
+
+    #[test]
+    fn completed_result_is_delivered_before_socket_retry_and_revocation_stops_retries() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        manager.save_cloud_credentials(&c).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        manager
+            .save_journal(&c, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+            .unwrap();
+        manager.cloud.inner.lock().unwrap().completed = true;
+        let handler = std::thread::spawn(move || {
+            let poll = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(poll.url(), "/api/agent/v1/poll");
+            poll.respond(tiny_http::Response::from_string(json!({"command":{"id":id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}}).to_string())).unwrap();
+            let result = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(result.url(), format!("/api/agent/v1/commands/{id}/result"));
+            result
+                .respond(tiny_http::Response::from_string("{}"))
+                .unwrap();
+            let socket = server
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap()
+                .unwrap();
+            assert_eq!(socket.url(), "/api/agent/v1/socket");
+            socket.respond(tiny_http::Response::empty(401)).unwrap();
+            assert!(server
+                .recv_timeout(Duration::from_millis(500))
+                .unwrap()
+                .is_none());
+        });
+        manager.cloud_flush_completed_then_connect().unwrap();
+        assert!(manager.cloud.inner.lock().unwrap().disabled);
+        assert!(manager.cloud.inner.lock().unwrap().active.is_none());
+        manager.cloud_flush_completed_then_connect().unwrap();
+        handler.join().unwrap();
     }
 
     #[test]
