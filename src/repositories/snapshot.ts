@@ -1,6 +1,7 @@
-import { call } from "../api";
+import { call, type ReadOptions } from "../api";
 import type { Snapshot } from "../types";
 
 export const snapshotRepository = {
-  get: () => call<Snapshot>("snapshot"),
+  get: (options?: ReadOptions) =>
+    call<Snapshot>("snapshot", undefined, options),
 };

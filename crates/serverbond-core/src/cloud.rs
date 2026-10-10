@@ -77,10 +77,23 @@ fn service_report(inventory: Vec<Value>) -> Vec<Value> {
 pub(crate) struct CloudState {
     started: AtomicBool,
     wake_requested: AtomicBool,
+    http: Mutex<Option<Client>>,
     connector: Mutex<Option<std::thread::Thread>>,
     inner: Mutex<Runtime>,
 }
 impl CloudState {
+    fn http_client(&self) -> Result<Client> {
+        let mut http = self.http.lock().unwrap_or_else(|e| e.into_inner());
+        if http.is_none() {
+            *http = Some(client()?);
+        }
+        // Only transport is shared. Bearer credentials remain request-local.
+        Ok(http
+            .as_ref()
+            .expect("Cloud HTTP client initialized")
+            .clone())
+    }
+
     fn wake(&self) {
         // Blocking HTTP also uses this thread's park token. Keep our wake-up
         // request separately so an intervening HTTP wait cannot consume it.
@@ -376,7 +389,12 @@ impl Manager {
         };
         // Persist first: the same key can complete pairing after a lost response.
         self.save_cloud_credentials(&c)?;
-        let (status, reply) = post(&client()?, &c, "pair", &json!({"code":code,"key":c.key}))?;
+        let (status, reply) = post(
+            &self.cloud.http_client()?,
+            &c,
+            "pair",
+            &json!({"code":code,"key":c.key}),
+        )?;
         match status {
             200 => {},
             422 => bail!("Kod geçersiz veya başka bir cihazda kullanılmış. Cloud panelindeki cihazın bağlantı kodunu kontrol edin."),
@@ -403,7 +421,7 @@ impl Manager {
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(c) = self.cloud_credentials()? {
             if c.device_id.is_some() && !runtime.disabled {
-                let (status, _) = post(&client()?, &c, "revoke", &json!({}))?;
+                let (status, _) = post(&self.cloud.http_client()?, &c, "revoke", &json!({}))?;
                 anyhow::ensure!(
                     status == 200 || status == 401,
                     "Cloud iptal isteği başarısız ({status})."
@@ -637,7 +655,7 @@ impl Manager {
             base_url(&c.url, allow_http())?;
             c
         };
-        self.cloud_push_state(&client()?, &c, &[])
+        self.cloud_push_state(&self.cloud.http_client()?, &c, &[])
     }
 
     fn cloud_push_state_now(
@@ -729,7 +747,7 @@ impl Manager {
             c
         };
         let services = service_report(crate::api::service_inventory(self)?);
-        let http = client()?;
+        let http = self.cloud.http_client()?;
         let pending = self
             .cloud
             .inner
@@ -1233,7 +1251,7 @@ impl Manager {
             runtime.socket_endpoint = None;
             c
         };
-        let http = client()?;
+        let http = self.cloud.http_client()?;
         let (status, reply) = post(&http, &c, "socket", &json!({}))?;
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
         if self
@@ -1691,6 +1709,125 @@ mod windows_cloud_tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn cloud_http_client_reuses_connections_without_reusing_bearer_credentials() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: None,
+            name: None,
+            account: None,
+        };
+        let handler = std::thread::spawn(move || {
+            let mut connections = [
+                std::collections::BTreeSet::new(),
+                std::collections::BTreeSet::new(),
+            ];
+            for index in 0..40 {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .unwrap();
+                connections[index / 20].insert(*request.remote_addr().unwrap());
+                let key = if index < 30 { "b" } else { "c" };
+                assert_eq!(
+                    request
+                        .headers()
+                        .iter()
+                        .find(|header| header.field.equiv("Authorization"))
+                        .unwrap()
+                        .value
+                        .as_str(),
+                    format!("Bearer {}", key.repeat(64))
+                );
+                request
+                    .respond(tiny_http::Response::from_string("{}"))
+                    .unwrap();
+            }
+            connections.map(|set| set.len())
+        });
+        let fresh_started = Instant::now();
+        for _ in 0..20 {
+            post(&client().unwrap(), &c, "heartbeat", &json!({})).unwrap();
+        }
+        let fresh_elapsed = fresh_started.elapsed();
+        let shared_started = Instant::now();
+        for index in 0..20 {
+            let mut current = c.clone();
+            if index >= 10 {
+                current.key = "c".repeat(64);
+            }
+            post(
+                &manager.cloud.http_client().unwrap(),
+                &current,
+                "heartbeat",
+                &json!({}),
+            )
+            .unwrap();
+        }
+        let shared_elapsed = shared_started.elapsed();
+        let connections = handler.join().unwrap();
+        eprintln!("Cloud HTTP 20 requests: new-client {:?} / {} TCP connections; shared-client {:?} / {} TCP connections", fresh_elapsed, connections[0], shared_elapsed, connections[1]);
+        assert_eq!(connections, [20, 1]);
+    }
+
+    #[test]
+    fn pooled_cloud_transport_recovers_from_invalid_json_and_connection_close() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: None,
+            name: None,
+            account: None,
+        };
+        let handler = std::thread::spawn(move || {
+            let mut peers = Vec::new();
+            for index in 0..3 {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .unwrap();
+                peers.push(*request.remote_addr().unwrap());
+                if index == 1 {
+                    // tiny_http filters Connection headers on Response; use
+                    // its raw writer to exercise an actual server close.
+                    use std::io::Write;
+                    let mut writer = request.into_writer();
+                    writer
+                        .write_all(
+                            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
+                        )
+                        .unwrap();
+                    writer.flush().unwrap();
+                } else {
+                    request
+                        .respond(tiny_http::Response::from_string(if index == 0 {
+                            "{invalid"
+                        } else {
+                            "{}"
+                        }))
+                        .unwrap();
+                }
+            }
+            peers
+        });
+        let http = manager.cloud.http_client().unwrap();
+        assert!(post(&http, &c, "heartbeat", &json!({})).is_err());
+        assert_eq!(post(&http, &c, "heartbeat", &json!({})).unwrap().0, 200);
+        assert_eq!(post(&http, &c, "heartbeat", &json!({})).unwrap().0, 200);
+        let peers = handler.join().unwrap();
+        assert_eq!(peers[0], peers[1]);
+        assert_ne!(peers[1], peers[2]);
     }
 
     #[test]

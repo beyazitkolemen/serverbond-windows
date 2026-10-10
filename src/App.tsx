@@ -14,7 +14,7 @@ import {
   Ellipsis,
   LogOut,
 } from "lucide-react";
-import { call, desktop } from "./api";
+import { call, desktop, type ReadOptions } from "./api";
 import { listen } from "@tauri-apps/api/event";
 import {
   ComponentId,
@@ -96,10 +96,10 @@ function WorkspaceApp() {
   const inFlight = useRef(false);
   const requestNumber = useRef(0);
   const pollingActive = Boolean(busy || state?.busy);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options?: ReadOptions) => {
     const request = ++requestNumber.current;
     try {
-      const next = await snapshotRepository.get();
+      const next = await snapshotRepository.get(options);
       if (request === requestNumber.current) {
         setState(next);
         setLastRefresh(new Date());
@@ -217,7 +217,7 @@ function WorkspaceApp() {
     setMessage("");
     try {
       const result = await action();
-      await refresh().catch(() => {
+      await refresh({ fresh: true }).catch(() => {
         /* operation completed; keep latest connection state */
       });
       setMessage(typeof result === "string" ? result : "İşlem tamamlandı.");
