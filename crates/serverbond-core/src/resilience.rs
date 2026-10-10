@@ -63,6 +63,7 @@ impl Manager {
     pub fn shutdown(&self) -> Result<()> {
         let _guard = self.cleanup_gate()?;
         let was_shutting_down = self.shutting_down.swap(true, Ordering::AcqRel);
+        self.cloud.wake();
         match self.stop_inner() {
             Ok(()) => {
                 self.stop_api();
@@ -74,6 +75,7 @@ impl Manager {
                 // retain the API listener instead of shutting it down early.
                 self.shutting_down
                     .store(was_shutting_down, Ordering::Release);
+                self.cloud.wake();
                 Err(error)
             }
         }

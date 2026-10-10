@@ -79,6 +79,7 @@ pub(crate) struct CloudState {
     wake_requested: AtomicBool,
     http: Mutex<Option<Client>>,
     connector: Mutex<Option<std::thread::Thread>>,
+    socket_waker: Mutex<Option<Arc<mio::Waker>>>,
     inner: Mutex<Runtime>,
 }
 impl CloudState {
@@ -94,10 +95,18 @@ impl CloudState {
             .clone())
     }
 
-    fn wake(&self) {
+    pub(crate) fn wake(&self) {
         // Blocking HTTP also uses this thread's park token. Keep our wake-up
         // request separately so an intervening HTTP wait cannot consume it.
         self.wake_requested.store(true, Ordering::Release);
+        if let Some(waker) = self
+            .socket_waker
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            let _ = waker.wake();
+        }
         if let Some(connector) = self
             .connector
             .lock()
@@ -114,6 +123,110 @@ impl CloudState {
         } else {
             delay
         }
+    }
+}
+
+// TLS and WebSocket retain one stream owner. Switch to Mio only after their
+// bounded blocking handshake; all subsequent I/O goes through Mio so Windows
+// readiness is rearmed correctly when a read or write returns WouldBlock.
+#[derive(Debug)]
+struct CloudSocketStream {
+    blocking: Option<std::net::TcpStream>,
+    ready: Option<mio::net::TcpStream>,
+    deadline: Instant,
+}
+impl CloudSocketStream {
+    fn new(stream: std::net::TcpStream, deadline: Instant) -> Self {
+        Self {
+            blocking: Some(stream),
+            ready: None,
+            deadline,
+        }
+    }
+    fn activate(&mut self, poll: &mio::Poll) -> std::io::Result<()> {
+        let stream = self.blocking.take().expect("socket activates once");
+        stream.set_nonblocking(true)?;
+        let mut ready = mio::net::TcpStream::from_std(stream);
+        poll.registry()
+            .register(&mut ready, mio::Token(0), mio::Interest::READABLE)?;
+        self.ready = Some(ready);
+        Ok(())
+    }
+    fn interest(&mut self, poll: &mio::Poll, writable: bool) -> std::io::Result<()> {
+        let interest = if writable {
+            mio::Interest::READABLE | mio::Interest::WRITABLE
+        } else {
+            mio::Interest::READABLE
+        };
+        poll.registry().reregister(
+            self.ready.as_mut().expect("active socket"),
+            mio::Token(0),
+            interest,
+        )
+    }
+}
+impl std::io::Read for CloudSocketStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if let Some(ready) = self.ready.as_mut() {
+            ready.read(buf)
+        } else {
+            let remaining = socket_deadline_remaining(self.deadline)?;
+            let stream = self.blocking.as_mut().expect("handshake socket");
+            stream.set_read_timeout(Some(remaining))?;
+            stream.read(buf)
+        }
+    }
+}
+impl std::io::Write for CloudSocketStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if let Some(ready) = self.ready.as_mut() {
+            std::io::Write::write(ready, buf)
+        } else {
+            let remaining = socket_deadline_remaining(self.deadline)?;
+            let stream = self.blocking.as_mut().expect("handshake socket");
+            stream.set_write_timeout(Some(remaining))?;
+            std::io::Write::write(stream, buf)
+        }
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+fn socket_deadline_remaining(deadline: Instant) -> std::io::Result<Duration> {
+    deadline
+        .checked_duration_since(Instant::now())
+        .filter(|remaining| !remaining.is_zero())
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Reverb bağlantısı zaman aşımına uğradı.",
+            )
+        })
+}
+struct SocketWakeRegistration<'a>(&'a CloudState);
+impl Drop for SocketWakeRegistration<'_> {
+    fn drop(&mut self) {
+        self.0
+            .socket_waker
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+    }
+}
+fn socket_stream(
+    socket: &mut tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<CloudSocketStream>>,
+) -> Result<&mut CloudSocketStream> {
+    match socket.get_mut() {
+        tungstenite::stream::MaybeTlsStream::Plain(s) => Ok(s),
+        tungstenite::stream::MaybeTlsStream::NativeTls(s) => Ok(s.get_mut()),
+        _ => bail!("Desteklenmeyen TLS bağlantısı."),
+    }
+}
+fn socket_write(result: tungstenite::Result<()>) -> Result<bool> {
+    match result {
+        Ok(()) => Ok(false),
+        Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(true),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -450,7 +563,13 @@ impl Manager {
             loop {
                 let Some(m) = weak.upgrade() else { break };
                 if m.shutting_down.load(Ordering::Acquire) {
-                    break;
+                    // Service shutdown can fail and roll this flag back. Keep
+                    // the connector resumable without retaining its Manager
+                    // while parked; a real Manager drop still ends the loop.
+                    let wait = m.cloud.retry_delay(Duration::from_secs(1));
+                    drop(m);
+                    std::thread::park_timeout(wait);
+                    continue;
                 }
                 match m.cloud_flush_completed_then_connect() {
                     Ok(()) => {
@@ -1234,7 +1353,7 @@ impl Manager {
     fn cloud_socket_session(self: &Arc<Self>) -> Result<()> {
         use std::net::{TcpStream, ToSocketAddrs};
         use std::time::Instant;
-        use tungstenite::{client::IntoClientRequest, stream::MaybeTlsStream, Message};
+        use tungstenite::{client::IntoClientRequest, Message};
         let c = {
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             if runtime.disabled {
@@ -1305,24 +1424,38 @@ impl Manager {
         let mut request = socket_url.as_str().into_client_request()?;
         request.headers_mut().insert("Origin", c.url.parse()?);
         let addresses = (settings.host.as_str(), settings.port).to_socket_addrs()?;
+        // DNS uses the platform resolver. Once resolved, TCP address retries
+        // and TLS/WS handshakes share a budget, including partial header reads.
+        let deadline = Instant::now() + Duration::from_secs(5);
         let stream = addresses
             .take(4)
-            .find_map(|addr| TcpStream::connect_timeout(&addr, Duration::from_secs(5)).ok())
+            .find_map(|addr| {
+                let remaining = socket_deadline_remaining(deadline).ok()?;
+                TcpStream::connect_timeout(&addr, remaining).ok()
+            })
             .context("Reverb bağlantısı kurulamadı.")?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(10)))?;
         let mut config = tungstenite::protocol::WebSocketConfig::default();
         config.max_message_size = Some(65536);
         config.max_frame_size = Some(65536);
-        let (mut socket, _) =
-            tungstenite::client_tls_with_config(request, stream, Some(config), None)?;
-        match socket.get_mut() {
-            MaybeTlsStream::Plain(s) => s.set_read_timeout(Some(Duration::from_secs(1)))?,
-            MaybeTlsStream::NativeTls(s) => {
-                s.get_mut().set_read_timeout(Some(Duration::from_secs(1)))?
-            }
-            _ => bail!("Desteklenmeyen TLS bağlantısı."),
-        }
+        config.write_buffer_size = 0;
+        config.max_write_buffer_size = 131072;
+        let (mut socket, _) = tungstenite::client_tls_with_config(
+            request,
+            CloudSocketStream::new(stream, deadline),
+            Some(config),
+            None,
+        )?;
+        let mut poll = mio::Poll::new()?;
+        socket_stream(&mut socket)?.activate(&poll)?;
+        let waker = Arc::new(mio::Waker::new(poll.registry(), mio::Token(1))?);
+        *self
+            .cloud
+            .socket_waker
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(waker);
+        let _wake_registration = SocketWakeRegistration(&self.cloud);
+        let mut events = mio::Events::with_capacity(8);
+        let mut pending_write = false;
         let mut subscribed = false;
         let started = Instant::now();
         let mut heartbeat = Instant::now();
@@ -1366,10 +1499,13 @@ impl Manager {
                 heartbeat = Instant::now();
             }
             if last_ping.elapsed() >= Duration::from_secs(15) {
-                socket.send(Message::Text(
+                pending_write |= socket_write(socket.send(Message::Text(
                     json!({"event":"pusher:ping","data":{}}).to_string().into(),
-                ))?;
+                )))?;
                 last_ping = Instant::now();
+            }
+            if pending_write {
+                pending_write = socket_write(socket.flush())?;
             }
             let message = match socket.read() {
                 Ok(m) => m,
@@ -1379,7 +1515,15 @@ impl Manager {
                         std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
                     ) =>
                 {
-                    continue
+                    // read() may have queued an automatic WebSocket pong.
+                    // Check its flush too before choosing writable interest.
+                    pending_write = socket_write(socket.flush())?;
+                    socket_stream(&mut socket)?.interest(&poll, pending_write)?;
+                    // A worker completion signals the OS poll, independently of
+                    // reqwest's park token. Idle sockets still wake once a second
+                    // for lifecycle/heartbeat deadlines, without hot polling.
+                    poll.poll(&mut events, Some(Duration::from_secs(1)))?;
+                    continue;
                 }
                 Err(e) => return Err(e.into()),
             };
@@ -1411,7 +1555,7 @@ impl Manager {
                                 &json!({"socket_id":data["socket_id"],"channel_name":settings.channel}),
                             )?;
                             anyhow::ensure!(status == 200, "Reverb kanalı yetkilendirilemedi.");
-                            socket.send(Message::Text(json!({"event":"pusher:subscribe","data":{"channel":settings.channel,"auth":auth["auth"]}}).to_string().into()))?;
+                            pending_write |= socket_write(socket.send(Message::Text(json!({"event":"pusher:subscribe","data":{"channel":settings.channel,"auth":auth["auth"]}}).to_string().into())))?;
                         }
                         "pusher_internal:subscription_succeeded"
                             if event["channel"] == settings.channel =>
@@ -1446,15 +1590,17 @@ impl Manager {
                             }
                             break;
                         }
-                        "pusher:ping" => socket.send(Message::Text(
-                            json!({"event":"pusher:pong","data":{}}).to_string().into(),
-                        ))?,
+                        "pusher:ping" => {
+                            pending_write |= socket_write(socket.send(Message::Text(
+                                json!({"event":"pusher:pong","data":{}}).to_string().into(),
+                            )))?
+                        }
                         "pusher:error" => bail!("Reverb protokol hatası."),
                         _ => {}
                     }
                 }
                 Message::Ping(_) => {
-                    socket.flush()?;
+                    pending_write |= socket_write(socket.flush())?;
                 }
                 Message::Close(_) => bail!("Reverb bağlantısı kapandı."),
                 _ => {}
@@ -1472,6 +1618,721 @@ mod windows_cloud_tests {
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
     struct UpdateHost(Arc<AtomicBool>);
+
+    #[test]
+    fn failed_shutdown_rolls_back_and_resumes_real_socket_commands() {
+        use crate::process::{command, ManagedChild};
+        use std::net::TcpListener;
+        use std::sync::mpsc;
+        use tungstenite::Message;
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        manager.save_cloud_credentials(&c).unwrap();
+        let channel = format!("private-devices.{}", c.device_id.as_ref().unwrap());
+        let id = uuid::Uuid::new_v4().to_string();
+        let offer = Arc::new(AtomicBool::new(false));
+        let stop = Arc::new(AtomicBool::new(false));
+        let acknowledged = Arc::new(AtomicBool::new(false));
+        let (result_tx, result_rx) = mpsc::channel();
+        let http_offer = offer.clone();
+        let http_stop = stop.clone();
+        let http_ack = acknowledged.clone();
+        let http_id = id.clone();
+        let http_channel = channel.clone();
+        let http = std::thread::spawn(move || {
+            while !http_stop.load(Ordering::Acquire) {
+                let Some(request) = server.recv_timeout(Duration::from_millis(50)).unwrap() else {
+                    continue;
+                };
+                let reply = match request.url() {
+                    "/api/agent/v1/socket" => {
+                        json!({"key":"test","host":"127.0.0.1","port":port,"scheme":"http","channel":http_channel})
+                    }
+                    "/api/agent/v1/authorize" => json!({"auth":"fixture"}),
+                    "/api/agent/v1/poll"
+                        if http_offer.load(Ordering::Acquire)
+                            && !http_ack.load(Ordering::Acquire) =>
+                    {
+                        json!({"command":{"id":http_id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}})
+                    }
+                    path if path.ends_with("/result") => {
+                        assert_eq!(path, format!("/api/agent/v1/commands/{http_id}/result"));
+                        assert!(
+                            !http_ack.swap(true, Ordering::AcqRel),
+                            "duplicate resumed result"
+                        );
+                        result_tx.send(()).unwrap();
+                        json!({})
+                    }
+                    _ => json!({}),
+                };
+                request
+                    .respond(tiny_http::Response::from_string(reply.to_string()))
+                    .unwrap();
+            }
+        });
+        let socket_offer = offer.clone();
+        let ws = std::thread::spawn(move || {
+            for connection in 0..2 {
+                let started = Instant::now();
+                let stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(
+                                started.elapsed() < Duration::from_secs(8),
+                                "connector did not resume"
+                            );
+                            std::thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(e) => panic!("fixture socket failed: {e}"),
+                    }
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut socket = tungstenite::accept(stream).unwrap();
+                socket
+                    .send(Message::Text(
+                        json!({"event":"pusher:connection_established","data":{"socket_id":"1.2"}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .unwrap();
+                assert!(socket
+                    .read()
+                    .unwrap()
+                    .to_text()
+                    .unwrap()
+                    .contains("pusher:subscribe"));
+                socket
+                    .send(Message::Text(
+                        json!({"event":"pusher_internal:subscription_succeeded","channel":channel})
+                            .to_string()
+                            .into(),
+                    ))
+                    .unwrap();
+                if connection == 1 {
+                    let offered = Instant::now();
+                    while !socket_offer.load(Ordering::Acquire) {
+                        assert!(offered.elapsed() < Duration::from_secs(5));
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    socket
+                        .send(Message::Text(
+                            json!({"event":"command.ready","channel":channel})
+                                .to_string()
+                                .into(),
+                        ))
+                        .unwrap();
+                }
+                assert!(matches!(socket.read().unwrap(), Message::Close(_)));
+            }
+        });
+        manager.start_cloud();
+        let ready = Instant::now();
+        while manager.cloud.inner.lock().unwrap().connection != CloudConnection::Connected {
+            assert!(ready.elapsed() < Duration::from_secs(5));
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+        let mut sleeper = command(crate::terminal::powershell_path());
+        sleeper.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Start-Sleep -Seconds 60",
+        ]);
+        let child =
+            ManagedChild::spawn(sleeper, &home.path().join("logs/synthetic-redis.log")).unwrap();
+        manager
+            .processes
+            .lock()
+            .unwrap()
+            .insert(crate::redis::ID.into(), child);
+        // Hold the stop operation at its process inventory, deterministically
+        // exposing the transient shutdown flag to the socket and outer loop.
+        let processes = manager.processes.lock().unwrap();
+        let shutting = manager.clone();
+        let shutdown = std::thread::spawn(move || shutting.shutdown());
+        let started = Instant::now();
+        while !manager.shutting_down.load(Ordering::Acquire)
+            || manager.cloud.socket_waker.lock().unwrap().is_some()
+        {
+            assert!(started.elapsed() < Duration::from_secs(2));
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+        drop(processes);
+        assert!(shutdown.join().unwrap().is_err());
+        assert!(!manager.shutting_down.load(Ordering::Acquire));
+        assert!(manager
+            .processes
+            .lock()
+            .unwrap()
+            .get_mut(crate::redis::ID)
+            .unwrap()
+            .alive());
+        // Only remove the synthetic child. Missing binaries caused the actual
+        // stop error; resumed redis-stop can now execute harmlessly once.
+        manager.processes.lock().unwrap().remove(crate::redis::ID);
+        offer.store(true, Ordering::Release);
+        manager.cloud.wake();
+        result_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!(manager.journal(&c).unwrap()[&id], "succeeded");
+        assert!(acknowledged.load(Ordering::Acquire));
+        manager.shutdown().unwrap();
+        ws.join().unwrap();
+        stop.store(true, Ordering::Release);
+        http.join().unwrap();
+        let weak = Arc::downgrade(&manager);
+        drop(manager);
+        let dropped = Instant::now();
+        while weak.upgrade().is_some() {
+            assert!(
+                dropped.elapsed() < Duration::from_secs(2),
+                "parked connector retained its Manager"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    #[test]
+    fn trusted_tls_socket_keeps_buffered_frames_and_wakeable_pongs() {
+        use std::io::{BufRead, BufReader, Write};
+        use std::net::TcpStream;
+        use std::os::windows::process::CommandExt;
+        use std::process::{Command, Stdio};
+        use tungstenite::Message;
+        let home = tempfile::tempdir().unwrap();
+        let preferred = std::path::Path::new("D:/DevTools/bin/pwsh.exe");
+        let pwsh = if preferred.is_file() {
+            preferred.to_path_buf()
+        } else {
+            let found = Command::new("where.exe")
+                .arg("pwsh.exe")
+                .creation_flags(0x08000000)
+                .output()
+                .unwrap();
+            String::from_utf8(found.stdout)
+                .unwrap()
+                .lines()
+                .map(std::path::PathBuf::from)
+                .find(|path| {
+                    path.is_file()
+                        && path
+                            .extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+                })
+                .expect("native PowerShell 7 required for TLS fixture")
+        };
+        let mut child = Command::new(pwsh)
+            .args(["-NoProfile", "-NonInteractive", "-Command", "-"])
+            .env("SERVERBOND_TLS_FIXTURE_HOME", home.path())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .creation_flags(0x08000000)
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(br#"$ErrorActionPreference = 'Stop'
+try {
+    $fixtureRsa = [System.Security.Cryptography.RSA]::Create(2048)
+    $fixtureRequest = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new('CN=localhost', $fixtureRsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+    $fixtureSan = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
+    $fixtureSan.AddDnsName('localhost')
+    $fixtureRequest.CertificateExtensions.Add($fixtureSan.Build())
+    $fixtureRequest.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($true, $false, 0, $true))
+    $fixtureCert = $fixtureRequest.CreateSelfSigned([DateTimeOffset]::UtcNow.AddMinutes(-1), [DateTimeOffset]::UtcNow.AddDays(1))
+    [IO.File]::WriteAllBytes((Join-Path $env:SERVERBOND_TLS_FIXTURE_HOME 'test.pfx'), $fixtureCert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, 'fixture-only'))
+    [IO.File]::WriteAllBytes((Join-Path $env:SERVERBOND_TLS_FIXTURE_HOME 'test.cer'), $fixtureCert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+    $fixtureCert.Dispose()
+    $fixtureRsa.Dispose()
+} catch { Write-Error $_; exit 1 }
+
+"#).unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "TLS fixture certificate creation failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let certificate = native_tls::Certificate::from_der(
+            &std::fs::read(home.path().join("test.cer")).unwrap(),
+        )
+        .unwrap();
+        let connector = native_tls::TlsConnector::builder()
+            .add_root_certificate(certificate)
+            .build()
+            .unwrap();
+        // Node's TLS identity stays in OpenSSL memory. Windows native-tls PFX
+        // identity import persists a private-key container, so do not use it
+        // for this test server. The client still exercises real Schannel TLS.
+        let script = r#"const tls=require('node:tls'), fs=require('node:fs'), crypto=require('node:crypto'), assert=require('node:assert/strict');
+const server=tls.createServer({pfx:fs.readFileSync(process.argv[1]+'/test.pfx'),passphrase:'fixture-only'}, socket=>{
+  let data=Buffer.alloc(0), upgraded=false;
+  const frame=(opcode,payload)=>Buffer.concat([Buffer.from([0x80|opcode,payload.length]),payload]);
+  socket.on('error',()=>{});
+  socket.on('data', chunk=>{
+    data=Buffer.concat([data,chunk]); assert.ok(data.length<16384);
+    if(!upgraded){ const end=data.indexOf('\r\n\r\n'); if(end<0)return;
+      const key=/Sec-WebSocket-Key:\s*(\S+)/i.exec(data.subarray(0,end).toString())[1];
+      const accept=crypto.createHash('sha1').update(key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+      socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
+      socket.write(Buffer.concat([frame(1,Buffer.from('first')),frame(1,Buffer.from('second'))]));
+      data=data.subarray(end+4); upgraded=true;
+    }
+    while(data.length>=6){ const opcode=data[0]&15, size=data[1]&127; assert.ok(size<126); assert.ok(data[1]&128);
+      if(data.length<6+size)return;
+      const payload=Buffer.from(data.subarray(6,6+size)); for(let i=0;i<size;i++)payload[i]^=data[2+i%4]; data=data.subarray(6+size);
+      if(opcode===1){ assert.equal(payload.toString(),'worker-result'); socket.write(frame(9,Buffer.from([4,5,6]))); }
+      else if(opcode===10){ assert.deepEqual([...payload],[4,5,6]); process.stdout.write('PONG\n'); }
+    }
+  });
+  process.stdin.once('data',()=>{ socket.end(frame(8,Buffer.alloc(0))); server.close(()=>process.exit(0)); });
+});
+server.listen(0,'127.0.0.1',()=>process.stdout.write(String(server.address().port)+'\n'));
+setTimeout(()=>process.exit(1),10000).unref();
+"#;
+        struct FixtureProcess(std::process::Child);
+        impl Drop for FixtureProcess {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let mut peer = FixtureProcess(
+            Command::new("node.exe")
+                .args(["-e", script])
+                .arg(home.path())
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .creation_flags(0x08000000)
+                .spawn()
+                .unwrap(),
+        );
+        let mut output = BufReader::new(peer.0.stdout.take().unwrap());
+        let mut ready = String::new();
+        output.read_line(&mut ready).unwrap();
+        let port: u16 = ready.trim().parse().expect("TLS server failed to start");
+        let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        let (mut socket, _) = tungstenite::client_tls_with_config(
+            format!("wss://localhost:{port}/"),
+            CloudSocketStream::new(stream, Instant::now() + Duration::from_secs(5)),
+            None,
+            Some(tungstenite::Connector::NativeTls(connector)),
+        )
+        .unwrap();
+        let mut poll = mio::Poll::new().unwrap();
+        socket_stream(&mut socket).unwrap().activate(&poll).unwrap();
+        let mut events = mio::Events::with_capacity(8);
+        let buffered_deadline = Instant::now() + Duration::from_secs(5);
+        for expected in ["first", "second"] {
+            loop {
+                assert!(
+                    Instant::now() < buffered_deadline,
+                    "TLS buffered frame timed out"
+                );
+                match socket.read() {
+                    Ok(message) => {
+                        assert_eq!(message, Message::Text(expected.into()));
+                        break;
+                    }
+                    Err(tungstenite::Error::Io(e))
+                        if e.kind() == std::io::ErrorKind::WouldBlock =>
+                    {
+                        poll.poll(&mut events, Some(Duration::from_secs(2)))
+                            .unwrap()
+                    }
+                    Err(e) => panic!("TLS buffered read failed: {e}"),
+                }
+            }
+        }
+        let cloud = Arc::new(CloudState::default());
+        *cloud.socket_waker.lock().unwrap() = Some(Arc::new(
+            mio::Waker::new(poll.registry(), mio::Token(1)).unwrap(),
+        ));
+        let _registration = SocketWakeRegistration(&cloud);
+        let changed = cloud.clone();
+        let worker = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(30));
+            changed.inner.lock().unwrap().completed = true;
+            changed.wake();
+        });
+        let started = Instant::now();
+        while !cloud.inner.lock().unwrap().completed {
+            poll.poll(&mut events, Some(Duration::from_secs(2)))
+                .unwrap();
+        }
+        assert!(started.elapsed() < Duration::from_millis(500));
+        socket_write(socket.send(Message::Text("worker-result".into()))).unwrap();
+        let pong_deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            assert!(Instant::now() < pong_deadline, "TLS pong timed out");
+            match socket.read() {
+                Ok(Message::Ping(bytes)) => {
+                    assert_eq!(bytes.as_ref(), &[4, 5, 6]);
+                    socket_write(socket.flush()).unwrap();
+                    break;
+                }
+                Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    poll.poll(&mut events, Some(Duration::from_secs(2)))
+                        .unwrap()
+                }
+                other => panic!("TLS ping failed: {other:?}"),
+            }
+        }
+        worker.join().unwrap();
+        let mut pong = String::new();
+        output.read_line(&mut pong).unwrap();
+        assert_eq!(pong.trim(), "PONG");
+        peer.0.stdin.take().unwrap().write_all(b"close\n").unwrap();
+        drop(socket);
+        assert!(peer.0.wait().unwrap().success());
+        drop(_registration);
+        assert!(cloud.socket_waker.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn stalled_socket_handshake_returns_to_https_within_shared_budget() {
+        stalled_socket_handshake("http");
+        stalled_socket_handshake("https");
+    }
+    fn stalled_socket_handshake(scheme: &'static str) {
+        use std::net::TcpListener;
+        use std::sync::mpsc;
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        let home = tempfile::tempdir().unwrap();
+        let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+        let c = Credentials {
+            url: format!("http://{}", server.server_addr()),
+            key: "b".repeat(64),
+            code_hash: String::new(),
+            device_id: Some(uuid::Uuid::new_v4().to_string()),
+            name: None,
+            account: None,
+        };
+        manager.save_cloud_credentials(&c).unwrap();
+        let channel = format!("private-devices.{}", c.device_id.as_ref().unwrap());
+        let handler = std::thread::spawn(move || {
+            let request = server
+                .recv_timeout(Duration::from_secs(2))
+                .unwrap()
+                .unwrap();
+            assert_eq!(request.url(), "/api/agent/v1/socket");
+            request.respond(tiny_http::Response::from_string(json!({"key":"test","host":"127.0.0.1","port":port,"scheme":scheme,"channel":channel}).to_string())).unwrap();
+            let fallback = server
+                .recv_timeout(Duration::from_secs(8))
+                .unwrap()
+                .unwrap();
+            assert_eq!(fallback.url(), "/api/agent/v1/poll");
+            fallback
+                .respond(tiny_http::Response::from_string("{}"))
+                .unwrap();
+        });
+        let (stop_tx, stop_rx) = mpsc::channel();
+        let stalled = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 4096];
+            assert!(stream.read(&mut request).unwrap() > 0);
+            stop_rx.recv_timeout(Duration::from_secs(8)).unwrap();
+        });
+        let started = Instant::now();
+        assert!(manager.cloud_socket_session().is_err());
+        let elapsed = started.elapsed();
+        eprintln!("stalled production {scheme} WebSocket handshake: {elapsed:?}");
+        assert!(elapsed >= Duration::from_secs(4) && elapsed < Duration::from_secs(6));
+        manager.cloud_tick(true).unwrap();
+        assert!(started.elapsed() < Duration::from_secs(6));
+        assert!(manager.cloud.socket_waker.lock().unwrap().is_none());
+        stop_tx.send(()).unwrap();
+        stalled.join().unwrap();
+        handler.join().unwrap();
+    }
+
+    #[test]
+    fn slow_drip_headers_cannot_reset_handshake_deadline() {
+        use std::io::Write;
+        use std::net::{TcpListener, TcpStream};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let peer = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0; 4096];
+            assert!(stream.read(&mut request).unwrap() > 0);
+            for byte in b"HTTP/1.1 101 Switching Protocols\r\n" {
+                if stream.write_all(&[*byte]).is_err() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(30));
+            }
+        });
+        let stream = TcpStream::connect(address).unwrap();
+        let started = Instant::now();
+        let result = tungstenite::client_tls_with_config(
+            format!("ws://{address}/"),
+            CloudSocketStream::new(stream, started + Duration::from_millis(200)),
+            None,
+            None,
+        );
+        assert!(result.is_err());
+        eprintln!("slow-drip handshake shared200ms: {:?}", started.elapsed());
+        assert!(started.elapsed() < Duration::from_millis(500));
+        drop(result);
+        peer.join().unwrap();
+    }
+
+    #[test]
+    fn slow_socket_reader_applies_bounded_write_backpressure() {
+        use std::net::{TcpListener, TcpStream};
+        use std::sync::mpsc;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (release_tx, release_rx) = mpsc::channel();
+        let peer = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let _socket = tungstenite::accept(stream).unwrap();
+            release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        });
+        let stream = TcpStream::connect(address).unwrap();
+        let config = tungstenite::protocol::WebSocketConfig::default()
+            .write_buffer_size(0)
+            .max_write_buffer_size(131072);
+        let (mut socket, _) = tungstenite::client_tls_with_config(
+            format!("ws://{address}/"),
+            CloudSocketStream::new(stream, Instant::now() + Duration::from_secs(2)),
+            Some(config),
+            None,
+        )
+        .unwrap();
+        let mut poll = mio::Poll::new().unwrap();
+        socket_stream(&mut socket).unwrap().activate(&poll).unwrap();
+        let payload = "x".repeat(65536);
+        let mut bounded = false;
+        for _ in 0..1000 {
+            match socket.send(tungstenite::Message::Text(payload.clone().into())) {
+                Ok(()) => {}
+                Err(tungstenite::Error::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(tungstenite::Error::WriteBufferFull(_)) => {
+                    bounded = true;
+                    break;
+                }
+                Err(e) => panic!("unexpected backpressure error: {e}"),
+            }
+        }
+        assert!(bounded, "unread peer did not reach bounded write buffer");
+        assert!(socket_write(socket.flush()).unwrap());
+        socket_stream(&mut socket)
+            .unwrap()
+            .interest(&poll, true)
+            .unwrap();
+        let mut events = mio::Events::with_capacity(4);
+        let started = Instant::now();
+        poll.poll(&mut events, Some(Duration::from_millis(100)))
+            .unwrap();
+        assert!(
+            started.elapsed() >= Duration::from_millis(80),
+            "backpressure caused a busy wake loop"
+        );
+        release_tx.send(()).unwrap();
+        drop(socket);
+        peer.join().unwrap();
+    }
+
+    #[test]
+    fn idle_socket_worker_completion_and_lifecycle_are_wakeable() {
+        use std::net::TcpListener;
+        use std::sync::mpsc;
+        use tungstenite::Message;
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        for ending in ["shutdown", "re-pair", "revoke", "server-close"] {
+            let home = tempfile::tempdir().unwrap();
+            let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let socket_port = listener.local_addr().unwrap().port();
+            let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+            let credentials = Credentials {
+                url: format!("http://{}", server.server_addr()),
+                key: "b".repeat(64),
+                code_hash: String::new(),
+                device_id: Some(uuid::Uuid::new_v4().to_string()),
+                name: None,
+                account: None,
+            };
+            manager.save_cloud_credentials(&credentials).unwrap();
+            let channel = format!(
+                "private-devices.{}",
+                credentials.device_id.as_ref().unwrap()
+            );
+            let id = uuid::Uuid::new_v4().to_string();
+            let offer = Arc::new(AtomicBool::new(false));
+            let acknowledged = Arc::new(AtomicBool::new(false));
+            let stop = Arc::new(AtomicBool::new(false));
+            let (result_tx, result_rx) = mpsc::channel();
+            let (exit_tx, exit_rx) = mpsc::channel();
+            let (finish_tx, finish_rx) = mpsc::channel();
+            let (probe_tx, probe_rx) = mpsc::channel();
+            let (pong_tx, pong_rx) = mpsc::channel();
+            let http_offer = offer.clone();
+            let http_ack = acknowledged.clone();
+            let http_stop = stop.clone();
+            let http_channel = channel.clone();
+            let http_id = id.clone();
+            let handler = std::thread::spawn(move || {
+                while !http_stop.load(Ordering::Acquire) {
+                    let Some(request) = server.recv_timeout(Duration::from_millis(50)).unwrap()
+                    else {
+                        continue;
+                    };
+                    let reply = match request.url() {
+                        "/api/agent/v1/socket" => {
+                            json!({"key":"test","host":"127.0.0.1","port":socket_port,"scheme":"http","channel":http_channel})
+                        }
+                        "/api/agent/v1/authorize" => json!({"auth":"fixture"}),
+                        "/api/agent/v1/poll"
+                            if http_offer.load(Ordering::Acquire)
+                                && !http_ack.load(Ordering::Acquire) =>
+                        {
+                            json!({"command":{"id":http_id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}})
+                        }
+                        path if path.ends_with("/result") => {
+                            assert_eq!(path, format!("/api/agent/v1/commands/{http_id}/result"));
+                            assert!(!http_ack.swap(true, Ordering::AcqRel), "duplicate result");
+                            result_tx.send(Instant::now()).unwrap();
+                            json!({})
+                        }
+                        _ => json!({}),
+                    };
+                    request
+                        .respond(tiny_http::Response::from_string(reply.to_string()))
+                        .unwrap();
+                }
+            });
+            let ws = std::thread::spawn(move || {
+                let (stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut socket = tungstenite::accept(stream).unwrap();
+                socket
+                    .send(Message::Text(
+                        json!({"event":"pusher:connection_established","data":{"socket_id":"1.2"}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .unwrap();
+                let subscription = socket.read().unwrap();
+                assert!(subscription.to_text().unwrap().contains("pusher:subscribe"));
+                socket
+                    .send(Message::Text(
+                        json!({"event":"pusher_internal:subscription_succeeded","channel":channel})
+                            .to_string()
+                            .into(),
+                    ))
+                    .unwrap();
+                probe_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+                socket.send(Message::Ping(vec![1, 2, 3].into())).unwrap();
+                assert_eq!(socket.read().unwrap(), Message::Pong(vec![1, 2, 3].into()));
+                socket
+                    .send(Message::Text(
+                        json!({"event":"pusher:ping","data":{}}).to_string().into(),
+                    ))
+                    .unwrap();
+                assert!(socket
+                    .read()
+                    .unwrap()
+                    .to_text()
+                    .unwrap()
+                    .contains("pusher:pong"));
+                pong_tx.send(()).unwrap();
+                finish_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+                match ending {
+                    "revoke" => socket
+                        .send(Message::Text(
+                            json!({"event":"connection.revoked","channel":channel})
+                                .to_string()
+                                .into(),
+                        ))
+                        .unwrap(),
+                    "server-close" => socket.close(None).unwrap(),
+                    _ => {}
+                }
+                let _ = socket.read();
+            });
+            let session_manager = manager.clone();
+            let session = std::thread::spawn(move || {
+                let outcome = session_manager.cloud_socket_session();
+                exit_tx.send(outcome.is_ok()).unwrap();
+            });
+            let ready = Instant::now();
+            while manager.cloud.inner.lock().unwrap().connection != CloudConnection::Connected {
+                assert!(ready.elapsed() < Duration::from_secs(5));
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            // No incoming WS frames: completion must interrupt the OS wait.
+            std::thread::sleep(Duration::from_millis(100));
+            offer.store(true, Ordering::Release);
+            let started = Instant::now();
+            manager.cloud_tick(true).unwrap();
+            let delivered = result_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+            eprintln!(
+                "idle WebSocket {ending}: worker/result {:?}",
+                delivered.duration_since(started)
+            );
+            assert!(
+                delivered.duration_since(started) < Duration::from_millis(800),
+                "completion waited for the idle read timer"
+            );
+            assert_eq!(manager.journal(&credentials).unwrap()[&id], "succeeded");
+            assert!(acknowledged.load(Ordering::Acquire));
+            probe_tx.send(()).unwrap();
+            pong_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+            let ending_start = Instant::now();
+            match ending {
+                "shutdown" => manager.shutdown().unwrap(),
+                "re-pair" => {
+                    let mut new = credentials.clone();
+                    new.key = "c".repeat(64);
+                    manager.save_cloud_credentials(&new).unwrap();
+                    manager.cloud.wake();
+                }
+                _ => {}
+            }
+            finish_tx.send(()).unwrap();
+            let graceful = exit_rx.recv_timeout(Duration::from_millis(800)).unwrap();
+            assert_eq!(graceful, ending != "server-close");
+            eprintln!("idle WebSocket {ending}: exit {:?}", ending_start.elapsed());
+            session.join().unwrap();
+            ws.join().unwrap();
+            assert!(manager.cloud.socket_waker.lock().unwrap().is_none());
+            if ending == "revoke" {
+                assert!(manager.cloud.inner.lock().unwrap().disabled);
+            }
+            stop.store(true, Ordering::Release);
+            handler.join().unwrap();
+        }
+    }
     impl DesktopApi for UpdateHost {
         fn call(&self, operation: &str, _: Value) -> Result<DesktopReply> {
             match operation {

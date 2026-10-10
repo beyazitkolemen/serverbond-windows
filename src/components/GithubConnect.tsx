@@ -16,6 +16,7 @@ export default function GithubConnect({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const generation = useRef(0);
+  const actionActive = useRef(false);
   const clientDirty = useRef(false);
   useEffect(() => {
     if (!clientDirty.current) setClientId(github.oauthClientId ?? "");
@@ -77,6 +78,8 @@ export default function GithubConnect({
     };
   }, [flow]);
   async function start() {
+    if (actionActive.current || disabled) return;
+    actionActive.current = true;
     const attempt = ++generation.current;
     setWorking(true);
     setError("");
@@ -95,11 +98,13 @@ export default function GithubConnect({
     } catch (error) {
       if (generation.current === attempt) setError(String(error));
     } finally {
+      actionActive.current = false;
       if (generation.current === attempt) setWorking(false);
     }
   }
   async function cancel() {
-    if (!flow) return;
+    if (!flow || actionActive.current) return;
+    actionActive.current = true;
     generation.current++;
     setWorking(true);
     try {
@@ -109,6 +114,7 @@ export default function GithubConnect({
     } catch (error) {
       setError(String(error));
     } finally {
+      actionActive.current = false;
       setWorking(false);
     }
   }
