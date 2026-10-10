@@ -569,6 +569,15 @@ impl Manager {
         }
         let result = self.cloud_push_state_now(http, c, force);
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        // A disconnected/re-paired device owns a fresh retry schedule. An old
+        // in-flight request must not delay or revoke its state synchronization.
+        if self
+            .cloud_credentials()?
+            .as_ref()
+            .is_none_or(|current| current.key != c.key)
+        {
+            return Ok(());
+        }
         if result.is_err() {
             runtime.state_retry_delay_secs = if runtime.state_retry_delay_secs == 0 {
                 15
@@ -627,12 +636,20 @@ impl Manager {
         }
         for body in state::bodies(&changed, &removed)? {
             let (status, _) = post(http, c, "state", &body)?;
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(());
+            }
             if status == 401 {
-                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
                 runtime.disabled = true;
                 runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
                 return Ok(());
             }
+            drop(runtime);
             anyhow::ensure!(status == 200, "Durum raporu gönderilemedi.");
         }
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
@@ -687,6 +704,13 @@ impl Manager {
                 &json!({"status":"succeeded","output":output}),
             )?;
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(());
+            }
             if !matches!(delivery, ResultDelivery::Accepted) {
                 runtime.after_ack = None;
                 if matches!(delivery, ResultDelivery::Revoked) {
@@ -801,6 +825,14 @@ impl Manager {
             return Ok(());
         };
         let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if runtime.disabled
+            || self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+        {
+            return Ok(());
+        }
         uuid::Uuid::parse_str(&command.id)?;
         let mut journal = self.journal(&c)?;
         if let Some(saved) = journal.get(&command.id).cloned() {
@@ -842,6 +874,13 @@ impl Manager {
             }
             let delivery = self.cloud_submit_result(&http, &c, &command.id, &body)?;
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(());
+            }
             if matches!(delivery, ResultDelivery::Revoked) {
                 runtime.disabled = true;
                 runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
@@ -1037,6 +1076,13 @@ impl Manager {
         if !matches!(delivery, ResultDelivery::Accepted) {
             self.clear_pending_update(c)?;
             let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(true);
+            }
             if matches!(delivery, ResultDelivery::Revoked) {
                 runtime.disabled = true;
                 runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
@@ -1114,12 +1160,20 @@ impl Manager {
         };
         let http = client()?;
         let (status, reply) = post(&http, &c, "socket", &json!({}))?;
+        let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if self
+            .cloud_credentials()?
+            .as_ref()
+            .is_none_or(|current| current.key != c.key)
+        {
+            return Ok(());
+        }
         if status == 401 {
-            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
             runtime.disabled = true;
             runtime.error = Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
             return Ok(());
         }
+        drop(runtime);
         anyhow::ensure!(status == 200, "Reverb ayarları alınamadı.");
         let settings: SocketSettings = serde_json::from_value(reply)?;
         anyhow::ensure!(
@@ -1138,11 +1192,17 @@ impl Manager {
                 "ws"
             })
             .map_err(|_| anyhow::anyhow!("Soket adresi geçersiz."))?;
-        self.cloud
-            .inner
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .socket_endpoint = Some(socket_url.as_str().trim_end_matches('/').to_string());
+        {
+            let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if self
+                .cloud_credentials()?
+                .as_ref()
+                .is_none_or(|current| current.key != c.key)
+            {
+                return Ok(());
+            }
+            runtime.socket_endpoint = Some(socket_url.as_str().trim_end_matches('/').to_string());
+        }
         socket_url
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("Soket adresi geçersiz."))?
@@ -1235,11 +1295,17 @@ impl Manager {
                 Err(e) => return Err(e.into()),
             };
             last_message = Instant::now();
-            self.cloud
-                .inner
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .last_socket_message = Some(chrono::Utc::now().to_rfc3339());
+            {
+                let mut runtime = self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
+                if self
+                    .cloud_credentials()?
+                    .as_ref()
+                    .is_none_or(|current| current.key != c.key)
+                {
+                    break;
+                }
+                runtime.last_socket_message = Some(chrono::Utc::now().to_rfc3339());
+            }
             match message {
                 Message::Text(text) => {
                     let event: Value = serde_json::from_str(&text)?;
@@ -1280,9 +1346,15 @@ impl Manager {
                         "connection.revoked" if event["channel"] == settings.channel => {
                             let mut runtime =
                                 self.cloud.inner.lock().unwrap_or_else(|e| e.into_inner());
-                            runtime.disabled = true;
-                            runtime.error =
-                                Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+                            if self
+                                .cloud_credentials()?
+                                .as_ref()
+                                .is_some_and(|current| current.key == c.key)
+                            {
+                                runtime.disabled = true;
+                                runtime.error =
+                                    Some("Cloud erişimi iptal edildi. Yeniden eşleştirin.".into());
+                            }
                             break;
                         }
                         "pusher:ping" => socket.send(Message::Text(
@@ -1938,6 +2010,160 @@ mod windows_cloud_tests {
 
         m.cloud_push_state(&http, &c, &[]).unwrap();
         assert!(!m.cloud.inner.lock().unwrap().state_dirty);
+    }
+
+    #[test]
+    fn stale_result_acknowledgement_does_not_revoke_a_new_pairing() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        for status in [401, 409] {
+            let home = tempfile::tempdir().unwrap();
+            let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+            let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+            let old = Credentials {
+                url: format!("http://{}", server.server_addr()),
+                key: "a".repeat(64),
+                code_hash: String::new(),
+                device_id: Some(uuid::Uuid::new_v4().to_string()),
+                name: None,
+                account: None,
+            };
+            manager.save_cloud_credentials(&old).unwrap();
+            let id = uuid::Uuid::new_v4().to_string();
+            manager
+                .save_journal(&old, &BTreeMap::from([(id.clone(), "succeeded".into())]))
+                .unwrap();
+            let mut current = old.clone();
+            current.key = "b".repeat(64);
+            current.device_id = Some(uuid::Uuid::new_v4().to_string());
+            let changed = manager.clone();
+            let handler = std::thread::spawn(move || {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing poll request");
+                assert_eq!(request.url(), "/api/agent/v1/poll");
+                request.respond(tiny_http::Response::from_string(json!({
+                    "command":{"id":id,"service":"redis","action":"stop","expires_at":"2099-01-01T00:00:00Z"}
+                }).to_string())).unwrap();
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing result replay");
+                assert_eq!(request.url(), format!("/api/agent/v1/commands/{id}/result"));
+                let mut runtime = changed.cloud.inner.lock().unwrap();
+                changed.save_cloud_credentials(&current).unwrap();
+                runtime.reset_state_sync();
+                runtime.connection = CloudConnection::Connecting;
+                drop(runtime);
+                request
+                    .respond(tiny_http::Response::from_string("{}").with_status_code(status))
+                    .unwrap();
+            });
+
+            manager.cloud_tick(true).unwrap();
+            handler.join().unwrap();
+            let runtime = manager.cloud.inner.lock().unwrap();
+            assert!(!runtime.disabled, "stale {status} revoked new pairing");
+            assert!(runtime.error.is_none());
+            assert_eq!(runtime.connection, CloudConnection::Connecting);
+        }
+    }
+
+    #[test]
+    fn stale_socket_bootstrap_response_does_not_touch_a_new_pairing() {
+        std::env::set_var("SERVERBOND_CLOUD_ALLOW_HTTP", "1");
+        for status in [401, 200] {
+            let home = tempfile::tempdir().unwrap();
+            let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+            let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+            let old = Credentials {
+                url: format!("http://{}", server.server_addr()),
+                key: "a".repeat(64),
+                code_hash: String::new(),
+                device_id: Some(uuid::Uuid::new_v4().to_string()),
+                name: None,
+                account: None,
+            };
+            manager.save_cloud_credentials(&old).unwrap();
+            let mut current = old.clone();
+            current.key = "b".repeat(64);
+            current.device_id = Some(uuid::Uuid::new_v4().to_string());
+            let changed = manager.clone();
+            let handler = std::thread::spawn(move || {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing socket request");
+                assert_eq!(request.url(), "/api/agent/v1/socket");
+                let mut runtime = changed.cloud.inner.lock().unwrap();
+                changed.save_cloud_credentials(&current).unwrap();
+                runtime.reset_state_sync();
+                runtime.connection = CloudConnection::Connecting;
+                drop(runtime);
+                request
+                    .respond(tiny_http::Response::from_string("{}").with_status_code(status))
+                    .unwrap();
+            });
+
+            manager.cloud_socket_session().unwrap();
+            handler.join().unwrap();
+            let runtime = manager.cloud.inner.lock().unwrap();
+            assert!(!runtime.disabled, "stale {status} revoked new pairing");
+            assert!(runtime.error.is_none());
+            assert!(runtime.socket_endpoint.is_none());
+            assert_eq!(runtime.connection, CloudConnection::Connecting);
+        }
+    }
+
+    #[test]
+    fn stale_state_response_does_not_revoke_or_back_off_a_new_pairing() {
+        for status in [401, 500] {
+            let home = tempfile::tempdir().unwrap();
+            let manager = Arc::new(Manager::new(home.path().into()).unwrap());
+            let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+            let old = Credentials {
+                url: format!("http://{}", server.server_addr()),
+                key: "a".repeat(64),
+                code_hash: String::new(),
+                device_id: Some(uuid::Uuid::new_v4().to_string()),
+                name: None,
+                account: None,
+            };
+            manager.save_cloud_credentials(&old).unwrap();
+            let mut current = old.clone();
+            current.key = "b".repeat(64);
+            current.device_id = Some(uuid::Uuid::new_v4().to_string());
+            let changed = manager.clone();
+            let handler = std::thread::spawn(move || {
+                let request = server
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .expect("missing state request");
+                assert_eq!(request.url(), "/api/agent/v1/state");
+                // Reproduce a pairing change while the old upload is in flight.
+                let mut runtime = changed.cloud.inner.lock().unwrap();
+                changed.save_cloud_credentials(&current).unwrap();
+                runtime.reset_state_sync();
+                runtime.connection = CloudConnection::Connecting;
+                drop(runtime);
+                request
+                    .respond(tiny_http::Response::from_string("{}").with_status_code(status))
+                    .unwrap();
+            });
+
+            manager
+                .cloud_push_state(&client().unwrap(), &old, &[])
+                .unwrap();
+            handler.join().unwrap();
+            let runtime = manager.cloud.inner.lock().unwrap();
+            assert!(!runtime.disabled, "stale {status} revoked new pairing");
+            assert!(runtime.error.is_none());
+            assert!(runtime.state_dirty);
+            assert!(runtime.state_fingerprints.is_empty());
+            assert!(runtime.state_retry_after.is_none());
+            assert_eq!(runtime.state_retry_delay_secs, 0);
+            assert_eq!(runtime.connection, CloudConnection::Connecting);
+        }
     }
 
     #[test]

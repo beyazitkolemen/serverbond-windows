@@ -35,6 +35,7 @@ Yeni çekirdek davranışı için `crates/serverbond-core/tests` altına test ek
 - Paket indirme, MySQL ilk kurulum ve phpMyAdmin tarayıcı akışları yok sayılmış (`ignored`) testlerdir; Cloud Agent bunları çalıştırmaz.
 - MySQL ve PostgreSQL kurup başlatan testler yalnızca ilgili servis dosyaları değiştiğinde çalışır. Yayın işi önceki etiketle karşılaştırıp yalnızca etkilenen ortam testini seçer; seçim `node --test scripts/ai/select-release-tests.test.mjs` ile doğrulanır. Aynı yayın içindeki ayrı testler doğrulanmış paket arşivlerini `SERVERBOND_TEST_CACHE` üzerinden yeniden kullanır; her testin veritabanı dizini ayrıdır. Kural: `.cursor/rules/long-service-tests.mdc`.
 - `SERVERBOND_HOME` veri dizinini taşır; testler geçici dizin kullanır.
+- `CARGO_TARGET_DIR` özel derleme klasörü seçer. MCP testi ve kurucu yaşam döngüsü testi bu klasördeki güncel dosyaları kullanır; eski `target` çıktısına dönmez. Yerel D: derlemeleri için örnek: `D:\Caches\cargo-target\serverbond`.
 
 ## Windows kurulum yolu testi
 

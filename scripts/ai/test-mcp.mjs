@@ -12,7 +12,8 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 const home = await mkdtemp(join(tmpdir(), "serverbond-mcp-test-"));
 const binary = resolve(
-  "target/debug",
+  process.env.CARGO_TARGET_DIR || "target",
+  "debug",
   process.platform === "win32" ? "serverbond.exe" : "serverbond",
 );
 const env = { ...process.env, SERVERBOND_HOME: home };

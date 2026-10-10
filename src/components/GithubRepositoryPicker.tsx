@@ -298,10 +298,11 @@ function GithubBranches({
   changeRef.current = onChange;
   useEffect(() => {
     const id = ++generation.current;
-    if (!automatic && !revision) return;
-    setLoading(true);
+    setLoading(false);
     setError("");
     setData(null);
+    if (!automatic && !revision) return;
+    setLoading(true);
     void githubService
       .branches(repository)
       .then((result) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Rocket } from "lucide-react";
 import { call } from "../api";
 import type {
@@ -51,24 +51,36 @@ export default function ReleasePane({
   };
   const [history, setHistory] = useState<ReleaseRecord[]>([]);
   const [historyError, setHistoryError] = useState("");
-  const [consoleText, setConsoleText] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState<ReleaseRecord | null>(
+    null,
+  );
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const historyRevision = useRef(0);
   const dirty = JSON.stringify(draft) !== JSON.stringify(source);
   const last = history[0];
   useEffect(() => {
-    let cancelled = false;
+    const revision = ++historyRevision.current;
+    setHistory([]);
+    setSelectedRecord(null);
+    setHistoryError("");
+    setHistoryLoading(true);
     void call<ReleaseRecord[]>("list_project_releases", { id: project.id })
       .then((records) => {
-        if (!cancelled) {
+        if (revision === historyRevision.current) {
           setHistoryError("");
           setHistory(records);
-          setConsoleText(records[0]?.output ?? "");
+          setSelectedRecord(records[0] ?? null);
         }
       })
       .catch(() => {
-        if (!cancelled) setHistoryError("Sürüm geçmişi okunamadı.");
+        if (revision === historyRevision.current)
+          setHistoryError("Sürüm geçmişi okunamadı.");
+      })
+      .finally(() => {
+        if (revision === historyRevision.current) setHistoryLoading(false);
       });
     return () => {
-      cancelled = true;
+      ++historyRevision.current;
     };
   }, [project.id]);
   const update = <K extends keyof ProjectRelease>(
@@ -87,14 +99,23 @@ export default function ReleasePane({
     });
     setValues({ release: draft, extra: draft.extraArtisan.join("\n") });
   };
-  const refreshHistory = () =>
-    call<ReleaseRecord[]>("list_project_releases", { id: project.id }).then(
-      (records) => {
+  const refreshHistory = async () => {
+    const revision = ++historyRevision.current;
+    try {
+      const records = await call<ReleaseRecord[]>(
+        "list_project_releases",
+        { id: project.id },
+        { fresh: true },
+      );
+      if (revision === historyRevision.current) {
         setHistoryError("");
         setHistory(records);
-        if (records[0]) setConsoleText(records[0].output);
-      },
-    );
+        if (records[0]) setSelectedRecord(records[0]);
+      }
+    } finally {
+      if (revision === historyRevision.current) setHistoryLoading(false);
+    }
+  };
   return (
     <div className="project-pane project-release">
       <p className="section-note">
@@ -108,9 +129,11 @@ export default function ReleasePane({
             ? last.success
               ? `Son sürüm başarılı · ${last.startedAt}`
               : `Son sürüm başarısız · ${last.startedAt}`
-            : historyError
-              ? "Sürüm durumu okunamadı"
-              : "Henüz sürüm çalıştırılmadı"}
+            : historyLoading
+              ? "Sürüm geçmişi okunuyor…"
+              : historyError
+                ? "Sürüm durumu okunamadı"
+                : "Henüz sürüm çalıştırılmadı"}
         </StatusBadge>
         <div className="release-actions">
           {draftDirty && (
@@ -149,7 +172,9 @@ export default function ReleasePane({
                   );
                   throw error;
                 });
-                setConsoleText(record.output);
+                // Invalidate the initial read before publishing this result.
+                ++historyRevision.current;
+                setSelectedRecord(record);
                 await refreshHistory().catch(() =>
                   setHistoryError("Sürüm uygulandı ancak geçmiş yenilenemedi."),
                 );
@@ -260,14 +285,17 @@ export default function ReleasePane({
       <section className="release-console" aria-label="Sürüm çıktısı">
         <header>
           <h4>Çıktı</h4>
-          {last?.sha ? (
+          {selectedRecord?.sha ? (
             <span className="muted">
-              {last.branch || "HEAD"} · {last.sha} ·{" "}
-              {Math.round(last.durationMs / 1000)} sn
+              {selectedRecord.branch || "HEAD"} · {selectedRecord.sha} ·{" "}
+              {Math.round(selectedRecord.durationMs / 1000)} sn
             </span>
           ) : null}
         </header>
-        <pre>{consoleText || "Çalıştırdıktan sonra çıktı burada görünür."}</pre>
+        <pre>
+          {selectedRecord?.output ||
+            "Çalıştırdıktan sonra çıktı burada görünür."}
+        </pre>
       </section>
       {history.length ? (
         <section className="release-history" aria-label="Sürüm geçmişi">
@@ -278,7 +306,7 @@ export default function ReleasePane({
                 <button
                   type="button"
                   className="section-link"
-                  onClick={() => setConsoleText(record.output)}
+                  onClick={() => setSelectedRecord(record)}
                 >
                   {record.startedAt}
                 </button>

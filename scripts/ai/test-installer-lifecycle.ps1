@@ -1,5 +1,5 @@
 param(
-    [string]$RenderedDir = (Join-Path $PSScriptRoot '../../target/release/nsis/x64'),
+    [string]$RenderedDir = (Join-Path $(if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $PSScriptRoot '../../target' }) 'release/nsis/x64'),
     [string]$NsisDir = (Join-Path $env:LOCALAPPDATA 'tauri/NSIS'),
     [string]$ArtifactsRoot = 'D:\Temp\F4'
 )

@@ -20,6 +20,19 @@ use std::{
 
 pub const ID: &str = crate::domain::ComponentId::Postgres.as_str();
 
+fn metadata_if_present(path: &std::path::Path) -> Result<Option<fs::Metadata>> {
+    match fs::metadata(path) {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error).with_context(|| {
+            format!(
+                "PostgreSQL dosya bilgisi okunamadı: {}. Mevcut veriler korunuyor.",
+                path.display()
+            )
+        }),
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostgresState {
@@ -154,6 +167,7 @@ impl Manager {
         {
             return Ok(());
         }
+        let data_exists = self.check_postgres_data()?;
         let settings = self
             .config
             .lock()
@@ -165,9 +179,9 @@ impl Manager {
         let bin = self.postgres_bin()?;
         let datadir = self.postgres_data_dir();
         let passfile = self.postgres_password_path();
-        if !datadir.exists() {
+        if !data_exists {
             crate::storage::require_space(&self.home.join("data"), 128 * 1024 * 1024)?;
-            if !passfile.exists() {
+            if metadata_if_present(&passfile)?.is_none() {
                 secrets::save(&passfile, &uuid::Uuid::new_v4().simple().to_string())?;
             }
             let password = secrets::read(&passfile)?;
@@ -194,9 +208,11 @@ impl Manager {
                 "PostgreSQL veri dizini oluşturulamadı. postgres günlüğünü kontrol edin.",
             )?;
             fs::rename(stage.path(), &datadir)?;
-        } else if !passfile.exists() {
-            bail!("PostgreSQL veri klasörü var ama parola dosyası yok. Veriler korunuyor.");
         }
+        // Initialization and SQL readiness are different facts. Persist the
+        // former before spawning so a failed/interrupted first startup cannot
+        // later hide a missing cluster by replacing it with an empty one.
+        storage::atomic_write(&self.postgres_initialized_path(), b"ok")?;
         let mut cmd = command(bin.join("postgres.exe"));
         self.postgres_env(&mut cmd, &bin);
         cmd.args([
@@ -263,12 +279,49 @@ impl Manager {
         self.home.join("data/postgresql-17")
     }
 
+    fn check_postgres_data(&self) -> Result<bool> {
+        let data = self.postgres_data_dir();
+        let password = self.postgres_password_path();
+        let data_metadata = metadata_if_present(&data)?;
+        let password_metadata = metadata_if_present(&password)?;
+        let ready = metadata_if_present(&self.postgres_ready_path())?;
+        let initialized = metadata_if_present(&self.postgres_initialized_path())?;
+        // Old installations have only the readiness marker. Both markers prove
+        // an initialized cluster whose absence must never trigger initdb.
+        if (ready.is_some() || initialized.is_some())
+            && !data_metadata.as_ref().is_some_and(fs::Metadata::is_dir)
+        {
+            bail!("PostgreSQL veri klasörü kayıp. Boş veritabanı oluşturulmadı; veri klasörünü/yedeğinizi geri getirin.");
+        }
+        if data_metadata
+            .as_ref()
+            .is_some_and(|metadata| !metadata.is_dir())
+            || (data_metadata.is_some()
+                && !password_metadata
+                    .as_ref()
+                    .is_some_and(fs::Metadata::is_file))
+        {
+            bail!("PostgreSQL veri klasörü veya parola dosyası tutarsız. Mevcut veriler değiştirilmedi.");
+        }
+        // Check DPAPI access before starting a server we cannot authenticate
+        // against (for example after moving data to a different Windows user).
+        if password_metadata.is_some() {
+            secrets::read(&password)
+                .context("PostgreSQL parolası okunamadı; mevcut parola ve veriler korunuyor.")?;
+        }
+        Ok(data_metadata.is_some())
+    }
+
     fn postgres_password_path(&self) -> PathBuf {
         self.home.join("config/postgres-password.dpapi")
     }
 
     fn postgres_ready_path(&self) -> PathBuf {
         self.home.join("config/postgres-ready")
+    }
+
+    fn postgres_initialized_path(&self) -> PathBuf {
+        self.home.join("config/postgres-initialized")
     }
 
     fn postgres_env(&self, cmd: &mut std::process::Command, bin: &std::path::Path) {
@@ -323,6 +376,116 @@ impl Manager {
             bail!("{}", if stderr.is_empty() { stdout } else { stderr });
         }
         Ok(stdout)
+    }
+}
+
+#[cfg(test)]
+mod data_preservation_tests {
+    use super::*;
+
+    #[test]
+    fn missing_initialized_cluster_is_not_recreated() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        fs::write(manager.postgres_ready_path(), b"ok").unwrap();
+        let error = manager.start_postgres().unwrap_err();
+        assert!(
+            error.to_string().contains("veri klasörü kayıp"),
+            "{error:#}"
+        );
+        assert!(!manager.postgres_data_dir().exists());
+        assert!(!manager.postgres_password_path().exists());
+        assert_eq!(fs::read(manager.postgres_ready_path()).unwrap(), b"ok");
+    }
+
+    #[test]
+    fn existing_cluster_without_password_is_preserved() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        fs::create_dir(manager.postgres_data_dir()).unwrap();
+        let marker = manager.postgres_data_dir().join("user-data");
+        fs::write(&marker, b"preserve").unwrap();
+        let error = manager.start_postgres().unwrap_err();
+        assert!(error.to_string().contains("tutarsız"), "{error:#}");
+        assert_eq!(fs::read(marker).unwrap(), b"preserve");
+        assert!(!manager.postgres_password_path().exists());
+    }
+
+    #[test]
+    fn unreadable_password_is_rejected_before_starting_a_server() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        fs::create_dir(manager.postgres_data_dir()).unwrap();
+        fs::write(manager.postgres_password_path(), b"invalid-dpapi").unwrap();
+        let error = manager.start_postgres().unwrap_err();
+        assert!(
+            error.to_string().contains("parolası okunamadı"),
+            "{error:#}"
+        );
+        assert_eq!(
+            fs::read(manager.postgres_password_path()).unwrap(),
+            b"invalid-dpapi"
+        );
+        assert!(!manager.postgres_ready_path().exists());
+        assert!(!manager.processes.lock().unwrap().contains_key(ID));
+    }
+
+    #[test]
+    fn fresh_cluster_has_no_data_preflight_error() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        assert!(!manager.check_postgres_data().unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn metadata_read_error_is_not_treated_as_an_absent_cluster() {
+        let home = tempfile::tempdir().unwrap();
+        let parent = home.path().join("file-as-parent");
+        fs::write(&parent, b"preserve").unwrap();
+        let error = metadata_if_present(&parent.join("cluster")).unwrap_err();
+        assert!(error.to_string().contains("dosya bilgisi okunamadı"));
+        assert_eq!(fs::read(parent).unwrap(), b"preserve");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn interrupted_first_start_preserves_initialized_cluster_without_ready_marker() {
+        let home = tempfile::tempdir().unwrap();
+        let manager = Manager::new(home.path().into()).unwrap();
+        let data = manager.postgres_data_dir();
+        fs::create_dir(&data).unwrap();
+        fs::write(data.join("PG_VERSION"), b"17").unwrap();
+        let password = "Only-local-test-123!";
+        secrets::save(&manager.postgres_password_path(), password).unwrap();
+        fs::write(manager.postgres_initialized_path(), b"ok").unwrap();
+        assert!(!manager.postgres_ready_path().exists());
+        assert!(manager.check_postgres_data().unwrap());
+        assert!(manager.postgres_credentials().is_err());
+
+        let preserved = home.path().join("data/preserved-first-start");
+        fs::rename(&data, &preserved).unwrap();
+        let encrypted = fs::read(manager.postgres_password_path()).unwrap();
+        let error = manager.start_postgres().unwrap_err();
+        assert!(
+            error.to_string().contains("veri klasörü kayıp"),
+            "{error:#}"
+        );
+        assert!(!data.exists());
+        assert_eq!(
+            fs::read(manager.postgres_password_path()).unwrap(),
+            encrypted
+        );
+        assert_eq!(fs::read(preserved.join("PG_VERSION")).unwrap(), b"17");
+
+        fs::rename(&preserved, &data).unwrap();
+        assert!(manager.check_postgres_data().unwrap());
+        assert_eq!(
+            secrets::read(&manager.postgres_password_path()).unwrap(),
+            password
+        );
+        assert!(!manager.postgres_ready_path().exists());
+        assert!(!manager.processes.lock().unwrap().contains_key(ID));
     }
 }
 
@@ -383,6 +546,31 @@ mod credential_tests {
             !std::fs::read_to_string(home.path().join("logs/serverbond.log"))
                 .unwrap()
                 .contains(&next)
+        );
+        manager
+            .psql_query(&next, "CREATE TABLE preservation_marker(value TEXT); INSERT INTO preservation_marker VALUES ('İstanbul');")
+            .unwrap();
+        manager.stop_postgres().unwrap();
+        let preserved = home.path().join("data/postgresql-preserved");
+        fs::rename(manager.postgres_data_dir(), &preserved).unwrap();
+        let encrypted_password = fs::read(manager.postgres_password_path()).unwrap();
+        let error = manager.start_postgres().unwrap_err();
+        assert!(
+            error.to_string().contains("veri klasörü kayıp"),
+            "{error:#}"
+        );
+        assert!(!manager.postgres_data_dir().exists());
+        assert_eq!(
+            fs::read(manager.postgres_password_path()).unwrap(),
+            encrypted_password
+        );
+        fs::rename(&preserved, manager.postgres_data_dir()).unwrap();
+        manager.start_postgres().unwrap();
+        assert_eq!(
+            manager
+                .psql_query(&next, "SELECT value FROM preservation_marker;")
+                .unwrap(),
+            "İstanbul"
         );
         manager.stop_postgres().unwrap();
     }
